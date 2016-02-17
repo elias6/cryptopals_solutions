@@ -5,7 +5,7 @@ import cProfile
 import pprint
 import sys
 from collections import Counter
-from itertools import chain, cycle, zip_longest
+from itertools import cycle, zip_longest
 
 printer = pprint.PrettyPrinter(width=120)
 pp = printer.pprint
@@ -55,34 +55,22 @@ def english_like_score(text):
         chi2 += difference**2 / expected
     return total_letter_count / chi2 / len(text)
 
-def old_english_like_score(text):
-    result = 0
-    for char in text.lower():
-        if char in "etaoin":
-            result += 2
-        elif char in "shrdlu":
-            result += 1
-    return result
-
-def all_english_like_scores_data(encoded_message, fn=english_like_score):
+def all_english_like_scores_data(cipher_bytes):
     result = []
     for i in range(256):
         key = bytes([i])
-        message = bytes_to_string(xor_encrypt(encoded_message, key))
-        score = fn(message)
+        message = bytes_to_string(xor_encrypt(cipher_bytes, key))
+        score = english_like_score(message)
         result.append({
             "key": list(key),
             "key_binary": ["{:08b}".format(b) for b in key],
             "message": message,
-            "original": encoded_message,
+            "original": cipher_bytes,
             "score": score})
     return result
 
-def best_english_like_score_data(text, fn=english_like_score, num=1):
-    return sorted(
-        all_english_like_scores_data(text, fn=fn),
-        key=lambda m: m["score"],
-        reverse=True)[:num]
+def best_english_like_score_data(text, num=1):
+    return sorted(all_english_like_scores_data(text), key=lambda m: m["score"], reverse=True)[:num]
 
 def challenge1():
     cipher_hex = ("49276d206b696c6c696e6720796f757220627261696e206c" +
@@ -122,27 +110,31 @@ def challenge6():
     assert edit_distance(b"this is a test", b"wokka wokka!!!") == 37
     cipher_bytes = base64.b64decode(open("6.txt").read())
     edit_distances = {}
-    for keysize in range(2, 41):
-        chunk1 = cipher_bytes[:keysize]
-        chunk2 = cipher_bytes[keysize : 2 * keysize]
-        edit_distances[keysize] = edit_distance(chunk1, chunk2) / keysize
-    keysizes = sorted(
-        edit_distances,
-        key=lambda keysize: edit_distances[keysize],
-        reverse=True)
-    best_keysize = keysizes[0]
-    chunks = byte_chunks(cipher_bytes, best_keysize)
-    transposed_blocks = []
-    decoding_data = []
-    for i in range(best_keysize):
-        transposed_blocks.append(bytes(chunk[i] for chunk in chunks if i < len(chunk)))
-        decoding_data.append(best_english_like_score_data(transposed_blocks[i]))
-    pp(decoding_data)
-    key = bytes(chain(*(decoding_data[i]["key"] for i in range(best_keysize))))
+    test_chunk_count = 10
+    for key_size in range(2, 41):
+        chunks = byte_chunks(cipher_bytes, key_size)
+        edit_distances[key_size] = 0
+        for i in range(test_chunk_count):
+            edit_distances[key_size] += edit_distance(chunks[i], chunks[i + 1])
+        edit_distances[key_size] /= key_size
+    key_sizes = sorted(edit_distances, key=lambda key_size: edit_distances[key_size])
+    best_key_size = key_sizes[0]
+
+    chunks = byte_chunks(cipher_bytes, best_key_size)
+    transposed_messages = []
+    key = bytearray()
+    for i in range(best_key_size):
+        transposed_block = bytes(chunk[i] for chunk in chunks if i < len(chunk))
+        score_data = best_english_like_score_data(transposed_block)[0]
+        transposed_messages.append(score_data["message"])
+        key.extend(score_data["key"])
     print(key)
-    print(bytes(zip(d["message"] for d in decoding_data)))
-    # print(bytes_to_string(xor_encrypt(cipher_bytes, key))[:100])
-    # pp(transposed_blocks)
+    print()
+    plaintext = []
+    for message in zip_longest(*transposed_messages):
+        plaintext += "".join(char for char in message if char is not None)
+    plaintext = "".join(plaintext)
+    print(plaintext)
 
 if __name__ == "__main__":
     globals()["challenge" + sys.argv[1]]()
