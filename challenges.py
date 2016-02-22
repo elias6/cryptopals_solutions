@@ -217,6 +217,7 @@ def test_all_challenges():
     for num in sorted(challenges):
         print("running challenge {}".format(num), file=old_stdout)
         challenges[num]()
+    sys.stdout = old_stdout
 
 if __name__ == "__main__":
     try:
