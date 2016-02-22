@@ -4,6 +4,8 @@ import base64
 import cProfile
 import pprint
 import sys
+
+from Crypto.Cipher import AES
 from collections import Counter
 from itertools import cycle, zip_longest
 
@@ -135,6 +137,11 @@ def challenge6():
         plaintext += "".join(char for char in message if char is not None)
     plaintext = "".join(plaintext)
     print(plaintext)
+
+def challenge7():
+    cipher_bytes = base64.b64decode(open("7.txt").read())
+    message = AES.new("YELLOW SUBMARINE", AES.MODE_ECB).decrypt(cipher_bytes)
+    print(bytes_to_string(message))
 
 if __name__ == "__main__":
     globals()["challenge" + sys.argv[1]]()
