@@ -145,6 +145,16 @@ def challenge7():
     message = AES.new("YELLOW SUBMARINE", AES.MODE_ECB).decrypt(cipher_bytes)
     print(bytes_to_string(message))
 
+def challenge8():
+    ecb_texts = []
+    for i, line in enumerate(open("8.txt").readlines()):
+        cipher_bytes = bytes.fromhex(line.strip())
+        chunk_counter = Counter(byte_chunks(cipher_bytes, 16))
+        if chunk_counter.most_common(1)[0][1] > 1:
+            ecb_texts.append({"index": i, "ciphertext": cipher_bytes})
+    pp(ecb_texts)
+    assert len(ecb_texts) == 1
+
 if __name__ == "__main__":
     globals()["challenge" + sys.argv[1]]()
     # cProfile.run("challenge" + sys.argv[1] + "()", sort="cumtime")
