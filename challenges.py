@@ -167,6 +167,27 @@ def challenge9():
     """Implement PKCS#7 padding"""
     b"YELLOW SUBMARINE\x04\x04\x04\x04"
 
+def challenge10():
+    """Implement CBC mode"""
+    cipher_bytes = base64.b64decode(open("10.txt").read())
+    iv = bytes([0] * 16)
+
+    plain_bytes = AES.new("YELLOW SUBMARINE", AES.MODE_CBC, iv).decrypt(cipher_bytes)
+    # print(bytes_to_string(plain_bytes))
+    # Create new cipher object because using cipher object messes up internal IV state
+    cbc_result = AES.new("YELLOW SUBMARINE", AES.MODE_CBC, iv).encrypt(plain_bytes)
+    assert cbc_result == cipher_bytes
+
+    last_cipher_chunk = iv
+    cipher = AES.new("YELLOW SUBMARINE", AES.MODE_ECB, iv)
+    result = bytearray()
+    for plain_chunk in byte_chunks(plain_bytes, 16):
+        combined_chunk = xor_bytes(last_cipher_chunk, plain_chunk)
+        cipher_chunk = cipher.encrypt(combined_chunk)
+        result.extend(cipher_chunk)
+        last_cipher_chunk = cipher_chunk
+    assert result == cipher_bytes
+
 if __name__ == "__main__":
     globals()["challenge" + sys.argv[1]]()
     # cProfile.run("challenge" + sys.argv[1] + "()", sort="cumtime")
