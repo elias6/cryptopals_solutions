@@ -90,6 +90,7 @@ def challenge2():
     output = xor_bytes(
         bytes.fromhex("1c0111001f010100061a024b53535009181c"),
         bytes.fromhex("686974207468652062756c6c277320657965"))
+    assert output == b"the kid don't play"
     print(bytes_to_string(output))
     print(output.hex())
 
@@ -100,6 +101,7 @@ def challenge3():
     best_data = best_english_like_score_data(ciphertext, num=5)
     pp(best_data)
     print(best_data[0]["message"])
+    assert best_data[0]["message"] == "Cooking MC's like a pound of bacon"
 
 def challenge4():
     """Detect single-character XOR"""
@@ -112,11 +114,16 @@ def challenge4():
     best_decodings = sorted(decoded_string_data, key=lambda d: d["score"], reverse=True)
     result = best_decodings[:3]
     pp(result)
+    assert best_decodings[0]["message"] == "Now that the party is jumping\n"
 
 def challenge5():
     """Implement repeating-key XOR"""
     stanza = "Burning 'em, if you ain't quick and nimble\n" + "I go crazy when I hear a cymbal"
-    print(xor_encrypt(stanza.encode("utf-8"), b"ICE").hex())
+    result = xor_encrypt(stanza.encode("utf-8"), b"ICE").hex()
+    assert result == ("0b3637272a2b2e63622c2e69692a23693a2a3c6324202d623d63343"
+        "c2a26226324272765272a282b2f20430a652e2c652a3124333a653e2b2027630c692b"
+        "20283165286326302e27282f")
+    print(result)
 
 def challenge6():
     """Break repeating-key XOR"""
@@ -148,12 +155,14 @@ def challenge6():
         plaintext += "".join(char for char in message if char is not None)
     plaintext = "".join(plaintext)
     print(plaintext)
+    assert "white boy" in plaintext
 
 def challenge7():
     """AES in ECB mode"""
     cipher_bytes = base64.b64decode(open("7.txt").read())
     message = AES.new("YELLOW SUBMARINE", AES.MODE_ECB).decrypt(cipher_bytes)
     print(bytes_to_string(message))
+    assert b"white boy" in message
 
 def challenge8():
     """Detect AES in ECB mode"""
