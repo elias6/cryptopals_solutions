@@ -2,11 +2,14 @@
 
 import base64
 import cProfile
+import os
 import pprint
+import re
 import sys
 
 from Crypto.Cipher import AES
 from collections import Counter
+from copy import copy
 from itertools import cycle, zip_longest
 
 printer = pprint.PrettyPrinter(width=120)
@@ -188,6 +191,30 @@ def challenge10():
         last_cipher_chunk = cipher_chunk
     assert result == cipher_bytes
 
+def test_all_challenges():
+    challenges = {}
+    for name, var in globals().copy().items():
+        try:
+            num = int(re.findall("challenge(\d+)", name)[0])
+        except (IndexError, ValueError):
+            pass
+        else:
+            if callable(var):
+                challenges[num] = var
+    old_stdout = sys.stdout
+    sys.stdout = open(os.devnull, "w")
+    new_printer = copy(printer)
+    printer._stream = sys.stdout
+    for num in sorted(challenges):
+        print("running challenge {}".format(num), file=old_stdout)
+        challenges[num]()
+
 if __name__ == "__main__":
-    globals()["challenge" + sys.argv[1]]()
-    # cProfile.run("challenge" + sys.argv[1] + "()", sort="cumtime")
+    try:
+        challenge = globals()["challenge" + sys.argv[1]]
+    except IndexError:
+        test_all_challenges()
+        # cProfile.run("test_all_challenges()", sort="cumtime")
+    else:
+        challenge()
+        # cProfile.run("challenge()", sort="cumtime")
