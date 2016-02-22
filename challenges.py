@@ -75,6 +75,7 @@ def best_english_like_score_data(text, num=1):
     return sorted(all_english_like_scores_data(text), key=lambda m: m["score"], reverse=True)[:num]
 
 def challenge1():
+    """Convert hex to base64"""
     cipher_hex = ("49276d206b696c6c696e6720796f757220627261696e206c" +
         "696b65206120706f69736f6e6f7573206d757368726f6f6d")
     result = hex_to_base64(cipher_hex)
@@ -82,6 +83,7 @@ def challenge1():
     print(bytes_to_string(result))
 
 def challenge2():
+    """Fixed XOR"""
     output = xor_bytes(
         bytes.fromhex("1c0111001f010100061a024b53535009181c"),
         bytes.fromhex("686974207468652062756c6c277320657965"))
@@ -89,6 +91,7 @@ def challenge2():
     print(output.hex())
 
 def challenge3():
+    """Single-byte XOR cipher"""
     cipher_hex = "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736"
     ciphertext = bytes.fromhex(cipher_hex)
     best_data = best_english_like_score_data(ciphertext, num=5)
@@ -96,6 +99,7 @@ def challenge3():
     print(best_data[0]["message"])
 
 def challenge4():
+    """Detect single-character XOR"""
     cipher_hexes = [line.rstrip() for line in open("4.txt").readlines()]
     decoded_string_data = []
     for i, string in enumerate(cipher_hexes):
@@ -107,10 +111,12 @@ def challenge4():
     pp(result)
 
 def challenge5():
+    """Implement repeating-key XOR"""
     stanza = "Burning 'em, if you ain't quick and nimble\n" + "I go crazy when I hear a cymbal"
     print(xor_encrypt(stanza.encode("utf-8"), b"ICE").hex())
 
 def challenge6():
+    """Break repeating-key XOR"""
     assert edit_distance(b"this is a test", b"wokka wokka!!!") == 37
     cipher_bytes = base64.b64decode(open("6.txt").read())
     edit_distances = {}
@@ -141,11 +147,13 @@ def challenge6():
     print(plaintext)
 
 def challenge7():
+    """AES in ECB mode"""
     cipher_bytes = base64.b64decode(open("7.txt").read())
     message = AES.new("YELLOW SUBMARINE", AES.MODE_ECB).decrypt(cipher_bytes)
     print(bytes_to_string(message))
 
 def challenge8():
+    """Detect AES in ECB mode"""
     ecb_texts = []
     for i, line in enumerate(open("8.txt").readlines()):
         cipher_bytes = bytes.fromhex(line.strip())
