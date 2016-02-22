@@ -163,6 +163,10 @@ def challenge8():
     pp(ecb_texts)
     assert len(ecb_texts) == 1
 
+def challenge9():
+    """Implement PKCS#7 padding"""
+    b"YELLOW SUBMARINE\x04\x04\x04\x04"
+
 if __name__ == "__main__":
     globals()["challenge" + sys.argv[1]]()
     # cProfile.run("challenge" + sys.argv[1] + "()", sort="cumtime")
