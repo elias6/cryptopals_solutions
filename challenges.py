@@ -74,6 +74,10 @@ def all_english_like_scores_data(cipher_bytes):
 def best_english_like_score_data(text, num=1):
     return sorted(all_english_like_scores_data(text), key=lambda m: m["score"], reverse=True)[:num]
 
+def looks_like_ecb(cipher_bytes):
+    chunk_counter = Counter(byte_chunks(cipher_bytes, 16))
+    return chunk_counter.most_common(1)[0][1] > 1
+
 def pkcs7_pad(input_bytes, block_size=16):
     padding_length = -len(input_bytes) % block_size
     if padding_length == 0:
@@ -172,8 +176,7 @@ def challenge8():
     ecb_texts = []
     for i, line in enumerate(open("8.txt").readlines()):
         cipher_bytes = bytes.fromhex(line.strip())
-        chunk_counter = Counter(byte_chunks(cipher_bytes, 16))
-        if chunk_counter.most_common(1)[0][1] > 1:
+        if looks_like_ecb(cipher_bytes):
             ecb_texts.append({"index": i, "ciphertext": cipher_bytes})
     pp(ecb_texts)
     assert len(ecb_texts) == 1
