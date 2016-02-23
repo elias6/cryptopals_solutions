@@ -211,7 +211,7 @@ def challenge10():
     iv = bytes([0] * 16)
 
     plain_bytes = AES.new("YELLOW SUBMARINE", AES.MODE_CBC, iv).decrypt(cipher_bytes)
-    # print(bytes_to_string(plain_bytes))
+    assert b"white boy" in plain_bytes
     # Create new cipher object because using cipher object messes up internal IV state
     cbc_result = AES.new("YELLOW SUBMARINE", AES.MODE_CBC, iv).encrypt(plain_bytes)
     assert cbc_result == cipher_bytes
