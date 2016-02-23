@@ -57,8 +57,8 @@ def english_like_score(text):
     for char in text.lower():
         char_counts[char] += 1
     chi2 = 0
-    for letter, count in char_counts.items():
-        expected = text_length * frequencies.get(letter, 8e-4)
+    for char, count in char_counts.items():
+        expected = text_length * frequencies.get(char, 8e-4)
         difference = count - expected
         chi2 += difference**2 / expected
     total_letter_count = sum(1 for char in text.lower() if char in frequencies)
