@@ -39,7 +39,6 @@ def edit_distance(bytes1, bytes2):
     return result
 
 def byte_chunks(input_bytes, chunk_size):
-    # TODO: return generator instead?
     return [input_bytes[i : i + chunk_size] for i in range(0, len(input_bytes), chunk_size)]
 
 def english_like_score(text):
