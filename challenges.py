@@ -11,6 +11,9 @@ from Crypto.Cipher import AES
 from collections import Counter
 from copy import copy
 from itertools import cycle, zip_longest
+from random import SystemRandom
+
+random = SystemRandom()
 
 printer = pprint.PrettyPrinter(width=120)
 pp = printer.pprint
@@ -83,6 +86,19 @@ def pkcs7_pad(input_bytes, block_size=16):
     if padding_length == 0:
         padding_length = block_size
     return input_bytes + bytes([padding_length] * padding_length)
+
+def create_random_aes_key():
+    return os.urandom(16)
+
+def encrypt_with_random_key_and_random_mode(plain_bytes):
+    key = create_random_aes_key()
+    mode = random.choice([AES.MODE_CBC, AES.MODE_ECB])
+    # iv is ignored for MODE_ECB
+    iv = os.urandom(16)
+    prefix = os.urandom(random.randint(5, 10))
+    suffix = os.urandom(random.randint(5, 10))
+    bytes_to_encrypt = pkcs7_pad(prefix + plain_bytes + suffix)
+    return (AES.new(key, mode, iv).encrypt(bytes_to_encrypt), mode)
 
 def challenge1():
     """Convert hex to base64"""
@@ -205,6 +221,22 @@ def challenge10():
         result.extend(cipher_chunk)
         last_cipher_chunk = cipher_chunk
     assert result == cipher_bytes
+
+def challenge11():
+    """An ECB/CBC detection oracle"""
+    # hamlet.txt from http://erdani.com/tdpl/hamlet.txt
+    # This seems to work perfectly when encrypting 2923 or more bytes of hamlet.txt, but frequently
+    # guesses incorrectly with 2922 bytes or fewer. Different files produce different results but
+    # for any given file, there seems to be a precise amount of data at which this function works
+    # reliably, and below which it frequently thinks ECB is CBC.
+    plain_bytes = open("hamlet.txt", "rb").read(3000)
+    results = Counter()
+    for i in range(1000):
+        cipher_bytes, mode_number = encrypt_with_random_key_and_random_mode(plain_bytes)
+        mode = {1: "ECB", 2: "CBC"}[mode_number]
+        apparent_mode = "ECB" if looks_like_ecb(cipher_bytes) else "CBC"
+        results[apparent_mode] += 1
+        assert mode == apparent_mode, (mode, apparent_mode, results)
 
 def test_all_challenges():
     challenges = {}
