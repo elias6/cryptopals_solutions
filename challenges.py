@@ -74,6 +74,12 @@ def all_english_like_scores_data(cipher_bytes):
 def best_english_like_score_data(text, num=1):
     return sorted(all_english_like_scores_data(text), key=lambda m: m["score"], reverse=True)[:num]
 
+def pkcs7_pad(input_bytes, block_size=16):
+    padding_length = -len(input_bytes) % block_size
+    if padding_length == 0:
+        padding_length = block_size
+    return input_bytes + bytes([padding_length] * padding_length)
+
 def challenge1():
     """Convert hex to base64"""
     cipher_hex = ("49276d206b696c6c696e6720796f757220627261696e206c" +
@@ -174,7 +180,7 @@ def challenge8():
 
 def challenge9():
     """Implement PKCS#7 padding"""
-    b"YELLOW SUBMARINE\x04\x04\x04\x04"
+    assert pkcs7_pad(b"YELLOW SUBMARINE", 20) == b"YELLOW SUBMARINE\x04\x04\x04\x04"
 
 def challenge10():
     """Implement CBC mode"""
