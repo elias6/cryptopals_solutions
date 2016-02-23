@@ -8,7 +8,7 @@ import re
 import sys
 
 from Crypto.Cipher import AES
-from collections import Counter
+from collections import Counter, defaultdict
 from copy import copy
 from itertools import cycle, zip_longest
 from random import SystemRandom
@@ -52,8 +52,12 @@ def english_like_score(text):
         "u": 0.0225134, "v": 0.0082903, "w": 0.0171272, "x": 0.0013692, "y": 0.0145984,
         "z": 0.0007836, " ": 0.1918182}
     text_length = len(text)
+    # Use defaultdict instead of Counter because Counter is slow
+    char_counts = defaultdict(int)
+    for char in text.lower():
+        char_counts[char] += 1
     chi2 = 0
-    for letter, count in Counter(text.lower()).items():
+    for letter, count in char_counts.items():
         expected = text_length * frequencies.get(letter, 8e-4)
         difference = count - expected
         chi2 += difference**2 / expected
