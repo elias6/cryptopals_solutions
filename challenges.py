@@ -10,7 +10,7 @@ import sys
 from Crypto.Cipher import AES
 from collections import Counter, defaultdict
 from copy import copy
-from itertools import cycle, zip_longest
+from itertools import count, cycle, zip_longest
 from random import SystemRandom
 
 random = SystemRandom()
@@ -240,6 +240,43 @@ def challenge11():
         apparent_mode = "ECB" if looks_like_ecb(cipher_bytes) else "CBC"
         results[apparent_mode] += 1
         assert mode == apparent_mode, (mode, apparent_mode, results)
+
+def challenge12():
+    """Byte-at-a-time ECB decryption (Simple)"""
+    unknown_bytes = base64.b64decode(
+        "Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkgaGFpciBjYW"
+        "4gYmxvdwpUaGUgZ2lybGllcyBvbiBzdGFuZGJ5IHdhdmluZyBqdXN0IHRvIHNheSBoaQpE"
+        "aWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUgYnkK")
+    cipher = AES.new(create_random_aes_key(), AES.MODE_ECB)
+    call_oracle = lambda plain_bytes: cipher.encrypt(pkcs7_pad(plain_bytes + unknown_bytes))
+
+    seen_cipher_sizes = set()
+    for plaintext_size in count(1):
+        cipher_bytes = call_oracle(b"A" * plaintext_size)
+        seen_cipher_sizes.add(len(cipher_bytes))
+        if len(seen_cipher_sizes) >= 2 and looks_like_ecb(cipher_bytes):
+            break
+    seen_cipher_sizes = sorted(seen_cipher_sizes)
+    apparent_block_size = seen_cipher_sizes[1] - seen_cipher_sizes[0]
+    assert apparent_block_size == 16
+
+    plaintext = bytes()
+    for byte_index in range(len(unknown_bytes)):
+        block_index = byte_index // apparent_block_size
+        plaintext_in_block_length = byte_index % apparent_block_size
+        short_block_length = apparent_block_size - 1 - plaintext_in_block_length
+        short_input_block = b"A" * short_block_length
+        short_block_output = call_oracle(short_input_block)
+        short_block_chunk = byte_chunks(short_block_output)[block_index]
+        for i in range(256):
+            input_block = short_input_block + plaintext + bytes([i])
+            output = call_oracle(input_block)
+            telltale_chunk = byte_chunks(output)[block_index]
+            if telltale_chunk == short_block_chunk:
+                plaintext += bytes([i])
+                break
+    print(bytes_to_string(plaintext))
+    assert plaintext == unknown_bytes
 
 def test_all_challenges():
     challenges = {}
