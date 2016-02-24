@@ -38,7 +38,7 @@ def edit_distance(bytes1, bytes2):
         result += sum(1 for i in range(8) if byte1 & (1 << i) != byte2 & (1 << i))
     return result
 
-def byte_chunks(input_bytes, chunk_size):
+def byte_chunks(input_bytes, chunk_size=16):
     return [input_bytes[i : i + chunk_size] for i in range(0, len(input_bytes), chunk_size)]
 
 def english_like_score(text):
@@ -81,7 +81,7 @@ def best_english_like_score_data(text, num=1):
     return sorted(all_english_like_scores_data(text), key=lambda m: m["score"], reverse=True)[:num]
 
 def looks_like_ecb(cipher_bytes):
-    chunk_counter = Counter(byte_chunks(cipher_bytes, 16))
+    chunk_counter = Counter(byte_chunks(cipher_bytes))
     return chunk_counter.most_common(1)[0][1] > 1
 
 def pkcs7_pad(input_bytes, block_size=16):
@@ -218,7 +218,7 @@ def challenge10():
     last_cipher_chunk = iv
     cipher = AES.new("YELLOW SUBMARINE", AES.MODE_ECB, iv)
     result = bytearray()
-    for plain_chunk in byte_chunks(plain_bytes, 16):
+    for plain_chunk in byte_chunks(plain_bytes):
         combined_chunk = xor_bytes(last_cipher_chunk, plain_chunk)
         cipher_chunk = cipher.encrypt(combined_chunk)
         result.extend(cipher_chunk)
