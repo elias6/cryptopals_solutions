@@ -178,7 +178,7 @@ def challenge6():
     print()
     plaintext = []
     for message in zip_longest(*transposed_messages):
-        plaintext += "".join(char for char in message if char is not None)
+        plaintext.append("".join(char for char in message if char is not None))
     plaintext = "".join(plaintext)
     print(plaintext)
     assert "white boy" in plaintext
