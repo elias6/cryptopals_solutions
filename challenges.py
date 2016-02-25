@@ -12,6 +12,7 @@ from collections import Counter, defaultdict
 from copy import copy
 from itertools import count, cycle, zip_longest
 from random import SystemRandom
+from urllib.parse import parse_qs, urlencode
 
 random = SystemRandom()
 
@@ -110,6 +111,13 @@ def encrypt_with_random_key_and_random_mode(plain_bytes):
     suffix = os.urandom(random.randint(5, 10))
     bytes_to_encrypt = pkcs7_pad(prefix + plain_bytes + suffix)
     return (AES.new(key, mode, iv).encrypt(bytes_to_encrypt), mode)
+
+def create_encrypted_user_profile(email_address, cipher):
+    profile_data = [("email", email_address), ("uid", "10"), ("role", "user")]
+    return cipher.encrypt(pkcs7_pad(urlencode(profile_data).encode("utf-8")))
+
+def decrypt_profile(encrypted_profile, cipher):
+    return bytes_to_string(pkcs7_unpad(cipher.decrypt(encrypted_profile)))
 
 def challenge1():
     """Convert hex to base64"""
@@ -285,6 +293,25 @@ def challenge12():
                 break
     print(bytes_to_string(plaintext))
     assert plaintext == unknown_bytes
+
+def challenge13():
+    """ECB cut-and-paste"""
+    cipher = AES.new(create_random_aes_key(), mode=AES.MODE_ECB)
+
+    profile1 = create_encrypted_user_profile("peter.gregory@piedpiper.com", cipher)
+    profile1_chunks = byte_chunks(profile1)
+
+    profile2 = create_encrypted_user_profile("zach.woods@piedpiper.comadmin", cipher)
+    profile2_chunks = byte_chunks(profile2)
+
+    profile3 = create_encrypted_user_profile("a@a.com", cipher)
+    padding_only_chunk = byte_chunks(profile3)[-1]
+
+    new_profile = b"".join(profile1_chunks[:3]) + profile2_chunks[2] + padding_only_chunk
+    decrypted_new_profile = decrypt_profile(new_profile, cipher)
+    assert parse_qs(decrypted_new_profile)["role"] == ["admin"]
+    print(decrypted_new_profile)
+    #TODO: try to make a profile without duplicate uid params and "rol" string at end
 
 def test_all_challenges():
     challenges = {}
