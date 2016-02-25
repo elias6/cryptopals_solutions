@@ -112,6 +112,17 @@ def encrypt_with_random_key_and_random_mode(plain_bytes):
     bytes_to_encrypt = pkcs7_pad(prefix + plain_bytes + suffix)
     return (AES.new(key, mode, iv).encrypt(bytes_to_encrypt), mode)
 
+def appears_to_produce_ecb(oracle_fn):
+    return any(looks_like_ecb(oracle_fn(b"A" * i)) for i in range(1000))
+
+def guess_block_size(oracle_fn):
+    seen_cipher_sizes = set()
+    for plaintext_size in count(start=1):
+        cipher_bytes = oracle_fn(b"A" * plaintext_size)
+        seen_cipher_sizes.add(len(cipher_bytes))
+        if len(seen_cipher_sizes) == 2:
+            return max(seen_cipher_sizes) - min(seen_cipher_sizes)
+
 def create_encrypted_user_profile(email_address, cipher):
     profile_data = [("email", email_address), ("uid", "10"), ("role", "user")]
     return cipher.encrypt(pkcs7_pad(urlencode(profile_data).encode("utf-8")))
@@ -265,15 +276,8 @@ def challenge12():
         "aWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUgYnkK")
     cipher = AES.new(create_random_aes_key(), AES.MODE_ECB)
     call_oracle = lambda plain_bytes: cipher.encrypt(pkcs7_pad(plain_bytes + unknown_bytes))
-
-    seen_cipher_sizes = set()
-    for plaintext_size in count(1):
-        cipher_bytes = call_oracle(b"A" * plaintext_size)
-        seen_cipher_sizes.add(len(cipher_bytes))
-        if len(seen_cipher_sizes) >= 2 and looks_like_ecb(cipher_bytes):
-            break
-    seen_cipher_sizes = sorted(seen_cipher_sizes)
-    apparent_block_size = seen_cipher_sizes[1] - seen_cipher_sizes[0]
+    assert appears_to_produce_ecb(call_oracle)
+    apparent_block_size = guess_block_size(call_oracle)
     assert apparent_block_size == 16
 
     plaintext = bytes()
