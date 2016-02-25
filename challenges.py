@@ -90,6 +90,14 @@ def pkcs7_pad(input_bytes, block_size=16):
         padding_length = block_size
     return input_bytes + bytes([padding_length] * padding_length)
 
+def pkcs7_unpad(cipher_bytes, block_size=16):
+    padding_length = cipher_bytes[-1]
+    expected_padding = bytes([padding_length]) * padding_length
+    padding = cipher_bytes[-padding_length:]
+    if padding_length > block_size or padding != expected_padding:
+        raise ValueError("Invalid padding")
+    return cipher_bytes[:-padding_length]
+
 def create_random_aes_key():
     return os.urandom(16)
 
