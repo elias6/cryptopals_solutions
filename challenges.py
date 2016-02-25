@@ -275,17 +275,18 @@ def challenge12():
         "4gYmxvdwpUaGUgZ2lybGllcyBvbiBzdGFuZGJ5IHdhdmluZyBqdXN0IHRvIHNheSBoaQpE"
         "aWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUgYnkK")
     cipher = AES.new(create_random_aes_key(), AES.MODE_ECB)
-    call_oracle = lambda plain_bytes: cipher.encrypt(pkcs7_pad(plain_bytes + unknown_bytes))
+
+    def call_oracle(plain_bytes):
+        return cipher.encrypt(pkcs7_pad(plain_bytes + unknown_bytes))
+
     assert appears_to_produce_ecb(call_oracle)
-    apparent_block_size = guess_block_size(call_oracle)
-    assert apparent_block_size == 16
+    block_size = guess_block_size(call_oracle)
+    assert block_size == 16
 
     plaintext = bytes()
     for byte_index in range(len(unknown_bytes)):
-        block_index = byte_index // apparent_block_size
-        plaintext_in_block_length = byte_index % apparent_block_size
-        short_block_length = apparent_block_size - 1 - plaintext_in_block_length
-        short_input_block = b"A" * short_block_length
+        block_index, plaintext_in_block_length = divmod(byte_index, block_size)
+        short_input_block = b"A" * (block_size - 1 - plaintext_in_block_length)
         short_block_output = call_oracle(short_input_block)
         short_block_chunk = byte_chunks(short_block_output)[block_index]
         for i in range(256):
