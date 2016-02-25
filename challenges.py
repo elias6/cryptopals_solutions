@@ -81,8 +81,8 @@ def all_english_like_scores_data(cipher_bytes):
             "score": score})
     return result
 
-def best_english_like_score_data(text, num=1):
-    return sorted(all_english_like_scores_data(text), key=lambda m: m["score"], reverse=True)[:num]
+def best_english_like_score_data(text):
+    return sorted(all_english_like_scores_data(text), key=lambda m: m["score"], reverse=True)
 
 def looks_like_ecb(cipher_bytes):
     chunk_counter = Counter(byte_chunks(cipher_bytes))
@@ -154,7 +154,7 @@ def challenge3():
     """Single-byte XOR cipher"""
     cipher_hex = "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736"
     ciphertext = bytes.fromhex(cipher_hex)
-    best_data = best_english_like_score_data(ciphertext, num=5)
+    best_data = best_english_like_score_data(ciphertext)[:5]
     pp(best_data)
     print(best_data[0]["message"])
     assert best_data[0]["message"] == "Cooking MC's like a pound of bacon"
