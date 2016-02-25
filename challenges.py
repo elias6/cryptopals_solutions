@@ -62,6 +62,8 @@ def english_like_score(text):
     text_length = len(text)
     chi_squared = 0
     for char, char_count in char_counts.items():
+        # Number 5.4e-4 was empirically observed to produce the best ratio of
+        # score for English text to score for incorrectly decrypted text.
         expected = text_length * frequencies.get(char, 5.4e-4)
         difference = char_count - expected
         chi_squared += difference * difference / expected
@@ -85,6 +87,8 @@ def best_english_like_score_data(text):
     return sorted(all_english_like_scores_data(text), key=lambda m: m["score"], reverse=True)
 
 def looks_like_ecb(cipher_bytes):
+    # TODO: use birthday paradox to calculate an estimate for the expected
+    # number of duplicate blocks so this function works on big ciphertexts.
     chunk_counter = Counter(byte_chunks(cipher_bytes))
     return chunk_counter.most_common(1)[0][1] > 1
 
