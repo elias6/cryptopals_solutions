@@ -43,26 +43,29 @@ def byte_chunks(input_bytes, chunk_size=16):
     return [input_bytes[i : i + chunk_size] for i in range(0, len(input_bytes), chunk_size)]
 
 def english_like_score(text):
-    # Character frequencies from http://www.data-compression.com/english.html
+    # Character frequencies taken from raw letter averages at
+    # http://www.macfreek.nl/memory/Letter_Distribution, then rounded to 6
+    # decimal places for readability.
     frequencies = {
-        "a": 0.0651738, "b": 0.0124248, "c": 0.0217339, "d": 0.0349835, "e": 0.1041442,
-        "f": 0.0197881, "g": 0.0158610, "h": 0.0492888, "i": 0.0558094, "j": 0.0009033,
-        "k": 0.0050529, "l": 0.0331490, "m": 0.0202124, "n": 0.0564513, "o": 0.0596302,
-        "p": 0.0137645, "q": 0.0008606, "r": 0.0497563, "s": 0.0515760, "t": 0.0729357,
-        "u": 0.0225134, "v": 0.0082903, "w": 0.0171272, "x": 0.0013692, "y": 0.0145984,
-        "z": 0.0007836, " ": 0.1918182}
-    text_length = len(text)
+        " ": 0.183169, "a": 0.065531, "b": 0.012708, "c": 0.022651, "d": 0.033523,
+        "e": 0.102179, "f": 0.019718, "g": 0.016359, "h": 0.048622, "i": 0.057343,
+        "j": 0.001144, "k": 0.005692, "l": 0.033562, "m": 0.020173, "n": 0.057031,
+        "o": 0.062006, "p": 0.015031, "q": 0.000881, "r": 0.049720, "s": 0.053263,
+        "t": 0.075100, "u": 0.022952, "v": 0.007880, "w": 0.016896, "x": 0.001498,
+        "y": 0.014700, "z": 0.000598,
+        "\ufffd": 1e-6 # Unicode replacement character
+    }
     # Use defaultdict instead of Counter because Counter is slow
     char_counts = defaultdict(int)
     for char in text.lower():
         char_counts[char] += 1
-    chi2 = 0
-    for char, count in char_counts.items():
-        expected = text_length * frequencies.get(char, 8e-4)
-        difference = count - expected
-        chi2 += difference**2 / expected
-    total_letter_count = sum(1 for char in text.lower() if char in frequencies)
-    return total_letter_count / chi2 / text_length
+    text_length = len(text)
+    chi_squared = 0
+    for char, char_count in char_counts.items():
+        expected = text_length * frequencies.get(char, 5.4e-4)
+        difference = char_count - expected
+        chi_squared += difference * difference / expected
+    return 1e6 / chi_squared / text_length
 
 def all_english_like_scores_data(cipher_bytes):
     result = []
