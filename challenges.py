@@ -10,7 +10,8 @@ import sys
 from Crypto.Cipher import AES
 from collections import Counter, defaultdict
 from copy import copy
-from itertools import count, cycle, zip_longest
+from fractions import gcd
+from itertools import cycle, zip_longest
 from random import SystemRandom
 from urllib.parse import parse_qs, urlencode
 
@@ -123,12 +124,18 @@ def appears_to_produce_ecb(oracle_fn):
     return any(looks_like_ecb(oracle_fn(b"A" * i)) for i in range(1000))
 
 def guess_block_size(oracle_fn):
-    seen_cipher_sizes = set()
-    for plaintext_size in count(start=1):
-        cipher_bytes = oracle_fn(b"A" * plaintext_size)
-        seen_cipher_sizes.add(len(cipher_bytes))
-        if len(seen_cipher_sizes) == 2:
-            return max(seen_cipher_sizes) - min(seen_cipher_sizes)
+    seen_sizes = set()
+    for plaintext_size in range(33):
+        for _ in range(5):
+            cipher_bytes = oracle_fn(os.urandom(plaintext_size))
+            seen_sizes.add(len(cipher_bytes))
+    if len(seen_sizes) >= 2:
+        result = 0
+        for size in seen_sizes:
+            result = gcd(result, size)
+        return result
+    else:
+        raise ValueError("Could not guess block size")
 
 def create_encrypted_user_profile(email_address, cipher):
     profile_data = [("email", email_address), ("uid", "10"), ("role", "user")]
