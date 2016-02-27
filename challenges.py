@@ -46,8 +46,8 @@ def byte_chunks(input_bytes, chunk_size=16):
 
 def english_like_score(text):
     # Character frequencies taken from raw letter averages at
-    # http://www.macfreek.nl/memory/Letter_Distribution, then rounded to 6
-    # decimal places for readability.
+    # http://www.macfreek.nl/memory/Letter_Distribution, then rounded to
+    # 6 decimal places for readability.
     frequencies = {
         " ": 0.183169, "a": 0.065531, "b": 0.012708, "c": 0.022651, "d": 0.033523,
         "e": 0.102179, "f": 0.019718, "g": 0.016359, "h": 0.048622, "i": 0.057343,
@@ -64,8 +64,9 @@ def english_like_score(text):
     text_length = len(text)
     chi_squared = 0
     for char, char_count in char_counts.items():
-        # Number 5.4e-4 was empirically observed to produce the best ratio of
-        # score for English text to score for incorrectly decrypted text.
+        # Number 5.4e-4 was empirically observed to produce the best
+        # ratio of score for English text to score for incorrectly
+        # decrypted text.
         expected = text_length * frequencies.get(char, 5.4e-4)
         difference = char_count - expected
         chi_squared += difference * difference / expected
@@ -91,8 +92,9 @@ def best_english_like_score_data(text):
                   reverse=True)
 
 def looks_like_ecb(cipher_bytes):
-    # TODO: use birthday paradox to calculate an estimate for the expected
-    # number of duplicate blocks so this function works on big ciphertexts.
+    # TODO: use birthday paradox to calculate an estimate for the
+    # expected number of duplicate blocks so this function works on big
+    # ciphertexts.
     chunk_counter = Counter(byte_chunks(cipher_bytes))
     return chunk_counter.most_common(1)[0][1] > 1
 
@@ -256,7 +258,8 @@ def challenge10():
 
     plain_bytes = AES.new("YELLOW SUBMARINE", AES.MODE_CBC, iv).decrypt(cipher_bytes)
     assert b"white boy" in plain_bytes
-    # Create new cipher object because using cipher object messes up internal IV state
+    # Create new cipher object because using cipher object messes up
+    # internal IV state
     cbc_result = AES.new("YELLOW SUBMARINE", AES.MODE_CBC, iv).encrypt(plain_bytes)
     assert cbc_result == cipher_bytes
 
@@ -273,10 +276,12 @@ def challenge10():
 def challenge11():
     """An ECB/CBC detection oracle"""
     # hamlet.txt from http://erdani.com/tdpl/hamlet.txt
-    # This seems to work perfectly when encrypting 2923 or more bytes of hamlet.txt, but frequently
-    # guesses incorrectly with 2922 bytes or fewer. Different files produce different results but
-    # for any given file, there seems to be a precise amount of data at which this function works
-    # reliably, and below which it frequently thinks ECB is CBC.
+    # This seems to work perfectly when encrypting 2923 or more bytes of
+    # hamlet.txt, but frequently guesses incorrectly with 2922 bytes or
+    # fewer. Different files produce different results but for any given
+    # file, there seems to be a precise amount of data at which this
+    # function works reliably, and below which it frequently thinks ECB
+    # is CBC.
     plain_bytes = open("hamlet.txt", "rb").read(3000)
     results = Counter()
     for i in range(1000):
@@ -334,7 +339,8 @@ def challenge13():
     decrypted_new_profile = decrypt_profile(new_profile, cipher)
     assert parse_qs(decrypted_new_profile)["role"] == ["admin"]
     print(decrypted_new_profile)
-    #TODO: try to make a profile without duplicate uid params and "rol" string at end
+    # TODO: try to make a profile without duplicate uid params and "rol"
+    # string at end
 
 def test_all_challenges():
     challenges = {}
