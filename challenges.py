@@ -20,6 +20,8 @@ random = SystemRandom()
 printer = pprint.PrettyPrinter(width=120)
 pp = printer.pprint
 
+ALL_BYTES = [bytes([i]) for i in range(256)]
+
 def hex_to_base64(hex_string):
     return base64.b64encode(bytes.fromhex(hex_string))
 
@@ -74,8 +76,7 @@ def english_like_score(text):
 
 def all_english_like_scores_data(cipher_bytes):
     result = []
-    for i in range(256):
-        key = bytes([i])
+    for key in ALL_BYTES:
         message = bytes_to_string(xor_encrypt(cipher_bytes, key))
         score = english_like_score(message)
         result.append({
@@ -312,12 +313,12 @@ def challenge12():
         short_input_block = b"A" * (block_size - 1 - plaintext_in_block_length)
         short_block_output = call_oracle(short_input_block)
         short_block_chunk = byte_chunks(short_block_output)[block_index]
-        for i in range(256):
-            input_block = short_input_block + plaintext + bytes([i])
+        for test_byte in ALL_BYTES:
+            input_block = short_input_block + plaintext + test_byte
             output = call_oracle(input_block)
             telltale_chunk = byte_chunks(output)[block_index]
             if telltale_chunk == short_block_chunk:
-                plaintext += bytes([i])
+                plaintext += test_byte
                 break
     print(bytes_to_string(plaintext))
     assert plaintext == unknown_bytes
