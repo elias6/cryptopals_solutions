@@ -41,7 +41,8 @@ def edit_distance(bytes1, bytes2):
     return result
 
 def byte_chunks(input_bytes, chunk_size=16):
-    return [input_bytes[i : i + chunk_size] for i in range(0, len(input_bytes), chunk_size)]
+    return [input_bytes[i : i + chunk_size]
+        for i in range(0, len(input_bytes), chunk_size)]
 
 def english_like_score(text):
     # Character frequencies taken from raw letter averages at
@@ -85,7 +86,9 @@ def all_english_like_scores_data(cipher_bytes):
     return result
 
 def best_english_like_score_data(text):
-    return sorted(all_english_like_scores_data(text), key=lambda m: m["score"], reverse=True)
+    return sorted(all_english_like_scores_data(text),
+                  key=lambda m: m["score"],
+                  reverse=True)
 
 def looks_like_ecb(cipher_bytes):
     # TODO: use birthday paradox to calculate an estimate for the expected
@@ -185,7 +188,8 @@ def challenge4():
 
 def challenge5():
     """Implement repeating-key XOR"""
-    stanza = "Burning 'em, if you ain't quick and nimble\n" + "I go crazy when I hear a cymbal"
+    stanza = ("Burning 'em, if you ain't quick and nimble\n"
+        "I go crazy when I hear a cymbal")
     result = xor_encrypt(stanza.encode("utf-8"), b"ICE").hex()
     assert result == ("0b3637272a2b2e63622c2e69692a23693a2a3c6324202d623d63343"
         "c2a26226324272765272a282b2f20430a652e2c652a3124333a653e2b2027630c692b"
