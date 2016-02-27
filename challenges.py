@@ -297,7 +297,7 @@ def challenge12():
     block_size = guess_block_size(call_oracle)
     assert block_size == 16
 
-    plaintext = bytes()
+    plaintext = bytearray()
     for byte_index in range(len(unknown_bytes)):
         block_index, plaintext_in_block_length = divmod(byte_index, block_size)
         short_input_block = b"A" * (block_size - 1 - plaintext_in_block_length)
