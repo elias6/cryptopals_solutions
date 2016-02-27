@@ -290,8 +290,8 @@ def challenge12():
         "aWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUgYnkK")
     cipher = AES.new(create_random_aes_key(), AES.MODE_ECB)
 
-    def call_oracle(plain_bytes):
-        return cipher.encrypt(pkcs7_pad(plain_bytes + unknown_bytes))
+    def call_oracle(attacker_bytes):
+        return cipher.encrypt(pkcs7_pad(attacker_bytes + unknown_bytes))
 
     assert appears_to_produce_ecb(call_oracle)
     block_size = guess_block_size(call_oracle)
