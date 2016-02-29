@@ -11,7 +11,7 @@ from Crypto.Cipher import AES
 from collections import Counter, defaultdict
 from copy import copy
 from fractions import gcd
-from itertools import count, cycle, zip_longest
+from itertools import cycle, zip_longest
 from random import SystemRandom
 from urllib.parse import parse_qs, urlencode
 
@@ -308,16 +308,16 @@ def challenge12():
     assert block_size == 16
 
     plaintext = bytearray()
-    for byte_index in count(start=0):
-        block_index, plaintext_in_block_length = divmod(byte_index, block_size)
-        short_input_block = b"A" * (block_size - 1 - plaintext_in_block_length)
+    while True:
+        short_input_block = b"A" * ((block_size - len(plaintext) - 1) % block_size)
         short_block_output = call_oracle(short_input_block)
-        short_block_chunk = byte_chunks(short_block_output)[block_index]
+        block_index = len(plaintext) // block_size
+        block_to_look_for = byte_chunks(short_block_output)[block_index]
         for test_byte in ALL_BYTES:
-            input_block = short_input_block + plaintext + test_byte
-            output = call_oracle(input_block)
+            test_input = short_input_block + plaintext + test_byte
+            output = call_oracle(test_input)
             telltale_chunk = byte_chunks(output)[block_index]
-            if telltale_chunk == short_block_chunk:
+            if telltale_chunk == block_to_look_for:
                 plaintext += test_byte
                 break
         else:
