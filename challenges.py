@@ -167,6 +167,27 @@ def decrypt_profile(encrypted_profile, cipher):
     return bytes_to_string(pkcs7_unpad(cipher.decrypt(encrypted_profile)))
 
 
+def crack_ecb_oracle(oracle_fn, prefix_length=0, block_size=16):
+    assert appears_to_produce_ecb(oracle_fn)
+
+    result = bytearray()
+    while True:
+        short_block_length = (block_size - len(result) - 1 - prefix_length) % block_size
+        short_input_block = b"A" * short_block_length
+        short_block_output = oracle_fn(short_input_block)
+        block_index = (len(result) + prefix_length) // block_size
+        block_to_look_for = byte_chunks(short_block_output)[block_index]
+        for test_byte in ALL_BYTES:
+            test_input = short_input_block + result + test_byte
+            output = oracle_fn(test_input)
+            telltale_chunk = byte_chunks(output)[block_index]
+            if telltale_chunk == block_to_look_for:
+                result += test_byte
+                break
+        else:  # if no byte matches
+            return pkcs7_unpad(result)
+
+
 def challenge1():
     """Convert hex to base64"""
     cipher_hex = ("49276d206b696c6c696e6720796f757220627261696e206c" +
@@ -331,27 +352,10 @@ def challenge12():
     def call_oracle(attacker_bytes):
         return cipher.encrypt(pkcs7_pad(attacker_bytes + unknown_bytes))
 
-    assert appears_to_produce_ecb(call_oracle)
     block_size = guess_block_size(call_oracle)
     assert block_size == 16
 
-    plaintext = bytearray()
-    while True:
-        short_input_block = b"A" * ((block_size - len(plaintext) - 1) % block_size)
-        short_block_output = call_oracle(short_input_block)
-        block_index = len(plaintext) // block_size
-        block_to_look_for = byte_chunks(short_block_output)[block_index]
-        for test_byte in ALL_BYTES:
-            test_input = short_input_block + plaintext + test_byte
-            output = call_oracle(test_input)
-            telltale_chunk = byte_chunks(output)[block_index]
-            if telltale_chunk == block_to_look_for:
-                plaintext += test_byte
-                break
-        else:
-            # if no byte matches
-            break
-    plaintext = pkcs7_unpad(plaintext)
+    plaintext = crack_ecb_oracle(call_oracle)
     print(bytes_to_string(plaintext))
     assert plaintext == unknown_bytes
 
@@ -403,24 +407,7 @@ def challenge14():
     # TODO: make prefix_length calculation work reliably even if
     # attacker bytes look like random bytes or target bytes.
 
-    plaintext = bytearray()
-    while True:
-        short_block_length = (block_size - len(plaintext) - 1 - prefix_length) % block_size
-        short_input_block = b"A" * short_block_length
-        short_block_output = call_oracle(short_input_block)
-        block_index = (len(plaintext) + prefix_length) // block_size
-        block_to_look_for = byte_chunks(short_block_output)[block_index]
-        for test_byte in ALL_BYTES:
-            test_input = short_input_block + plaintext + test_byte
-            output = call_oracle(test_input)
-            telltale_chunk = byte_chunks(output)[block_index]
-            if telltale_chunk == block_to_look_for:
-                plaintext += test_byte
-                break
-        else:
-            # if no byte matches
-            break
-    plaintext = pkcs7_unpad(plaintext)
+    plaintext = crack_ecb_oracle(call_oracle, prefix_length=prefix_length)
     assert plaintext == target_bytes
 
 
