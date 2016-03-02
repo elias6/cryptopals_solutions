@@ -349,13 +349,13 @@ def challenge12():
         "aWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUgYnkK")
     cipher = AES.new(create_random_aes_key(), AES.MODE_ECB)
 
-    def call_oracle(attacker_bytes):
+    def oracle_fn(attacker_bytes):
         return cipher.encrypt(pkcs7_pad(attacker_bytes + unknown_bytes))
 
-    block_size = guess_block_size(call_oracle)
+    block_size = guess_block_size(oracle_fn)
     assert block_size == 16
 
-    plaintext = crack_ecb_oracle(call_oracle)
+    plaintext = crack_ecb_oracle(oracle_fn)
     print(bytes_to_string(plaintext))
     assert plaintext == unknown_bytes
 
@@ -388,26 +388,26 @@ def challenge14():
     target_bytes = (b"Give a man a beer, he'll waste an hour. "
         b"Teach a man to brew, he'll waste a lifetime.")
 
-    def call_oracle(attacker_bytes):
+    def oracle_fn(attacker_bytes):
         return cipher.encrypt(pkcs7_pad(random_bytes + attacker_bytes + target_bytes))
 
-    assert appears_to_produce_ecb(call_oracle)
-    block_size = guess_block_size(call_oracle)
+    assert appears_to_produce_ecb(oracle_fn)
+    block_size = guess_block_size(oracle_fn)
     assert block_size == 16
 
-    chunks = byte_chunks(call_oracle(b"A" * 3*block_size))
+    chunks = byte_chunks(oracle_fn(b"A" * 3*block_size))
     attacker_block, attacker_block_count = Counter(chunks).most_common(1)[0]
     assert attacker_block_count >= 2
     attacker_block_pos = block_size * chunks.index(attacker_block)
     for i in range(block_size):
-        chunks = byte_chunks(call_oracle(b"A" * (3*block_size - i - 1)))
+        chunks = byte_chunks(oracle_fn(b"A" * (3*block_size - i - 1)))
         if Counter(chunks)[attacker_block] < attacker_block_count:
             prefix_length = attacker_block_pos - (-i % block_size)
             break
     # TODO: make prefix_length calculation work reliably even if
     # attacker bytes look like random bytes or target bytes.
 
-    plaintext = crack_ecb_oracle(call_oracle, prefix_length=prefix_length)
+    plaintext = crack_ecb_oracle(oracle_fn, prefix_length=prefix_length)
     assert plaintext == target_bytes
 
 
