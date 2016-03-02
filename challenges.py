@@ -132,9 +132,8 @@ def appears_to_produce_ecb(oracle_fn):
 def guess_block_size(oracle_fn):
     seen_sizes = set()
     for plaintext_size in range(33):
-        for _ in range(5):
-            cipher_bytes = oracle_fn(os.urandom(plaintext_size))
-            seen_sizes.add(len(cipher_bytes))
+        cipher_bytes = oracle_fn(os.urandom(plaintext_size))
+        seen_sizes.add(len(cipher_bytes))
     if len(seen_sizes) >= 2:
         result = 0
         for size in seen_sizes:
