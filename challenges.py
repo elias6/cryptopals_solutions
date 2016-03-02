@@ -25,16 +25,20 @@ ALL_BYTES = [bytes([i]) for i in range(256)]
 def hex_to_base64(hex_string):
     return base64.b64encode(bytes.fromhex(hex_string))
 
+
 def bytes_to_string(b):
     return b.decode("utf-8", errors="replace")
+
 
 def xor_bytes(bytes1, bytes2):
     if len(bytes1) != len(bytes2):
         raise ValueError("strings must be of equal length")
     return bytes(a ^ b for a, b in zip(bytes1, bytes2))
 
+
 def xor_encrypt(input_bytes, key):
     return bytes(a ^ b for a, b in zip(input_bytes, cycle(key)))
+
 
 def edit_distance(bytes1, bytes2):
     result = 0
@@ -42,9 +46,11 @@ def edit_distance(bytes1, bytes2):
         result += sum(1 for i in range(8) if byte1 & (1 << i) != byte2 & (1 << i))
     return result
 
+
 def byte_chunks(input_bytes, chunk_size=16):
     return [input_bytes[i : i + chunk_size]
         for i in range(0, len(input_bytes), chunk_size)]
+
 
 def english_like_score(text):
     # Character frequencies taken from raw letter averages at
@@ -74,6 +80,7 @@ def english_like_score(text):
         chi_squared += difference * difference / expected
     return 1e6 / chi_squared / text_length
 
+
 def all_english_like_scores_data(cipher_bytes):
     result = []
     for key in ALL_BYTES:
@@ -87,10 +94,12 @@ def all_english_like_scores_data(cipher_bytes):
             "score": score})
     return result
 
+
 def best_english_like_score_data(text):
     return sorted(all_english_like_scores_data(text),
                   key=lambda m: m["score"],
                   reverse=True)
+
 
 def looks_like_ecb(cipher_bytes):
     # TODO: use birthday paradox to calculate an estimate for the
@@ -99,11 +108,13 @@ def looks_like_ecb(cipher_bytes):
     chunk_counter = Counter(byte_chunks(cipher_bytes))
     return chunk_counter.most_common(1)[0][1] > 1
 
+
 def pkcs7_pad(input_bytes, block_size=16):
     padding_length = -len(input_bytes) % block_size
     if padding_length == 0:
         padding_length = block_size
     return input_bytes + bytes([padding_length] * padding_length)
+
 
 def pkcs7_unpad(cipher_bytes, block_size=16):
     padding_length = cipher_bytes[-1]
@@ -113,8 +124,10 @@ def pkcs7_unpad(cipher_bytes, block_size=16):
         raise ValueError("Invalid padding")
     return cipher_bytes[:-padding_length]
 
+
 def create_random_aes_key():
     return os.urandom(16)
+
 
 def encrypt_with_random_key_and_random_mode(plain_bytes):
     key = create_random_aes_key()
@@ -126,8 +139,10 @@ def encrypt_with_random_key_and_random_mode(plain_bytes):
     bytes_to_encrypt = pkcs7_pad(prefix + plain_bytes + suffix)
     return (AES.new(key, mode, iv).encrypt(bytes_to_encrypt), mode)
 
+
 def appears_to_produce_ecb(oracle_fn):
     return any(looks_like_ecb(oracle_fn(b"A" * i)) for i in range(1000))
+
 
 def guess_block_size(oracle_fn):
     seen_sizes = set()
@@ -142,12 +157,15 @@ def guess_block_size(oracle_fn):
     else:
         raise ValueError("Could not guess block size")
 
+
 def create_encrypted_user_profile(email_address, cipher):
     profile_data = [("email", email_address), ("uid", "10"), ("role", "user")]
     return cipher.encrypt(pkcs7_pad(urlencode(profile_data).encode("utf-8")))
 
+
 def decrypt_profile(encrypted_profile, cipher):
     return bytes_to_string(pkcs7_unpad(cipher.decrypt(encrypted_profile)))
+
 
 def challenge1():
     """Convert hex to base64"""
@@ -156,6 +174,7 @@ def challenge1():
     result = hex_to_base64(cipher_hex)
     assert result == b"SSdtIGtpbGxpbmcgeW91ciBicmFpbiBsaWtlIGEgcG9pc29ub3VzIG11c2hyb29t"
     print(bytes_to_string(result))
+
 
 def challenge2():
     """Fixed XOR"""
@@ -166,6 +185,7 @@ def challenge2():
     print(bytes_to_string(output))
     print(output.hex())
 
+
 def challenge3():
     """Single-byte XOR cipher"""
     cipher_hex = "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736"
@@ -174,6 +194,7 @@ def challenge3():
     pp(best_data)
     print(best_data[0]["message"])
     assert best_data[0]["message"] == "Cooking MC's like a pound of bacon"
+
 
 def challenge4():
     """Detect single-character XOR"""
@@ -188,6 +209,7 @@ def challenge4():
     pp(result)
     assert best_decodings[0]["message"] == "Now that the party is jumping\n"
 
+
 def challenge5():
     """Implement repeating-key XOR"""
     stanza = ("Burning 'em, if you ain't quick and nimble\n"
@@ -197,6 +219,7 @@ def challenge5():
         "c2a26226324272765272a282b2f20430a652e2c652a3124333a653e2b2027630c692b"
         "20283165286326302e27282f")
     print(result)
+
 
 def challenge6():
     """Break repeating-key XOR"""
@@ -230,12 +253,14 @@ def challenge6():
     print(plaintext)
     assert "white boy" in plaintext
 
+
 def challenge7():
     """AES in ECB mode"""
     cipher_bytes = base64.b64decode(open("7.txt").read())
     message = AES.new("YELLOW SUBMARINE", AES.MODE_ECB).decrypt(cipher_bytes)
     print(bytes_to_string(message))
     assert b"white boy" in message
+
 
 def challenge8():
     """Detect AES in ECB mode"""
@@ -247,9 +272,11 @@ def challenge8():
     pp(ecb_texts)
     assert len(ecb_texts) == 1
 
+
 def challenge9():
     """Implement PKCS#7 padding"""
     assert pkcs7_pad(b"YELLOW SUBMARINE", 20) == b"YELLOW SUBMARINE\x04\x04\x04\x04"
+
 
 def challenge10():
     """Implement CBC mode"""
@@ -273,6 +300,7 @@ def challenge10():
         last_cipher_chunk = cipher_chunk
     assert result == cipher_bytes
 
+
 def challenge11():
     """An ECB/CBC detection oracle"""
     # hamlet.txt from http://erdani.com/tdpl/hamlet.txt
@@ -290,6 +318,7 @@ def challenge11():
         apparent_mode = "ECB" if looks_like_ecb(cipher_bytes) else "CBC"
         results[apparent_mode] += 1
         assert mode == apparent_mode, (mode, apparent_mode, results)
+
 
 def challenge12():
     """Byte-at-a-time ECB decryption (Simple)"""
@@ -326,6 +355,7 @@ def challenge12():
     print(bytes_to_string(plaintext))
     assert plaintext == unknown_bytes
 
+
 def challenge13():
     """ECB cut-and-paste"""
     cipher = AES.new(create_random_aes_key(), mode=AES.MODE_ECB)
@@ -345,6 +375,7 @@ def challenge13():
     print(decrypted_new_profile)
     # TODO: try to make a profile without duplicate uid params and "rol"
     # string at end
+
 
 def challenge14():
     """Byte-at-a-time ECB decryption (Harder)"""
@@ -392,6 +423,7 @@ def challenge14():
     plaintext = pkcs7_unpad(plaintext)
     assert plaintext == target_bytes
 
+
 def test_all_challenges():
     challenges = {}
     for name, var in globals().copy().items():
@@ -410,6 +442,7 @@ def test_all_challenges():
         print("running challenge {}".format(num), file=old_stdout)
         challenges[num]()
     sys.stdout = old_stdout
+
 
 if __name__ == "__main__":
     try:
