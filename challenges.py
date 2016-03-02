@@ -346,6 +346,52 @@ def challenge13():
     # TODO: try to make a profile without duplicate uid params and "rol"
     # string at end
 
+def challenge14():
+    """Byte-at-a-time ECB decryption (Harder)"""
+    cipher = AES.new(create_random_aes_key(), AES.MODE_ECB)
+    random_bytes = os.urandom(random.randint(0, 64))
+    target_bytes = (b"Give a man a beer, he'll waste an hour. "
+        b"Teach a man to brew, he'll waste a lifetime.")
+
+    def call_oracle(attacker_bytes):
+        return cipher.encrypt(pkcs7_pad(random_bytes + attacker_bytes + target_bytes))
+
+    assert appears_to_produce_ecb(call_oracle)
+    block_size = guess_block_size(call_oracle)
+    assert block_size == 16
+
+    chunks = byte_chunks(call_oracle(b"A" * 3*block_size))
+    attacker_block, attacker_block_count = Counter(chunks).most_common(1)[0]
+    assert attacker_block_count >= 2
+    attacker_block_pos = block_size * chunks.index(attacker_block)
+    for i in range(block_size):
+        chunks = byte_chunks(call_oracle(b"A" * (3*block_size - i - 1)))
+        if Counter(chunks)[attacker_block] < attacker_block_count:
+            prefix_length = attacker_block_pos - (-i % block_size)
+            break
+    # TODO: make prefix_length calculation work reliably even if
+    # attacker bytes look like random bytes or target bytes.
+
+    plaintext = bytearray()
+    while True:
+        short_block_length = (block_size - len(plaintext) - 1 - prefix_length) % block_size
+        short_input_block = b"A" * short_block_length
+        short_block_output = call_oracle(short_input_block)
+        block_index = (len(plaintext) + prefix_length) // block_size
+        block_to_look_for = byte_chunks(short_block_output)[block_index]
+        for test_byte in ALL_BYTES:
+            test_input = short_input_block + plaintext + test_byte
+            output = call_oracle(test_input)
+            telltale_chunk = byte_chunks(output)[block_index]
+            if telltale_chunk == block_to_look_for:
+                plaintext += test_byte
+                break
+        else:
+            # if no byte matches
+            break
+    plaintext = pkcs7_unpad(plaintext)
+    assert plaintext == target_bytes
+
 def test_all_challenges():
     challenges = {}
     for name, var in globals().copy().items():
