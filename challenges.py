@@ -411,6 +411,25 @@ def challenge14():
     assert plaintext == target_bytes
 
 
+def challenge15():
+    """PKCS#7 padding validation"""
+    assert pkcs7_unpad(b"ICE ICE BABY\x04\x04\x04\x04") == b"ICE ICE BABY"
+
+    try:
+        pkcs7_unpad(b"ICE ICE BABY\x05\x05\x05\x05")
+    except ValueError:
+        pass
+    else:
+        assert False, "Padding should not be considered valid"
+
+    try:
+        pkcs7_unpad(b"ICE ICE BABY\x01\x02\x03\x04")
+    except ValueError:
+        pass
+    else:
+        assert False, "Padding should not be considered valid"
+
+
 def test_all_challenges():
     challenges = {}
     for name, var in globals().copy().items():
