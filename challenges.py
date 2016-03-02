@@ -448,6 +448,7 @@ def test_all_challenges():
         print("running challenge {}".format(num), file=old_stdout)
         challenges[num]()
     sys.stdout = old_stdout
+    printer._stream = old_stdout
 
 
 if __name__ == "__main__":
