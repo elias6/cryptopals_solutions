@@ -29,7 +29,7 @@ def bytes_to_string(b):
 
 def xor_bytes(bytes1, bytes2):
     if len(bytes1) != len(bytes2):
-        raise ValueError("strings must be of equal length")
+        raise ValueError("inputs must be of equal length")
     return bytes(a ^ b for a, b in zip(bytes1, bytes2))
 
 
