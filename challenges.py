@@ -27,10 +27,15 @@ def bytes_to_string(b):
     return b.decode("utf-8", errors="replace")
 
 
-def xor_bytes(bytes1, bytes2):
-    if len(bytes1) != len(bytes2):
+def xor_bytes(*bytes_objects):
+    lengths = [len(b) for b in bytes_objects]
+    if len(set(lengths)) > 1:
         raise ValueError("inputs must be of equal length")
-    return bytes(a ^ b for a, b in zip(bytes1, bytes2))
+    result = bytearray([0]) * lengths[0]
+    for b in bytes_objects:
+        for i, byte in enumerate(b):
+            result[i] ^= byte
+    return bytes(result)
 
 
 def xor_encrypt(input_bytes, key):
