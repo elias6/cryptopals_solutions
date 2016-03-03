@@ -22,9 +22,6 @@ pp = printer.pprint
 
 ALL_BYTES = [bytes([i]) for i in range(256)]
 
-def hex_to_base64(hex_string):
-    return base64.b64encode(bytes.fromhex(hex_string))
-
 
 def bytes_to_string(b):
     return b.decode("utf-8", errors="replace")
@@ -38,13 +35,6 @@ def xor_bytes(bytes1, bytes2):
 
 def xor_encrypt(input_bytes, key):
     return bytes(a ^ b for a, b in zip(input_bytes, cycle(key)))
-
-
-def edit_distance(bytes1, bytes2):
-    result = 0
-    for byte1, byte2 in zip(bytes1, bytes2):
-        result += sum(1 for i in range(8) if byte1 & (1 << i) != byte2 & (1 << i))
-    return result
 
 
 def byte_chunks(input_bytes, chunk_size=16):
@@ -129,17 +119,6 @@ def create_random_aes_key():
     return os.urandom(16)
 
 
-def encrypt_with_random_key_and_random_mode(plain_bytes):
-    key = create_random_aes_key()
-    mode = random.choice([AES.MODE_CBC, AES.MODE_ECB])
-    # iv is ignored for MODE_ECB
-    iv = os.urandom(16)
-    prefix = os.urandom(random.randint(5, 10))
-    suffix = os.urandom(random.randint(5, 10))
-    bytes_to_encrypt = pkcs7_pad(prefix + plain_bytes + suffix)
-    return (AES.new(key, mode, iv).encrypt(bytes_to_encrypt), mode)
-
-
 def appears_to_produce_ecb(oracle_fn):
     return any(looks_like_ecb(oracle_fn(b"A" * i)) for i in range(1000))
 
@@ -156,15 +135,6 @@ def guess_block_size(oracle_fn):
         return result
     else:
         raise ValueError("Could not guess block size")
-
-
-def create_encrypted_user_profile(email_address, cipher):
-    profile_data = [("email", email_address), ("uid", "10"), ("role", "user")]
-    return cipher.encrypt(pkcs7_pad(urlencode(profile_data).encode("utf-8")))
-
-
-def decrypt_profile(encrypted_profile, cipher):
-    return bytes_to_string(pkcs7_unpad(cipher.decrypt(encrypted_profile)))
 
 
 def crack_ecb_oracle(oracle_fn, prefix_length=0, block_size=16):
@@ -190,6 +160,9 @@ def crack_ecb_oracle(oracle_fn, prefix_length=0, block_size=16):
 
 def challenge1():
     """Convert hex to base64"""
+    def hex_to_base64(hex_string):
+        return base64.b64encode(bytes.fromhex(hex_string))
+
     cipher_hex = ("49276d206b696c6c696e6720796f757220627261696e206c" +
         "696b65206120706f69736f6e6f7573206d757368726f6f6d")
     result = hex_to_base64(cipher_hex)
@@ -244,6 +217,12 @@ def challenge5():
 
 def challenge6():
     """Break repeating-key XOR"""
+    def edit_distance(bytes1, bytes2):
+        result = 0
+        for byte1, byte2 in zip(bytes1, bytes2):
+            result += sum(1 for i in range(8) if byte1 & (1 << i) != byte2 & (1 << i))
+        return result
+
     assert edit_distance(b"this is a test", b"wokka wokka!!!") == 37
     cipher_bytes = base64.b64decode(open("6.txt").read())
     edit_distances = {}
@@ -324,6 +303,16 @@ def challenge10():
 
 def challenge11():
     """An ECB/CBC detection oracle"""
+    def encrypt_with_random_key_and_random_mode(plain_bytes):
+        key = create_random_aes_key()
+        mode = random.choice([AES.MODE_CBC, AES.MODE_ECB])
+        # iv is ignored for MODE_ECB
+        iv = os.urandom(16)
+        prefix = os.urandom(random.randint(5, 10))
+        suffix = os.urandom(random.randint(5, 10))
+        bytes_to_encrypt = pkcs7_pad(prefix + plain_bytes + suffix)
+        return (AES.new(key, mode, iv).encrypt(bytes_to_encrypt), mode)
+
     # hamlet.txt from http://erdani.com/tdpl/hamlet.txt
     # This seems to work perfectly when encrypting 2923 or more bytes of
     # hamlet.txt, but frequently guesses incorrectly with 2922 bytes or
@@ -362,6 +351,13 @@ def challenge12():
 
 def challenge13():
     """ECB cut-and-paste"""
+    def create_encrypted_user_profile(email_address, cipher):
+        profile_data = [("email", email_address), ("uid", "10"), ("role", "user")]
+        return cipher.encrypt(pkcs7_pad(urlencode(profile_data).encode("utf-8")))
+
+    def decrypt_profile(encrypted_profile, cipher):
+        return bytes_to_string(pkcs7_unpad(cipher.decrypt(encrypted_profile)))
+
     cipher = AES.new(create_random_aes_key(), mode=AES.MODE_ECB)
 
     profile1 = create_encrypted_user_profile("peter.gregory@piedpiper.com", cipher)
