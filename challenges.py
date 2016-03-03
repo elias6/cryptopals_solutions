@@ -13,7 +13,7 @@ from copy import copy
 from fractions import gcd
 from itertools import cycle, zip_longest
 from random import SystemRandom
-from urllib.parse import parse_qs, urlencode
+from urllib.parse import parse_qs, quote as url_quote, urlencode
 
 random = SystemRandom()
 
@@ -424,6 +424,32 @@ def challenge15():
         pass
     else:
         assert False, "Padding should not be considered valid"
+
+
+def challenge16():
+    """CBC bitflipping attacks"""
+    key = create_random_aes_key()
+    iv = os.urandom(16)
+
+    def create_encrypted_string(user_data):
+        cipher = AES.new(key, AES.MODE_CBC, iv)
+        query_string = ("comment1=cooking%20MCs;userdata=" + url_quote(user_data) +
+            ";comment2=%20like%20a%20pound%20of%20bacon")
+        bytes_to_encrypt = pkcs7_pad(query_string.encode("utf-8"))
+        return cipher.encrypt(bytes_to_encrypt)
+
+    def encrypted_string_has_admin(cipher_bytes):
+        # Create new cipher object because internal IV state in old one
+        # gets messed up after being used.
+        cipher = AES.new(key, AES.MODE_CBC, iv)
+        plain_bytes = pkcs7_unpad(cipher.decrypt(cipher_bytes))
+        return b";admin=true;" in plain_bytes
+
+    cipher_bytes = create_encrypted_string("foo")
+    bits_to_flip = (bytes([0] * 32) +
+        xor_bytes(b"like%20a%20pound", b";admin=true;foo=") + bytes([0] * 32))
+    modified_cipher_bytes = xor_bytes(cipher_bytes, bits_to_flip)
+    assert encrypted_string_has_admin(modified_cipher_bytes)
 
 
 def test_all_challenges():
