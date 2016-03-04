@@ -120,6 +120,30 @@ def pkcs7_unpad(cipher_bytes, block_size=16):
     return cipher_bytes[:-padding_length]
 
 
+def cbc_encrypt(key, iv, plain_bytes):
+    cipher = AES.new(key, AES.MODE_ECB, iv)
+    last_cipher_chunk = iv
+    result = bytearray()
+    for plain_chunk in byte_chunks(plain_bytes):
+        combined_chunk = xor_bytes(last_cipher_chunk, plain_chunk)
+        cipher_chunk = cipher.encrypt(combined_chunk)
+        result.extend(cipher_chunk)
+        last_cipher_chunk = cipher_chunk
+    return bytes(result)
+
+
+def cbc_decrypt(key, iv, cipher_bytes):
+    cipher = AES.new(key, AES.MODE_ECB, iv)
+    last_cipher_chunk = iv
+    result = bytearray()
+    for cipher_chunk in byte_chunks(cipher_bytes):
+        decrypted_chunk = cipher.decrypt(cipher_chunk)
+        plain_chunk = xor_bytes(last_cipher_chunk, decrypted_chunk)
+        result.extend(plain_chunk)
+        last_cipher_chunk = cipher_chunk
+    return bytes(result)
+
+
 def create_random_aes_key():
     return os.urandom(16)
 
@@ -286,24 +310,18 @@ def challenge9():
 def challenge10():
     """Implement CBC mode"""
     cipher_bytes = base64.b64decode(open("10.txt").read())
+    key = b"YELLOW SUBMARINE"
     iv = bytes([0] * 16)
 
-    plain_bytes = AES.new("YELLOW SUBMARINE", AES.MODE_CBC, iv).decrypt(cipher_bytes)
+    plain_bytes = cbc_decrypt(key, iv, cipher_bytes)
     assert b"white boy" in plain_bytes
+    assert plain_bytes == AES.new(key, AES.MODE_CBC, iv).decrypt(cipher_bytes)
+
     # Create new cipher object because using cipher object messes up
     # internal IV state
-    cbc_result = AES.new("YELLOW SUBMARINE", AES.MODE_CBC, iv).encrypt(plain_bytes)
-    assert cbc_result == cipher_bytes
-
-    last_cipher_chunk = iv
-    cipher = AES.new("YELLOW SUBMARINE", AES.MODE_ECB, iv)
-    result = bytearray()
-    for plain_chunk in byte_chunks(plain_bytes):
-        combined_chunk = xor_bytes(last_cipher_chunk, plain_chunk)
-        cipher_chunk = cipher.encrypt(combined_chunk)
-        result.extend(cipher_chunk)
-        last_cipher_chunk = cipher_chunk
-    assert result == cipher_bytes
+    new_cipher_bytes = cbc_encrypt(key, iv, plain_bytes)
+    assert new_cipher_bytes == AES.new(key, AES.MODE_CBC, iv).encrypt(plain_bytes)
+    assert new_cipher_bytes == cipher_bytes
 
 
 def challenge11():
