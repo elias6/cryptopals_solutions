@@ -475,6 +475,68 @@ def challenge16():
     assert encrypted_string_has_admin(modified_cipher_bytes)
 
 
+def challenge17():
+    """The CBC padding oracle"""
+    key = create_random_aes_key()
+    iv = os.urandom(16)
+
+    unknown_strings = [base64.b64decode(x) for x in [
+        "MDAwMDAwTm93IHRoYXQgdGhlIHBhcnR5IGlzIGp1bXBpbmc=",
+        "MDAwMDAxV2l0aCB0aGUgYmFzcyBraWNrZWQgaW4gYW5kIHRoZSBWZWdhJ3MgYXJlIHB1bXBpbic=",
+        "MDAwMDAyUXVpY2sgdG8gdGhlIHBvaW50LCB0byB0aGUgcG9pbnQsIG5vIGZha2luZw==",
+        "MDAwMDAzQ29va2luZyBNQydzIGxpa2UgYSBwb3VuZCBvZiBiYWNvbg==",
+        "MDAwMDA0QnVybmluZyAnZW0sIGlmIHlvdSBhaW4ndCBxdWljayBhbmQgbmltYmxl",
+        "MDAwMDA1SSBnbyBjcmF6eSB3aGVuIEkgaGVhciBhIGN5bWJhbA==",
+        "MDAwMDA2QW5kIGEgaGlnaCBoYXQgd2l0aCBhIHNvdXBlZCB1cCB0ZW1wbw==",
+        "MDAwMDA3SSdtIG9uIGEgcm9sbCwgaXQncyB0aW1lIHRvIGdvIHNvbG8=",
+        "MDAwMDA4b2xsaW4nIGluIG15IGZpdmUgcG9pbnQgb2g=",
+        "MDAwMDA5aXRoIG15IHJhZy10b3AgZG93biBzbyBteSBoYWlyIGNhbiBibG93",
+    ]]
+
+    random.shuffle(unknown_strings)
+
+    def create_encrypted_string(random_string):
+        cipher = AES.new(key, AES.MODE_CBC, iv)
+        return cipher.encrypt(pkcs7_pad(random_string))
+
+    def has_valid_padding(iv, cipher_bytes):
+        cipher = AES.new(key, AES.MODE_CBC, iv)
+        plain_bytes = cipher.decrypt(cipher_bytes)
+        try:
+            pkcs7_unpad(plain_bytes)
+        except ValueError:
+            return False
+        else:
+            return True
+
+    for unknown_string in unknown_strings:
+        cipher_bytes = create_encrypted_string(unknown_string)
+        cipher_blocks = byte_chunks(cipher_bytes)
+
+        recovered_plaintext = bytearray()
+        for prev_cipher_block, cipher_block in zip([iv] + cipher_blocks, cipher_blocks):
+            recovered_block = bytes()
+            for i in range(1, 16 + 1):
+                assert i == len(recovered_block) + 1
+                cipher_slice = prev_cipher_block[-i:]
+                padding = bytes([i] * i)
+                new_last_bytes = bytearray(xor_bytes(cipher_slice, padding, b"\x00" + recovered_block))
+                for guess in ALL_BYTES:
+                    new_last_bytes[0] = cipher_slice[0] ^ guess[0] ^ i
+                    new_iv = prev_cipher_block[:-i] + new_last_bytes
+                    if has_valid_padding(new_iv, cipher_block):
+                        if not recovered_block:
+                            test_iv = xor_bytes(new_iv, bytes([0]*14 + [2] + [0]))
+                            if not has_valid_padding(test_iv, cipher_block):
+                                continue
+                        recovered_block = guess + recovered_block
+                        break
+            recovered_plaintext += recovered_block
+        recovered_plaintext = pkcs7_unpad(recovered_plaintext)
+        assert recovered_plaintext == unknown_string
+        print(bytes_to_string(recovered_plaintext))
+
+
 def test_all_challenges():
     challenges = {}
     for name, var in globals().copy().items():
