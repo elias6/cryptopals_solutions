@@ -528,6 +528,10 @@ def challenge17():
                         if not recovered_block:
                             test_iv = xor_bytes(new_iv, bytes([0]*14 + [2] + [0]))
                             if not has_valid_padding(test_iv, cipher_block):
+                                # Last byte of cipher_block appears to
+                                # have \x01 for padding, but this is
+                                # wrong.
+                                # See https://blog.skullsecurity.org/2013/padding-oracle-attacks-in-depth
                                 continue
                         recovered_block = guess + recovered_block
                         break
