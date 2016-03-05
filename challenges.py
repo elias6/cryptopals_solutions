@@ -17,10 +17,11 @@ from urllib.parse import parse_qs, quote as url_quote, urlencode
 
 random = SystemRandom()
 
-printer = pprint.PrettyPrinter(width=120)
-pp = printer.pprint
-
 ALL_BYTES = [bytes([i]) for i in range(256)]
+
+
+def pp(*args, width=120, **kwargs):
+    pprint.pprint(*args, width=width, **kwargs)
 
 
 def bytes_to_string(b):
@@ -574,7 +575,6 @@ if __name__ == "__main__":
     if args.quiet:
         old_stdout = sys.stdout
         sys.stdout = open(os.devnull, "w")
-        printer._stream = sys.stdout
     if args.profile:
         profile = cProfile.Profile()
         profile.runcall(func)
@@ -582,6 +582,5 @@ if __name__ == "__main__":
         func()
     if args.quiet:
         sys.stdout = old_stdout
-        printer._stream = old_stdout
     if args.profile:
         profile.print_stats(sort="cumtime")
