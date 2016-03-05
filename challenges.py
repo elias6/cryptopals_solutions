@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import argparse
 import base64
 import cProfile
 import os
@@ -9,7 +10,6 @@ import sys
 
 from Crypto.Cipher import AES
 from collections import Counter, defaultdict
-from copy import copy
 from fractions import gcd
 from itertools import cycle, zip_longest
 from random import SystemRandom
@@ -538,7 +538,7 @@ def challenge17():
         print(bytes_to_string(recovered_plaintext))
 
 
-def test_all_challenges():
+def test_all_challenges(stdout=sys.stdout):
     challenges = {}
     for name, var in globals().copy().items():
         try:
@@ -548,23 +548,40 @@ def test_all_challenges():
         else:
             if callable(var):
                 challenges[num] = var
-    old_stdout = sys.stdout
-    sys.stdout = open(os.devnull, "w")
-    new_printer = copy(printer)
-    printer._stream = sys.stdout
     for num in sorted(challenges):
-        print("running challenge {}".format(num), file=old_stdout)
+        print("running challenge {}".format(num), file=stdout)
         challenges[num]()
-    sys.stdout = old_stdout
-    printer._stream = old_stdout
 
 
 if __name__ == "__main__":
-    try:
-        challenge = globals()["challenge" + sys.argv[1]]
-    except IndexError:
-        test_all_challenges()
-        # cProfile.run("test_all_challenges()", sort="cumtime")
+    parser = argparse.ArgumentParser(description="Solve the Matasano crypto challenges.")
+    parser.add_argument(
+        "challenge", nargs="?",
+        help="The challenge to run. If this is not specified, all challenges will be "
+             "run.")
+    parser.add_argument(
+        "-p", "--profile", help="Profile challenges.", action="store_true")
+    parser.add_argument(
+        "-q", "--quiet", help="Don't show challenge output.", action="store_true")
+    args = parser.parse_args()
+
+    if args.challenge:
+        func = globals().get("challenge" + args.challenge)
+        if not func:
+            parser.error("Challenge {} not found".format(args.challenge))
     else:
-        challenge()
-        # cProfile.run("challenge()", sort="cumtime")
+        func = test_all_challenges
+    if args.quiet:
+        old_stdout = sys.stdout
+        sys.stdout = open(os.devnull, "w")
+        printer._stream = sys.stdout
+    if args.profile:
+        profile = cProfile.Profile()
+        profile.runcall(func)
+    else:
+        func()
+    if args.quiet:
+        sys.stdout = old_stdout
+        printer._stream = old_stdout
+    if args.profile:
+        profile.print_stats(sort="cumtime")
