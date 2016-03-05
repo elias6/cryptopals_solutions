@@ -475,9 +475,6 @@ def challenge16():
 
 def challenge17():
     """The CBC padding oracle"""
-    key = create_random_aes_key()
-    iv = os.urandom(16)
-
     unknown_strings = [base64.b64decode(x) for x in [
         "MDAwMDAwTm93IHRoYXQgdGhlIHBhcnR5IGlzIGp1bXBpbmc=",
         "MDAwMDAxV2l0aCB0aGUgYmFzcyBraWNrZWQgaW4gYW5kIHRoZSBWZWdhJ3MgYXJlIHB1bXBpbic=",
@@ -507,25 +504,27 @@ def challenge17():
         else:
             return True
 
+    key = create_random_aes_key()
+    iv = os.urandom(16)
+
     for unknown_string in unknown_strings:
         cipher_bytes = create_encrypted_string(unknown_string)
-        cipher_blocks = byte_chunks(cipher_bytes)
-
         recovered_plaintext = bytearray()
-        for prev_cipher_block, cipher_block in zip([iv] + cipher_blocks, cipher_blocks):
+        prev_cipher_block = iv
+        for cipher_block in byte_chunks(cipher_bytes):
             recovered_block = bytes()
-            for i in range(1, 16 + 1):
-                assert i == len(recovered_block) + 1
-                cipher_slice = prev_cipher_block[-i:]
-                padding = bytes([i] * i)
-                new_last_bytes = bytearray(xor_bytes(cipher_slice, padding, b"\x00" + recovered_block))
+            for pos in reversed(range(16)):
+                assert len(recovered_block) == 15 - pos
+                cipher_slice = prev_cipher_block[pos + 1:]
+                padding = bytes([len(recovered_block) + 1] * len(recovered_block))
+                iv_end = xor_bytes(cipher_slice, padding, recovered_block)
+                new_iv = bytearray(prev_cipher_block[:pos] + b"\x00" + iv_end)
                 for guess in ALL_BYTES:
-                    new_last_bytes[0] = cipher_slice[0] ^ guess[0] ^ i
-                    new_iv = prev_cipher_block[:-i] + new_last_bytes
-                    if has_valid_padding(new_iv, cipher_block):
+                    new_iv[pos] = prev_cipher_block[pos] ^ guess[0] ^ (16 - pos)
+                    if has_valid_padding(bytes(new_iv), cipher_block):
                         if not recovered_block:
-                            test_iv = xor_bytes(new_iv, bytes([0]*14 + [2] + [0]))
-                            if not has_valid_padding(test_iv, cipher_block):
+                            new_iv[14] ^= 2
+                            if not has_valid_padding(bytes(new_iv), cipher_block):
                                 # Last byte of cipher_block appears to have \x01 for
                                 # padding, but this is wrong.
                                 # See https://blog.skullsecurity.org/2013/padding-oracle-attacks-in-depth
@@ -533,6 +532,7 @@ def challenge17():
                         recovered_block = guess + recovered_block
                         break
             recovered_plaintext += recovered_block
+            prev_cipher_block = cipher_block
         recovered_plaintext = pkcs7_unpad(recovered_plaintext)
         assert recovered_plaintext == unknown_string
         print(bytes_to_string(recovered_plaintext))
