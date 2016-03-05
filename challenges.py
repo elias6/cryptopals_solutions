@@ -374,26 +374,27 @@ def challenge12():
 
 def challenge13():
     """ECB cut-and-paste"""
-    def create_encrypted_user_profile(email_address, cipher):
+    cipher = AES.new(create_random_aes_key(), mode=AES.MODE_ECB)
+
+    def create_encrypted_user_profile(email_address):
         profile_data = [("email", email_address), ("uid", "10"), ("role", "user")]
         return cipher.encrypt(pkcs7_pad(urlencode(profile_data).encode("utf-8")))
 
-    def decrypt_profile(encrypted_profile, cipher):
+    def decrypt_profile(encrypted_profile):
         return bytes_to_string(pkcs7_unpad(cipher.decrypt(encrypted_profile)))
 
-    cipher = AES.new(create_random_aes_key(), mode=AES.MODE_ECB)
 
-    profile1 = create_encrypted_user_profile("peter.gregory@piedpiper.com", cipher)
+    profile1 = create_encrypted_user_profile("peter.gregory@piedpiper.com")
     profile1_chunks = byte_chunks(profile1)
 
-    profile2 = create_encrypted_user_profile("zach.woods@piedpiper.comadmin", cipher)
+    profile2 = create_encrypted_user_profile("zach.woods@piedpiper.comadmin")
     profile2_chunks = byte_chunks(profile2)
 
-    profile3 = create_encrypted_user_profile("a@a.com", cipher)
+    profile3 = create_encrypted_user_profile("a@a.com")
     padding_only_chunk = byte_chunks(profile3)[-1]
 
     new_profile = b"".join(profile1_chunks[:3]) + profile2_chunks[2] + padding_only_chunk
-    decrypted_new_profile = decrypt_profile(new_profile, cipher)
+    decrypted_new_profile = decrypt_profile(new_profile)
     assert parse_qs(decrypted_new_profile)["role"] == ["admin"]
     print(decrypted_new_profile)
     # TODO: try to make a profile without duplicate uid params and "rol"
