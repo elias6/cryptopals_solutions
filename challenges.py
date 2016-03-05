@@ -254,16 +254,13 @@ def challenge6():
 
     assert edit_distance(b"this is a test", b"wokka wokka!!!") == 37
     cipher_bytes = base64.b64decode(open("6.txt").read())
-    edit_distances = {}
-    test_chunk_count = 10
+    edit_distances = defaultdict(int)
     for key_size in range(2, 41):
         chunks = byte_chunks(cipher_bytes, key_size)
-        edit_distances[key_size] = 0
-        for i in range(test_chunk_count):
+        for i in range(10):
             edit_distances[key_size] += edit_distance(chunks[i], chunks[i + 1])
         edit_distances[key_size] /= key_size
-    key_sizes = sorted(edit_distances, key=lambda key_size: edit_distances[key_size])
-    best_key_size = key_sizes[0]
+    best_key_size = min(edit_distances, key=lambda key_size: edit_distances[key_size])
 
     chunks = byte_chunks(cipher_bytes, best_key_size)
     transposed_messages = []
