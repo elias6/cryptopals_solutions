@@ -252,7 +252,8 @@ def challenge3():
 
 def challenge4():
     """Detect single-character XOR"""
-    cipher_hexes = [line.rstrip() for line in open("4.txt").readlines()]
+    with open("4.txt") as f:
+        cipher_hexes = [line.rstrip() for line in f.readlines()]
     decoded_string_data = []
     for i, string in enumerate(cipher_hexes):
         cipher_bytes = bytes.fromhex(string)
@@ -284,7 +285,8 @@ def challenge6():
         return result
 
     assert edit_distance(b"this is a test", b"wokka wokka!!!") == 37
-    cipher_bytes = base64.b64decode(open("6.txt").read())
+    with open("6.txt") as f:
+        cipher_bytes = base64.b64decode(f.read())
     edit_distances = defaultdict(int)
     for key_size in range(2, 41):
         chunks = byte_chunks(cipher_bytes, key_size)
@@ -304,7 +306,8 @@ def challenge6():
 
 def challenge7():
     """AES in ECB mode"""
-    cipher_bytes = base64.b64decode(open("7.txt").read())
+    with open("7.txt") as f:
+        cipher_bytes = base64.b64decode(f.read())
     message = AES.new("YELLOW SUBMARINE", AES.MODE_ECB).decrypt(cipher_bytes)
     print(bytes_to_string(message))
     assert b"white boy" in message
@@ -313,7 +316,9 @@ def challenge7():
 def challenge8():
     """Detect AES in ECB mode"""
     ecb_texts = []
-    for i, line in enumerate(open("8.txt").readlines()):
+    with open("8.txt") as f:
+        lines = f.readlines()
+    for i, line in enumerate(lines):
         cipher_bytes = bytes.fromhex(line.strip())
         if looks_like_ecb(cipher_bytes):
             ecb_texts.append({"index": i, "ciphertext": cipher_bytes})
@@ -328,7 +333,8 @@ def challenge9():
 
 def challenge10():
     """Implement CBC mode"""
-    cipher_bytes = base64.b64decode(open("10.txt").read())
+    with open("10.txt") as f:
+        cipher_bytes = base64.b64decode(f.read())
     key = b"YELLOW SUBMARINE"
     iv = bytes([0] * 16)
 
@@ -362,7 +368,8 @@ def challenge11():
     # file, there seems to be a precise amount of data at which this
     # function works reliably, and below which it frequently thinks ECB is
     # CBC.
-    plain_bytes = open("hamlet.txt", "rb").read(3000)
+    with open("hamlet.txt", "rb") as f:
+        plain_bytes = f.read(3000)
     results = Counter()
     for i in range(1000):
         cipher_bytes, mode_number = encrypt_with_random_key_and_random_mode(plain_bytes)
@@ -646,7 +653,8 @@ def challenge20():
         cipher = AES.new(key, AES.MODE_CTR, counter=create_ctr_counter(0))
         return cipher.encrypt(cipher_bytes)
 
-    plaintexts = [base64.b64decode(x) for x in open("20.txt").readlines()]
+    with open("20.txt") as f:
+        plaintexts = [base64.b64decode(x) for x in f.readlines()]
     ciphertexts = [encrypt(x) for x in plaintexts]
     recovered_plaintexts, recovered_key = crack_repeating_key_xor(ciphertexts)
     print("\n".join(bytes_to_string(p) for p in recovered_plaintexts))
@@ -687,11 +695,12 @@ if __name__ == "__main__":
             parser.error("Challenge {} not found".format(args.challenge))
     else:
         func = test_all_challenges
-    with redirect_stdout(open(os.devnull, "w") if args.quiet else sys.stdout):
-        if args.profile:
-            profile = cProfile.Profile()
-            profile.runcall(func)
-        else:
-            func()
+    with (open(os.devnull, "w") if args.quiet else sys.stdout) as output_stream:
+        with redirect_stdout(output_stream):
+            if args.profile:
+                profile = cProfile.Profile()
+                profile.runcall(func)
+            else:
+                func()
     if args.profile:
         profile.print_stats(sort="cumtime")
