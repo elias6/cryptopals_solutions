@@ -19,8 +19,10 @@ from random import SystemRandom
 from urllib.parse import parse_qs, quote as url_quote, urlencode
 
 try:
+    # Python 3.5
     from math import gcd
 except ImportError:
+    # older Python versions
     from fractions import gcd
 
 warnings.simplefilter("default", BytesWarning)
