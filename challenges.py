@@ -16,6 +16,7 @@ from collections import Counter, defaultdict
 from contextlib import redirect_stdout
 from itertools import chain, count, cycle
 from random import SystemRandom
+from time import time
 from urllib.parse import parse_qs, quote as url_quote, urlencode
 
 try:
@@ -711,6 +712,18 @@ def challenge21():
 
     for i in range(10):
         print(rng.extract_number())
+
+
+def challenge22():
+    """Crack an MT19937 seed"""
+    seed = int(time()) + random.randint(40, 1000)
+    output = MT19937_RNG(seed).extract_number()
+    future = seed + random.randint(40, 1000)
+    for seed_guess in reversed(range(future - 1000, future)):
+        if MT19937_RNG(seed_guess).extract_number() == output:
+            assert seed_guess == seed
+            return
+    assert False, "seed not found"
 
 
 def test_all_challenges(stdout=sys.stdout):
