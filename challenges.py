@@ -105,6 +105,18 @@ def looks_like_ecb(cipher_bytes):
     return chunk_counter.most_common(1)[0][1] > 1
 
 
+def crack_repeating_key_xor(ciphertexts):
+    key = bytearray()
+    for i in count(start=0):
+        transposed_block = bytes(c[i] for c in ciphertexts if i < len(c))
+        if transposed_block:
+            score_data = best_english_like_score_data(transposed_block)[0]
+            key.extend(score_data["key"])
+        else:
+            plaintexts = [xor_encrypt(c, key) for c in ciphertexts]
+            return (plaintexts, key)
+
+
 def pkcs7_pad(input_bytes, block_size=16):
     padding_length = -len(input_bytes) % block_size
     if padding_length == 0:
@@ -268,18 +280,11 @@ def challenge6():
         edit_distances[key_size] /= key_size
     best_key_size = min(edit_distances, key=lambda key_size: edit_distances[key_size])
 
-    chunks = byte_chunks(cipher_bytes, best_key_size)
-    key = bytearray()
-    for i in count(start=0):
-        transposed_block = bytes(chunk[i] for chunk in chunks if i < len(chunk))
-        if transposed_block:
-            score_data = best_english_like_score_data(transposed_block)[0]
-            key.extend(score_data["key"])
-        else:
-            break
+    cipher_chunks = byte_chunks(cipher_bytes, best_key_size)
+    plain_chunks, key = crack_repeating_key_xor(cipher_chunks)
+    plaintext = bytes_to_string(b"".join(plain_chunks))
     print(key)
     print()
-    plaintext = bytes_to_string(xor_encrypt(cipher_bytes, key))
     print(plaintext)
     assert "white boy" in plaintext
 
@@ -616,15 +621,7 @@ def challenge19():
 
     ciphertexts = [encrypt(x) for x in plaintexts]
 
-    recovered_key = bytearray()
-    for i in count(start=0):
-        transposed_block = bytes(c[i] for c in ciphertexts if i < len(c))
-        if transposed_block:
-            score_data = best_english_like_score_data(transposed_block)
-            recovered_key.extend(score_data[0]["key"])
-        else:
-            break
-    recovered_plaintexts = [xor_encrypt(x, recovered_key) for x in ciphertexts]
+    recovered_plaintexts, recovered_key = crack_repeating_key_xor(ciphertexts)
     print("\n".join(bytes_to_string(p) for p in recovered_plaintexts))
 
 
