@@ -9,6 +9,7 @@ import pprint
 import re
 import struct
 import sys
+import warnings
 
 from Crypto.Cipher import AES
 from collections import Counter, defaultdict
@@ -17,6 +18,10 @@ from fractions import gcd
 from itertools import chain, count, cycle
 from random import SystemRandom
 from urllib.parse import parse_qs, quote as url_quote, urlencode
+
+warnings.simplefilter("default", BytesWarning)
+warnings.simplefilter("default", ResourceWarning)
+warnings.simplefilter("default", DeprecationWarning)
 
 random = SystemRandom()
 
