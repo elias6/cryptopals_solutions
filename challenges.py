@@ -54,8 +54,16 @@ def byte_chunks(input_bytes, chunk_size=16):
 def english_like_score(text):
     # Character frequencies taken from raw letter averages at
     # http://www.macfreek.nl/memory/Letter_Distribution, then rounded to 6
-    # decimal places for readability.
+    # decimal places for readability. Numbers for control characters (\x00
+    # through \x1f excluding tab (\x09), newline (\x0a), and carriage return
+    # (\x0d)) were added by me after observing better results.
     frequencies = {
+        "\x00": 1e-6, "\x01": 1e-6, "\x02": 1e-6, "\x03": 1e-6, "\x04": 1e-6,
+        "\x05": 1e-6, "\x06": 1e-6, "\x07": 1e-6, "\x08": 1e-6, "\x0b": 1e-6,
+        "\x0c": 1e-6, "\x0e": 1e-6, "\x0f": 1e-6, "\x10": 1e-6, "\x11": 1e-6,
+        "\x12": 1e-6, "\x13": 1e-6, "\x14": 1e-6, "\x15": 1e-6, "\x16": 1e-6,
+        "\x17": 1e-6, "\x18": 1e-6, "\x19": 1e-6, "\x1a": 1e-6, "\x1b": 1e-6,
+        "\x1c": 1e-6, "\x1d": 1e-6, "\x1e": 1e-6, "\x1f": 1e-6,
         " ": 0.183169, "a": 0.065531, "b": 0.012708, "c": 0.022651, "d": 0.033523,
         "e": 0.102179, "f": 0.019718, "g": 0.016359, "h": 0.048622, "i": 0.057343,
         "j": 0.001144, "k": 0.005692, "l": 0.033562, "m": 0.020173, "n": 0.057031,
@@ -71,9 +79,9 @@ def english_like_score(text):
     text_length = len(text)
     chi_squared = 0
     for char, char_count in char_counts.items():
-        # Number 5.4e-4 was empirically observed to produce the best ratio of
+        # Number 4e-6 was empirically observed to produce the best ratio of
         # score for English text to score for incorrectly decrypted text.
-        expected = text_length * frequencies.get(char, 5.4e-4)
+        expected = text_length * frequencies.get(char, 4e-6)
         difference = char_count - expected
         chi_squared += difference * difference / expected
     return 1e6 / chi_squared / text_length
