@@ -10,6 +10,7 @@ import sys
 
 from Crypto.Cipher import AES
 from collections import Counter, defaultdict
+from contextlib import redirect_stdout
 from fractions import gcd
 from itertools import cycle, zip_longest
 from random import SystemRandom
@@ -572,15 +573,11 @@ if __name__ == "__main__":
             parser.error("Challenge {} not found".format(args.challenge))
     else:
         func = test_all_challenges
-    if args.quiet:
-        old_stdout = sys.stdout
-        sys.stdout = open(os.devnull, "w")
-    if args.profile:
-        profile = cProfile.Profile()
-        profile.runcall(func)
-    else:
-        func()
-    if args.quiet:
-        sys.stdout = old_stdout
+    with redirect_stdout(open(os.devnull, "w") if args.quiet else sys.stdout):
+        if args.profile:
+            profile = cProfile.Profile()
+            profile.runcall(func)
+        else:
+            func()
     if args.profile:
         profile.print_stats(sort="cumtime")
