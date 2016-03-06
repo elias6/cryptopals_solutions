@@ -13,7 +13,7 @@ import warnings
 
 from Crypto.Cipher import AES
 from collections import Counter, defaultdict
-from contextlib import redirect_stdout
+from contextlib import ExitStack, redirect_stdout
 from itertools import chain, count, cycle
 from random import SystemRandom
 from time import time
@@ -761,12 +761,15 @@ if __name__ == "__main__":
             parser.error("Challenge {} not found".format(args.challenge))
     else:
         func = test_all_challenges
-    with (open(os.devnull, "w") if args.quiet else sys.stdout) as output_stream:
-        with redirect_stdout(output_stream):
-            if args.profile:
-                profile = cProfile.Profile()
-                profile.runcall(func)
-            else:
-                func()
+    with ExitStack() as stack:
+        if args.quiet:
+            null_stream = open(os.devnull, "w")
+            stack.enter_context(null_stream)
+            stack.enter_context(redirect_stdout(null_stream))
+        if args.profile:
+            profile = cProfile.Profile()
+            profile.runcall(func)
+        else:
+            func()
     if args.profile:
         profile.print_stats(sort="cumtime")
