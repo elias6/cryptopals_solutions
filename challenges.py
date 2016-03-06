@@ -189,6 +189,11 @@ def crack_ecb_oracle(oracle_fn, prefix_length=0, block_size=16):
             return pkcs7_unpad(result)
 
 
+def create_ctr_counter(nonce):
+    return Crypto.Util.Counter.new(
+        nbits=64, prefix=struct.pack("<Q", nonce), initial_value=0, little_endian=True)
+
+
 def challenge1():
     """Convert hex to base64"""
     def hex_to_base64(hex_string):
@@ -556,9 +561,7 @@ def challenge18():
         plaintext += xor_bytes(keystream[:len(chunk)], chunk)
     print(bytes_to_string(plaintext))
 
-    counter = Crypto.Util.Counter.new(
-        nbits=64, prefix=struct.pack("<Q", nonce), initial_value=0, little_endian=True)
-    ctr_cipher = AES.new(key, AES.MODE_CTR, counter=counter)
+    ctr_cipher = AES.new(key, AES.MODE_CTR, counter=create_ctr_counter(nonce))
     assert plaintext == ctr_cipher.decrypt(cipher_bytes)
 
 
