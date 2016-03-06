@@ -14,10 +14,14 @@ import warnings
 from Crypto.Cipher import AES
 from collections import Counter, defaultdict
 from contextlib import redirect_stdout
-from fractions import gcd
 from itertools import chain, count, cycle
 from random import SystemRandom
 from urllib.parse import parse_qs, quote as url_quote, urlencode
+
+try:
+    from math import gcd
+except ImportError:
+    from fractions import gcd
 
 warnings.simplefilter("default", BytesWarning)
 warnings.simplefilter("default", ResourceWarning)
