@@ -14,7 +14,7 @@ from Crypto.Cipher import AES
 from collections import Counter, defaultdict
 from contextlib import redirect_stdout
 from fractions import gcd
-from itertools import chain, count, cycle, zip_longest
+from itertools import chain, count, cycle
 from random import SystemRandom
 from urllib.parse import parse_qs, quote as url_quote, urlencode
 
@@ -269,21 +269,18 @@ def challenge6():
     best_key_size = min(edit_distances, key=lambda key_size: edit_distances[key_size])
 
     chunks = byte_chunks(cipher_bytes, best_key_size)
-    transposed_messages = []
     key = bytearray()
-    for i in range(best_key_size):
+    for i in count(start=0):
         transposed_block = bytes(chunk[i] for chunk in chunks if i < len(chunk))
-        score_data = best_english_like_score_data(transposed_block)[0]
-        transposed_messages.append(score_data["message"])
-        key.extend(score_data["key"])
+        if transposed_block:
+            score_data = best_english_like_score_data(transposed_block)[0]
+            key.extend(score_data["key"])
+        else:
+            break
     print(key)
     print()
-    plaintext = []
-    for message in zip_longest(*transposed_messages):
-        plaintext.append("".join(char for char in message if char is not None))
-    plaintext = "".join(plaintext)
+    plaintext = bytes_to_string(xor_encrypt(cipher_bytes, key))
     print(plaintext)
-    assert plaintext == bytes_to_string(xor_encrypt(cipher_bytes, key))
     assert "white boy" in plaintext
 
 
