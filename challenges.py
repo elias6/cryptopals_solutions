@@ -539,6 +539,8 @@ def challenge17():
 
 
 def test_all_challenges(stdout=sys.stdout):
+    # Pass sys.stdout when this function is created so "running challenge"
+    # output shows even if stdout is redirected.
     challenges = {}
     for name, var in globals().copy().items():
         try:
