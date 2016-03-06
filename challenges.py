@@ -88,7 +88,6 @@ def all_english_like_scores_data(cipher_bytes):
             "key": list(key),
             "key_binary": ["{:08b}".format(b) for b in key],
             "message": message,
-            "original": cipher_bytes,
             "score": score})
     return result
 
