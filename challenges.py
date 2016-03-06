@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 
+import Crypto.Util.Counter
 import argparse
 import base64
 import cProfile
 import os
 import pprint
 import re
+import struct
 import sys
 
 from Crypto.Cipher import AES
@@ -536,6 +538,28 @@ def challenge17():
         recovered_plaintext = pkcs7_unpad(recovered_plaintext)
         assert recovered_plaintext == unknown_string
         print(bytes_to_string(recovered_plaintext))
+
+
+def challenge18():
+    """Implement CTR, the stream cipher mode"""
+    cipher_bytes = base64.b64decode("L77na/nrFsKvynd6HzOoG7GHTLXsTVu9qvY/"
+        "2syLXzhPweyyMTJULu/6/kXX0KSvoOLSFQ==")
+    key = b"YELLOW SUBMARINE"
+    ecb_cipher = AES.new(key, AES.MODE_ECB)
+    nonce = 0
+
+    plaintext = bytearray()
+    for block_index, chunk in enumerate(byte_chunks(cipher_bytes), start=nonce):
+        # Encode nonce and block_index as 64-bit little-endian integers
+        counter_value = struct.pack("<QQ", nonce, block_index)
+        keystream = ecb_cipher.encrypt(counter_value)
+        plaintext += xor_bytes(keystream[:len(chunk)], chunk)
+    print(bytes_to_string(plaintext))
+
+    counter = Crypto.Util.Counter.new(
+        nbits=64, prefix=struct.pack("<Q", nonce), initial_value=0, little_endian=True)
+    ctr_cipher = AES.new(key, AES.MODE_CTR, counter=counter)
+    assert plaintext == ctr_cipher.decrypt(cipher_bytes)
 
 
 def test_all_challenges(stdout=sys.stdout):
