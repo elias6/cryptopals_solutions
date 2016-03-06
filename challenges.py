@@ -222,6 +222,45 @@ def create_ctr_counter(nonce):
         nbits=64, prefix=struct.pack("<Q", nonce), initial_value=0, little_endian=True)
 
 
+class MT19937_RNG:
+    def __init__(self, seed):
+        self.index = 624
+        self.buffer = [seed]
+        for i in range(1, 624):
+            last_num = self.buffer[i - 1]
+            self.buffer.append(self._int32(1812433253 * (last_num ^ last_num >> 30) + i))
+
+    def extract_number(self):
+        if self.index >= 624:
+            self.twist()
+
+        y = self.buffer[self.index]
+
+        y = y ^ y >> 11
+        y = y ^ y << 7 & 2636928640
+        y = y ^ y << 15 & 4022730752
+        y = y ^ y >> 18
+
+        self.index += 1
+
+        return self._int32(y)
+
+    def twist(self):
+        for i in range(624):
+            y = self._int32((self.buffer[i] & 0x80000000) +
+                       (self.buffer[(i + 1) % 624] & 0x7fffffff))
+            self.buffer[i] = self.buffer[(i + 397) % 624] ^ (y >> 1)
+
+            if y % 2 != 0:
+                self.buffer[i] ^= 0x9908b0df
+        self.index = 0
+
+    @staticmethod
+    def _int32(x):
+        # Get the 32 least significant bits.
+        return int(0xFFFFFFFF & x)
+
+
 def challenge1():
     """Convert hex to base64"""
     def hex_to_base64(hex_string):
@@ -662,6 +701,14 @@ def challenge20():
     ciphertexts = [encrypt(x) for x in plaintexts]
     recovered_plaintexts, recovered_key = crack_repeating_key_xor(ciphertexts)
     print("\n".join(bytes_to_string(p) for p in recovered_plaintexts))
+
+
+def challenge21():
+    """Implement the MT19937 Mersenne Twister RNG"""
+    rng = MT19937_RNG(seed=0)
+
+    for i in range(10):
+        print(rng.extract_number())
 
 
 def test_all_challenges(stdout=sys.stdout):
