@@ -299,10 +299,9 @@ def challenge3():
 def challenge4():
     """Detect single-character XOR"""
     with open("4.txt") as f:
-        cipher_hexes = [line.rstrip() for line in f.readlines()]
+        ciphertexts = [bytes.fromhex(line.strip()) for line in f.readlines()]
     decoded_string_data = []
-    for i, string in enumerate(cipher_hexes):
-        cipher_bytes = bytes.fromhex(string)
+    for i, cipher_bytes in enumerate(ciphertexts):
         decoded_string_data.append(best_english_like_score_data(cipher_bytes)[0])
         decoded_string_data[-1]["index"] = i
     best_decodings = sorted(decoded_string_data, key=lambda d: d["score"], reverse=True)
