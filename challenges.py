@@ -625,6 +625,20 @@ def challenge19():
     print("\n".join(bytes_to_string(p) for p in recovered_plaintexts))
 
 
+def challenge20():
+    """Break fixed-nonce CTR statistically"""
+    key = create_random_aes_key()
+
+    def encrypt(cipher_bytes):
+        cipher = AES.new(key, AES.MODE_CTR, counter=create_ctr_counter(0))
+        return cipher.encrypt(cipher_bytes)
+
+    plaintexts = [base64.b64decode(x) for x in open("20.txt").readlines()]
+    ciphertexts = [encrypt(x) for x in plaintexts]
+    recovered_plaintexts, recovered_key = crack_repeating_key_xor(ciphertexts)
+    print("\n".join(bytes_to_string(p) for p in recovered_plaintexts))
+
+
 def test_all_challenges(stdout=sys.stdout):
     # Pass sys.stdout when this function is created so "running challenge"
     # output shows even if stdout is redirected.
