@@ -284,6 +284,7 @@ def challenge6():
         plaintext.append("".join(char for char in message if char is not None))
     plaintext = "".join(plaintext)
     print(plaintext)
+    assert plaintext == bytes_to_string(xor_encrypt(cipher_bytes, key))
     assert "white boy" in plaintext
 
 
