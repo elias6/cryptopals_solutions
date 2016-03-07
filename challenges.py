@@ -246,7 +246,7 @@ class MT19937_RNG:
 
         self.index += 1
 
-        return self._int32(y)
+        return y
 
     def twist(self):
         for i in range(624):
