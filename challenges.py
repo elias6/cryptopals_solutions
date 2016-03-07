@@ -233,7 +233,7 @@ class MT19937_RNG:
             last_num = self.buffer[i - 1]
             self.buffer.append(self._int32(1812433253 * (last_num ^ last_num >> 30) + i))
 
-    def extract_number(self):
+    def get_number(self):
         if self.index >= 624:
             self.twist()
 
@@ -710,16 +710,16 @@ def challenge21():
     rng = MT19937_RNG(seed=0)
 
     for i in range(10):
-        print(rng.extract_number())
+        print(rng.get_number())
 
 
 def challenge22():
     """Crack an MT19937 seed"""
     seed = int(time()) + random.randint(40, 1000)
-    output = MT19937_RNG(seed).extract_number()
+    output = MT19937_RNG(seed).get_number()
     future = seed + random.randint(40, 1000)
     for seed_guess in reversed(range(future - 1000, future)):
-        if MT19937_RNG(seed_guess).extract_number() == output:
+        if MT19937_RNG(seed_guess).get_number() == output:
             assert seed_guess == seed
             return
     assert False, "seed not found"
