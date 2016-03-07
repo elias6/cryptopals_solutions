@@ -228,7 +228,8 @@ class MT19937_RNG:
         self.buffer = [seed]
         for i in range(1, 624):
             last_num = self.buffer[i - 1]
-            self.buffer.append(self._int32(1812433253 * (last_num ^ last_num >> 30) + i))
+            self.buffer.append(
+                0xffffffff & (1812433253 * (last_num ^ last_num >> 30) + i))
 
     def get_number(self):
         if self.index >= 624:
@@ -246,11 +247,6 @@ class MT19937_RNG:
             if y % 2 != 0:
                 self.buffer[i] ^= 0x9908b0df
         self.index = 0
-
-    @staticmethod
-    def _int32(x):
-        # Get the 32 least significant bits.
-        return int(0xFFFFFFFF & x)
 
     @staticmethod
     def temper(x):
