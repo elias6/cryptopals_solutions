@@ -14,7 +14,7 @@ import warnings
 from Crypto.Cipher import AES
 from collections import Counter, defaultdict
 from contextlib import ExitStack, redirect_stdout
-from itertools import chain, count, cycle
+from itertools import count, cycle
 from random import SystemRandom
 from time import time
 from urllib.parse import parse_qs, quote as url_quote, urlencode
