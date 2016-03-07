@@ -226,6 +226,8 @@ def create_ctr_counter(nonce):
 
 
 class MT19937_RNG:
+    """Mersenne Twister random number generator"""
+
     def __init__(self, seed):
         self.index = 624
         self.buffer = [seed]
