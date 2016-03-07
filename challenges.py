@@ -236,17 +236,9 @@ class MT19937_RNG:
     def get_number(self):
         if self.index >= 624:
             self.twist()
-
-        y = self.buffer[self.index]
-
-        y = y ^ y >> 11
-        y = y ^ y << 7 & 2636928640
-        y = y ^ y << 15 & 4022730752
-        y = y ^ y >> 18
-
+        result = self.temper(self.buffer[self.index])
         self.index += 1
-
-        return y
+        return result
 
     def twist(self):
         for i in range(624):
@@ -262,6 +254,14 @@ class MT19937_RNG:
     def _int32(x):
         # Get the 32 least significant bits.
         return int(0xFFFFFFFF & x)
+
+    @staticmethod
+    def temper(x):
+        x ^= x >> 11
+        x ^= x << 7 & 2636928640
+        x ^= x << 15 & 4022730752
+        x ^= x >> 18
+        return x
 
 
 def challenge1():
