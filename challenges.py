@@ -63,13 +63,17 @@ def byte_chunks(input_bytes, chunk_size=16):
         for i in range(0, len(input_bytes), chunk_size)]
 
 
-def english_like_score(text):
-    # Character frequencies taken from raw letter averages at
-    # http://www.macfreek.nl/memory/Letter_Distribution, then rounded to 6
-    # decimal places for readability. Numbers for control characters (\x00
-    # through \x1f excluding tab (\x09), newline (\x0a), and carriage return
-    # (\x0d)) were added by me after observing better results.
-    frequencies = {
+# Character frequencies were taken from raw letter averages at
+# http://www.macfreek.nl/memory/Letter_Distribution, then rounded to 6
+# decimal places for readability. Numbers for control characters (\x00
+# through \x1f excluding tab (\x09), newline (\x0a), and carriage return
+# (\x0d)) were added by me after observing better results.
+english_byte_frequencies = defaultdict(
+    # The following number will be returned for any byte not explicitly
+    # represented. 4e-6 was observed to produce the best ratio of score for
+    # English text to score for incorrectly decrypted text.
+    lambda: 4e-6,
+    {ord(char): freq for char, freq in {
         "\x00": 1e-6, "\x01": 1e-6, "\x02": 1e-6, "\x03": 1e-6, "\x04": 1e-6,
         "\x05": 1e-6, "\x06": 1e-6, "\x07": 1e-6, "\x08": 1e-6, "\x0b": 1e-6,
         "\x0c": 1e-6, "\x0e": 1e-6, "\x0f": 1e-6, "\x10": 1e-6, "\x11": 1e-6,
@@ -81,20 +85,25 @@ def english_like_score(text):
         "j": 0.001144, "k": 0.005692, "l": 0.033562, "m": 0.020173, "n": 0.057031,
         "o": 0.062006, "p": 0.015031, "q": 0.000881, "r": 0.049720, "s": 0.053263,
         "t": 0.075100, "u": 0.022952, "v": 0.007880, "w": 0.016896, "x": 0.001498,
-        "y": 0.014700, "z": 0.000598,
-        "\ufffd": 1e-6 # Unicode replacement character
-    }
-    # Use defaultdict instead of Counter because Counter is slow
-    char_counts = defaultdict(int)
-    for char in text.lower():
-        char_counts[char] += 1
-    text_length = len(text)
+        "y": 0.014700, "z": 0.000598
+    }.items()})
+
+
+def english_like_score(text_bytes):
+    # english_byte_frequencies is defined outside of this function mainly as
+    # a performance optimization. In my tests, the time spent in this
+    # function is less than half of what it would be if
+    # english_byte_frequencies were defined inside this function. I am also
+    # using a defaultdict instead of a Counter for the byte counts as a
+    # performance optimization.
+    byte_counts = defaultdict(int)
+    for byte in text_bytes.lower():
+        byte_counts[byte] += 1
+    text_length = len(text_bytes)
     chi_squared = 0
-    for char, char_count in char_counts.items():
-        # Number 4e-6 was empirically observed to produce the best ratio of
-        # score for English text to score for incorrectly decrypted text.
-        expected = text_length * frequencies.get(char, 4e-6)
-        difference = char_count - expected
+    for byte, byte_count in byte_counts.items():
+        expected = text_length * english_byte_frequencies[byte]
+        difference = byte_count - expected
         chi_squared += difference * difference / expected
     return 1e6 / chi_squared / text_length
 
@@ -102,7 +111,7 @@ def english_like_score(text):
 def best_english_like_score_data(cipher_bytes):
     result = []
     for key in ALL_BYTES:
-        message = bytes_to_string(xor_encrypt(cipher_bytes, key))
+        message = xor_encrypt(cipher_bytes, key)
         score = english_like_score(message)
         result.append({
             "key": list(key),
@@ -285,8 +294,8 @@ def challenge3():
     ciphertext = bytes.fromhex(cipher_hex)
     best_data = best_english_like_score_data(ciphertext)[:5]
     pp(best_data)
-    print(best_data[0]["message"])
-    assert best_data[0]["message"] == "Cooking MC's like a pound of bacon"
+    print(bytes_to_string(best_data[0]["message"]))
+    assert best_data[0]["message"] == b"Cooking MC's like a pound of bacon"
 
 
 def challenge4():
@@ -300,7 +309,7 @@ def challenge4():
     best_decodings = sorted(decoded_string_data, key=lambda d: d["score"], reverse=True)
     result = best_decodings[:3]
     pp(result)
-    assert best_decodings[0]["message"] == "Now that the party is jumping\n"
+    assert best_decodings[0]["message"] == b"Now that the party is jumping\n"
 
 
 def challenge5():
