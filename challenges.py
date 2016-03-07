@@ -99,7 +99,7 @@ def english_like_score(text):
     return 1e6 / chi_squared / text_length
 
 
-def all_english_like_scores_data(cipher_bytes):
+def best_english_like_score_data(cipher_bytes):
     result = []
     for key in ALL_BYTES:
         message = bytes_to_string(xor_encrypt(cipher_bytes, key))
@@ -109,13 +109,8 @@ def all_english_like_scores_data(cipher_bytes):
             "key_binary": ["{:08b}".format(b) for b in key],
             "message": message,
             "score": score})
+    result.sort(key=lambda x: x["score"], reverse=True)
     return result
-
-
-def best_english_like_score_data(text):
-    return sorted(all_english_like_scores_data(text),
-                  key=lambda m: m["score"],
-                  reverse=True)
 
 
 def looks_like_ecb(cipher_bytes):
