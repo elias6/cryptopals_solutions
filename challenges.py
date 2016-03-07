@@ -239,7 +239,7 @@ class MT19937_RNG:
 
     def twist(self):
         for i in range(624):
-            y = self._int32((self.buffer[i] & 0x80000000) +
+            y = ((self.buffer[i] & 0x80000000) +
                        (self.buffer[(i + 1) % 624] & 0x7fffffff))
             self.buffer[i] = self.buffer[(i + 397) % 624] ^ (y >> 1)
 
