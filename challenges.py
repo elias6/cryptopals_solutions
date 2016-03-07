@@ -708,9 +708,9 @@ def challenge20():
 def challenge21():
     """Implement the MT19937 Mersenne Twister RNG"""
     rng = MT19937_RNG(seed=0)
-
-    for i in range(10):
-        print(rng.get_number())
+    numbers = [rng.get_number() for _ in range(10)]
+    assert numbers == [2357136044, 2546248239, 3071714933, 3626093760, 2588848963,
+        3684848379, 2340255427, 3638918503, 1819583497, 2678185683]
 
 
 def challenge22():
