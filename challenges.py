@@ -240,6 +240,16 @@ class MT19937_RNG:
             self.buffer.append(
                 0xffffffff & (1812433253 * (last_num ^ last_num >> 30) + i))
 
+    @classmethod
+    def from_output_batch(cls, batch):
+        # The seed passed in the next line has no effect since the buffer is
+        # being overwritten.
+        result = MT19937_RNG(seed=0)
+        result.buffer = [cls.untemper(x) for x in batch]
+        result.index = 0
+        return result
+
+
     def get_number(self):
         if self.index >= 624:
             self.twist()
@@ -263,6 +273,20 @@ class MT19937_RNG:
         x ^= x << 7 & 2636928640
         x ^= x << 15 & 4022730752
         x ^= x >> 18
+        return x
+
+    @staticmethod
+    def untemper(x):
+        x ^= x >> 18
+
+        x ^= x << 15 & 4022730752
+
+        x ^= x << 7 & 2636928640
+        x ^= x << 14 & 2485665792
+        x ^= x << 28 & 268435456
+
+        x ^= x >> 11
+        x ^= x >> 22
         return x
 
 
@@ -725,6 +749,16 @@ def challenge22():
             assert seed_guess == seed
             return
     assert False, "seed not found"
+
+
+def challenge23():
+    """Clone an MT19937 RNG from its output"""
+    rng = MT19937_RNG(seed=random.getrandbits(32))
+    numbers = [rng.get_number() for _ in range(624)]
+
+    rng2 = MT19937_RNG.from_output_batch(numbers)
+    numbers2 = [rng2.get_number() for _ in range(624)]
+    assert numbers == numbers2
 
 
 def test_all_challenges(stdout=sys.stdout):
