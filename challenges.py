@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import Crypto.Util.Counter
 import argparse
 import base64
 import cProfile
@@ -224,9 +223,15 @@ def crack_ecb_oracle(oracle_fn, prefix_length=0, block_size=16):
             return pkcs7_unpad(result)
 
 
-def create_ctr_counter(nonce):
-    return Crypto.Util.Counter.new(
-        nbits=64, prefix=struct.pack("<Q", nonce), initial_value=0, little_endian=True)
+def create_ctr_counter(nonce, block_index=0):
+    # This is roughly equivalent to the following code:
+    # return Crypto.Util.Counter.new(
+    #     nbits=64, prefix=struct.pack("<Q", nonce), initial_value=block_index,
+    #     little_endian=True)
+    # I prefer to use my own implementation because it is simpler, more
+    # readable, and good enough for my purposes. The nonce and the counter
+    # are encoded as 64-bit little-endian integers.
+    return (struct.pack("<QQ", nonce, i) for i in count(start=block_index)).__next__
 
 
 class MT19937_RNG:
@@ -647,9 +652,8 @@ def challenge18():
     nonce = 0
 
     plaintext = bytearray()
-    for block_index, chunk in enumerate(byte_chunks(cipher_bytes), start=nonce):
-        # Encode nonce and block_index as 64-bit little-endian integers
-        counter_value = struct.pack("<QQ", nonce, block_index)
+    ctr_iterator = create_ctr_counter(nonce).__self__
+    for counter_value, chunk in zip(ctr_iterator, byte_chunks(cipher_bytes)):
         keystream = ecb_cipher.encrypt(counter_value)
         plaintext += xor_bytes(keystream[:len(chunk)], chunk)
     print(bytes_to_string(plaintext))
