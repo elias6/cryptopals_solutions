@@ -238,7 +238,7 @@ class MT19937_RNG:
         for i in range(1, 624):
             last_num = self.buffer[i - 1]
             self.buffer.append(
-                0xffffffff & (1812433253 * (last_num ^ last_num >> 30) + i))
+                0xffffffff & (1812433253 * (last_num ^ (last_num >> 30)) + i))
 
     @classmethod
     def from_output_batch(cls, batch):
@@ -269,24 +269,24 @@ class MT19937_RNG:
 
     @staticmethod
     def temper(x):
-        x ^= x >> 11
-        x ^= x << 7 & 2636928640
-        x ^= x << 15 & 4022730752
-        x ^= x >> 18
+        x ^= (x >> 11)
+        x ^= (x << 7) & 0x9d2c5680
+        x ^= (x << 15) & 0xefc60000
+        x ^= (x >> 18)
         return x
 
     @staticmethod
     def untemper(x):
-        x ^= x >> 18
+        x ^= (x >> 18)
 
-        x ^= x << 15 & 4022730752
+        x ^= (x << 15) & 0xefc60000
 
-        x ^= x << 7 & 2636928640
-        x ^= x << 14 & 2485665792
-        x ^= x << 28 & 268435456
+        x ^= (x << 7) & 0x9d2c5680
+        x ^= (x << 14) & 0x94284000
+        x ^= (x << 28) & 0x10000000
 
-        x ^= x >> 11
-        x ^= x >> 22
+        x ^= (x >> 11)
+        x ^= (x >> 22)
         return x
 
 
