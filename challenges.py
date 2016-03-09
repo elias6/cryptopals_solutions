@@ -254,7 +254,6 @@ class MT19937_RNG:
         result.index = 0
         return result
 
-
     def get_number(self):
         if self.index >= 624:
             self.twist()
@@ -821,6 +820,7 @@ def challenge24():
     now = int(time())
     token = create_token(now)
     assert token_came_from_timestamp(token, now)
+
 
 def test_all_challenges(stdout=sys.stdout):
     # Pass sys.stdout when this function is created so "running challenge"
