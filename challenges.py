@@ -239,11 +239,11 @@ class MT19937_RNG:
 
     def __init__(self, seed):
         self.index = 624
-        self.buffer = [seed]
+        buffer = self.buffer = [seed] + [0]*623
+        prev = seed
         for i in range(1, 624):
-            last_num = self.buffer[i - 1]
-            self.buffer.append(
-                0xffffffff & (1812433253 * (last_num ^ (last_num >> 30)) + i))
+            buffer[i] = 0xffffffff & (1812433253 * (prev ^ (prev >> 30)) + i)
+            prev = buffer[i]
 
     @classmethod
     def from_output_batch(cls, batch):
@@ -262,13 +262,14 @@ class MT19937_RNG:
         return result
 
     def twist(self):
+        buffer = self.buffer
         for i in range(624):
-            y = ((self.buffer[i] & 0x80000000) +
-                       (self.buffer[(i + 1) % 624] & 0x7fffffff))
-            self.buffer[i] = self.buffer[(i + 397) % 624] ^ (y >> 1)
+            y = ((buffer[i] & 0x80000000) +
+                       (buffer[(i + 1) % 624] & 0x7fffffff))
+            buffer[i] = buffer[(i + 397) % 624] ^ (y >> 1)
 
-            if y % 2 != 0:
-                self.buffer[i] ^= 0x9908b0df
+            if y & 1:
+                buffer[i] ^= 0x9908b0df
         self.index = 0
 
     @staticmethod
