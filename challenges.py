@@ -781,6 +781,20 @@ def challenge24():
         rng = MT19937_RNG(seed=timestamp)
         return token == struct.pack(">4L", *[rng.get_number() for _ in range(4)])
 
+    def partially_twist(rng, n):
+        # Populate rng.buffer with the first n results of twisting. This
+        # function destroys the internal state of rng, so rng should no longer
+        # be used after being passed to this function.
+        buffer = rng.buffer
+        for i in range(n):
+            y = ((buffer[i] & 0x80000000) +
+                       (buffer[(i + 1) % 624] & 0x7fffffff))
+            buffer[i] = buffer[(i + 397) % 624] ^ (y >> 1)
+
+            if y & 1:
+                buffer[i] ^= 0x9908b0df
+        rng.index = 0
+
     seed = random.getrandbits(16)
     test_plaintext = (b"Give a man a beer, he'll waste an hour. "
         b"Teach a man to brew, he'll waste a lifetime.")
@@ -799,13 +813,19 @@ def challenge24():
     ciphertext_with_my_string = bytes(chain.from_iterable(cipher_chunks[-3:-1]))
     keystream = xor_encrypt(ciphertext_with_my_string, b"A")
     keystream_numbers = list(struct.unpack(">LL", keystream))
+    untempered_numbers = [MT19937_RNG.untemper(x) for x in keystream_numbers]
 
     for seed_guess in range(2**16):
-        if seed_guess % 2000 == 0:
+        if seed_guess % 5000 == 0:
             print("tried {} seeds".format(seed_guess))
         test_rng = MT19937_RNG(seed_guess)
-        test_output = [test_rng.get_number() for _ in range(len(cipher_chunks) - 1)]
-        if test_output[-2:] == keystream_numbers:
+        # The obvious way to test whether seed_guess is right is to generate
+        # (range(len(cipher_chunks) - 1)) numbers from test_rng and see whether
+        # the last 2 match keystream_numbers. However, that is agonizingly slow,
+        # so I am using partially_twist instead.
+        partially_twist(test_rng, len(cipher_chunks) - 1)
+        buffer_slice = test_rng.buffer[len(cipher_chunks) - 3 : len(cipher_chunks) - 1]
+        if buffer_slice == untempered_numbers:
             print("found seed: {}".format(seed_guess))
             assert seed_guess == seed
             break
