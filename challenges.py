@@ -862,6 +862,32 @@ def challenge25():
     assert recovered_plaintext == plain_bytes
 
 
+def challenge26():
+    """CTR bitflipping"""
+    key = create_random_aes_key()
+    nonce = random.getrandbits(64)
+
+    def create_encrypted_string(user_data):
+        cipher = AES.new(key, AES.MODE_CTR, counter=create_ctr_counter(nonce))
+        query_string = ("comment1=cooking%20MCs;userdata=" + url_quote(user_data) +
+            ";comment2=%20like%20a%20pound%20of%20bacon")
+        bytes_to_encrypt = pkcs7_pad(query_string.encode("utf-8"))
+        return cipher.encrypt(bytes_to_encrypt)
+
+    def encrypted_string_has_admin(cipher_bytes):
+        cipher = AES.new(key, AES.MODE_CTR, counter=create_ctr_counter(nonce))
+        plain_bytes = pkcs7_unpad(cipher.decrypt(cipher_bytes))
+        return b";admin=true;" in plain_bytes
+
+    cipher_bytes = create_encrypted_string("A" * 16)
+    new_cipher_bytes = bytearray(cipher_bytes)
+    new_cipher_bytes[32:48] = xor_bytes(
+        b"A" * 16, b"ha_ha;admin=true", new_cipher_bytes[32:48])
+    new_cipher_bytes = bytes(new_cipher_bytes)
+
+    assert encrypted_string_has_admin(new_cipher_bytes)
+
+
 def test_all_challenges(stdout=sys.stdout):
     # Pass sys.stdout when this function is created so "running challenge"
     # output shows even if stdout is redirected.
