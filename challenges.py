@@ -835,6 +835,33 @@ def challenge24():
     assert token_came_from_timestamp(token, now)
 
 
+def challenge25():
+    """Break "random access read/write" AES CTR"""
+    key = create_random_aes_key()
+    nonce = random.getrandbits(64)
+
+    def edit(cipher_bytes, block_index, new_bytes):
+        if len(new_bytes) % 16 != 0:
+            raise ValueError("new_bytes must be a multiple of 16 bytes long")
+        counter = create_ctr_counter(nonce, block_index)
+        cipher = AES.new(key, AES.MODE_CTR, counter=counter)
+        new_cipher_bytes = cipher.encrypt(new_bytes)
+        result = bytearray(cipher_bytes)
+        result[16*block_index : 16*block_index + len(new_bytes)] = new_cipher_bytes
+        return bytes(result)
+
+    # 25.txt is identical to 7.txt
+    with open("25.txt") as f:
+        temp_bytes = base64.b64decode(f.read())
+    plain_bytes = AES.new(b"YELLOW SUBMARINE", AES.MODE_ECB).decrypt(temp_bytes)
+    cipher = AES.new(key, AES.MODE_CTR, counter=create_ctr_counter(nonce))
+    cipher_bytes = cipher.encrypt(plain_bytes)
+
+    keystream = edit(cipher_bytes, 0, bytes([0]) * len(plain_bytes))
+    recovered_plaintext = xor_bytes(cipher_bytes, keystream)
+    assert recovered_plaintext == plain_bytes
+
+
 def test_all_challenges(stdout=sys.stdout):
     # Pass sys.stdout when this function is created so "running challenge"
     # output shows even if stdout is redirected.
