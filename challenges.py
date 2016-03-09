@@ -801,9 +801,7 @@ def challenge24():
     test_ciphertext = encrypt_with_rng(MT19937_RNG(seed), test_plaintext)
     assert encrypt_with_rng(MT19937_RNG(seed), test_ciphertext) == test_plaintext
 
-    # TODO: change the following assignment to random.getrandbits(16) after
-    # I figure out how to make MT19937_RNG stuff, especially twist, faster.
-    seed = 8000
+    seed = random.getrandbits(16)
     my_bytes = b"A" * 14
     ciphertext = encrypt_with_random_prefix(MT19937_RNG(seed), my_bytes)
     cipher_chunks = byte_chunks(ciphertext, 4)
