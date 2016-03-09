@@ -242,8 +242,7 @@ class MT19937_RNG:
         buffer = self.buffer = [seed] + [0]*623
         prev = seed
         for i in range(1, 624):
-            buffer[i] = 0xffffffff & (1812433253 * (prev ^ (prev >> 30)) + i)
-            prev = buffer[i]
+            prev = buffer[i] = 0xffffffff & (1812433253 * (prev ^ (prev >> 30)) + i)
 
     def get_number(self):
         if self.index >= 624:
