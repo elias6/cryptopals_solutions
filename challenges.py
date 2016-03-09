@@ -121,10 +121,10 @@ def best_english_like_score_data(cipher_bytes):
     return result
 
 
-def looks_like_ecb(cipher_bytes):
+def looks_like_ecb(cipher_bytes, chunk_size=16):
     # TODO: use birthday paradox to calculate an estimate for the expected
     # number of duplicate blocks so this function works on big ciphertexts.
-    chunk_counter = Counter(byte_chunks(cipher_bytes))
+    chunk_counter = Counter(byte_chunks(cipher_bytes, chunk_size))
     return chunk_counter.most_common(1)[0][1] > 1
 
 
@@ -184,8 +184,8 @@ def create_random_aes_key():
     return os.urandom(16)
 
 
-def appears_to_produce_ecb(oracle_fn):
-    return any(looks_like_ecb(oracle_fn(b"A" * i)) for i in range(1000))
+def appears_to_produce_ecb(oracle_fn, chunk_size=16):
+    return any(looks_like_ecb(oracle_fn(b"A" * i), chunk_size) for i in range(1000))
 
 
 def guess_block_size(oracle_fn):
