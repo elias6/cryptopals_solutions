@@ -791,8 +791,8 @@ def challenge24():
     # TODO: change the following assignment to random.getrandbits(16) after
     # I figure out how to make MT19937_RNG stuff, especially twist, faster.
     seed = 8000
-    plaintext = b"A" * 14
-    ciphertext = encrypt_with_random_prefix(MT19937_RNG(seed), plaintext)
+    my_bytes = b"A" * 14
+    ciphertext = encrypt_with_random_prefix(MT19937_RNG(seed), my_bytes)
     cipher_chunks = byte_chunks(ciphertext, 4)
     # Get bytes from last 2 chunks, excluding last chunk, which may not have
     # 4 bytes, and therefore may not allow me to determine the keystream
