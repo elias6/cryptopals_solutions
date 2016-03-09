@@ -13,7 +13,7 @@ import warnings
 from Crypto.Cipher import AES
 from collections import Counter, defaultdict
 from contextlib import ExitStack, redirect_stdout
-from itertools import count, cycle
+from itertools import chain, count, cycle
 from random import SystemRandom
 from time import time
 from urllib.parse import parse_qs, quote as url_quote, urlencode
@@ -764,6 +764,63 @@ def challenge23():
     numbers2 = [rng2.get_number() for _ in range(624)]
     assert numbers == numbers2
 
+
+def challenge24():
+    """Create the MT19937 stream cipher and break it"""
+    def encrypt_with_rng(rng, cipher_bytes):
+        result = bytearray()
+        for chunk in byte_chunks(cipher_bytes, 4):
+            # Create 4-byte chunk from rng
+            keystream_bytes = struct.pack(">L", rng.get_number())
+            result += xor_bytes(chunk, keystream_bytes[:len(chunk)])
+        return bytes(result)
+
+    def encrypt_with_random_prefix(rng, plain_bytes):
+        prefix = os.urandom(random.randint(0, 64))
+        return encrypt_with_rng(rng, prefix + plain_bytes)
+
+    def create_token(timestamp):
+        rng = MT19937_RNG(seed=timestamp)
+        return struct.pack(">4L", *[rng.get_number() for _ in range(4)])
+
+    def token_came_from_timestamp(token, timestamp):
+        rng = MT19937_RNG(seed=timestamp)
+        return token == struct.pack(">4L", *[rng.get_number() for _ in range(4)])
+
+    seed = random.getrandbits(16)
+    test_plaintext = (b"Give a man a beer, he'll waste an hour. "
+        b"Teach a man to brew, he'll waste a lifetime.")
+    test_ciphertext = encrypt_with_rng(MT19937_RNG(seed), test_plaintext)
+    assert encrypt_with_rng(MT19937_RNG(seed), test_ciphertext) == test_plaintext
+
+    # TODO: change the following assignment to random.getrandbits(16) after
+    # I figure out how to make MT19937_RNG stuff, especially twist, faster.
+    seed = 8000
+    plaintext = b"A" * 14
+    ciphertext = encrypt_with_random_prefix(MT19937_RNG(seed), plaintext)
+    cipher_chunks = byte_chunks(ciphertext, 4)
+    # Get bytes from last 2 chunks, excluding last chunk, which may not have
+    # 4 bytes, and therefore may not allow me to determine the keystream
+    # numbers.
+    ciphertext_with_my_string = bytes(chain.from_iterable(cipher_chunks[-3:-1]))
+    keystream = xor_encrypt(ciphertext_with_my_string, b"A")
+    keystream_numbers = list(struct.unpack(">LL", keystream))
+
+    for seed_guess in range(2**16):
+        if seed_guess % 2000 == 0:
+            print("tried {} seeds".format(seed_guess))
+        test_rng = MT19937_RNG(seed_guess)
+        test_output = [test_rng.get_number() for _ in range(len(cipher_chunks) - 1)]
+        if test_output[-2:] == keystream_numbers:
+            print("found seed: {}".format(seed_guess))
+            assert seed_guess == seed
+            break
+    else:
+        assert False, "seed not found"
+
+    now = int(time())
+    token = create_token(now)
+    assert token_came_from_timestamp(token, now)
 
 def test_all_challenges(stdout=sys.stdout):
     # Pass sys.stdout when this function is created so "running challenge"
