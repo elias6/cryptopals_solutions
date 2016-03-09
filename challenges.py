@@ -33,6 +33,9 @@ random = SystemRandom()
 
 ALL_BYTES = [bytes([i]) for i in range(256)]
 
+EXAMPLE_PLAIN_BYTES = (b"Give a man a beer, he'll waste an hour. "
+    b"Teach a man to brew, he'll waste a lifetime.")
+
 
 def pp(*args, width=120, **kwargs):
     pprint.pprint(*args, width=width, **kwargs)
@@ -497,8 +500,7 @@ def challenge14():
     """Byte-at-a-time ECB decryption (Harder)"""
     cipher = AES.new(create_random_aes_key(), AES.MODE_ECB)
     random_bytes = os.urandom(random.randint(0, 64))
-    target_bytes = (b"Give a man a beer, he'll waste an hour. "
-        b"Teach a man to brew, he'll waste a lifetime.")
+    target_bytes = EXAMPLE_PLAIN_BYTES
 
     def oracle_fn(attacker_bytes):
         return cipher.encrypt(pkcs7_pad(random_bytes + attacker_bytes + target_bytes))
@@ -796,10 +798,8 @@ def challenge24():
         rng.index = 0
 
     seed = random.getrandbits(16)
-    test_plaintext = (b"Give a man a beer, he'll waste an hour. "
-        b"Teach a man to brew, he'll waste a lifetime.")
-    test_ciphertext = encrypt_with_rng(MT19937_RNG(seed), test_plaintext)
-    assert encrypt_with_rng(MT19937_RNG(seed), test_ciphertext) == test_plaintext
+    test_ciphertext = encrypt_with_rng(MT19937_RNG(seed), EXAMPLE_PLAIN_BYTES)
+    assert encrypt_with_rng(MT19937_RNG(seed), test_ciphertext) == EXAMPLE_PLAIN_BYTES
 
     seed = random.getrandbits(16)
     my_bytes = b"A" * 14
