@@ -245,15 +245,6 @@ class MT19937_RNG:
             buffer[i] = 0xffffffff & (1812433253 * (prev ^ (prev >> 30)) + i)
             prev = buffer[i]
 
-    @classmethod
-    def from_output_batch(cls, batch):
-        # The seed passed in the next line has no effect since the buffer is
-        # being overwritten.
-        result = MT19937_RNG(seed=0)
-        result.buffer = [cls.untemper(x) for x in batch]
-        result.index = 0
-        return result
-
     def get_number(self):
         if self.index >= 624:
             self.twist()
@@ -760,7 +751,11 @@ def challenge23():
     rng = MT19937_RNG(seed=random.getrandbits(32))
     numbers = [rng.get_number() for _ in range(624)]
 
-    rng2 = MT19937_RNG.from_output_batch(numbers)
+    # The seed passed in the next line has no effect since the buffer is
+    # being overwritten.
+    rng2 = MT19937_RNG(seed=0)
+    rng2.buffer = [MT19937_RNG.untemper(x) for x in numbers]
+    rng2.index = 0
     numbers2 = [rng2.get_number() for _ in range(624)]
     assert numbers == numbers2
 
