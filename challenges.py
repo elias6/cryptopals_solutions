@@ -793,19 +793,16 @@ def challenge24():
         rng = MT19937_RNG(seed=timestamp)
         return token == struct.pack(">4L", *[rng.get_number() for _ in range(4)])
 
-    def partially_twist(rng, n):
-        # Populate rng.buffer with the first n results of twisting. This
-        # function destroys the internal state of rng, so rng should no longer
-        # be used after being passed to this function.
-        buffer = rng.buffer
+    def partially_twist(buffer, n):
+        # Populate buffer with the first n results of twisting. This function
+        # destroys the internal state of whatever RNG it belongs to, so the RNG
+        # should no longer be used after being passed to this function.
         for i in range(n):
             y = ((buffer[i] & 0x80000000) +
                        (buffer[(i + 1) % 624] & 0x7fffffff))
             buffer[i] = buffer[(i + 397) % 624] ^ (y >> 1)
-
             if y & 1:
                 buffer[i] ^= 0x9908b0df
-        rng.index = 0
 
     seed = random.getrandbits(16)
     test_ciphertext = encrypt_with_rng(MT19937_RNG(seed), EXAMPLE_PLAIN_BYTES)
@@ -831,7 +828,7 @@ def challenge24():
         # (range(len(cipher_chunks) - 1)) numbers from test_rng and see whether
         # the last 2 match keystream_numbers. However, that is agonizingly slow,
         # so I am using partially_twist instead.
-        partially_twist(test_rng, len(cipher_chunks) - 1)
+        partially_twist(test_rng.buffer, len(cipher_chunks) - 1)
         buffer_slice = test_rng.buffer[len(cipher_chunks) - 3 : len(cipher_chunks) - 1]
         if buffer_slice == untempered_numbers:
             print("found seed: {}".format(seed_guess))
