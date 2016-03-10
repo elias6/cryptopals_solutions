@@ -15,6 +15,7 @@ from collections import Counter, defaultdict
 from contextlib import ExitStack, redirect_stdout
 from itertools import chain, count, cycle
 from random import SystemRandom
+from sha1.sha1 import Sha1Hash
 from time import time
 from urllib.parse import parse_qs, quote as url_quote, urlencode
 
@@ -286,6 +287,14 @@ class MT19937_RNG:
         x ^= (x >> 11)
         x ^= (x >> 22)
         return x
+
+
+def sha1(message_bytes):
+    return Sha1Hash().update(message_bytes).digest()
+
+
+def create_mac(key, message_bytes):
+    return sha1(key + message_bytes)
 
 
 def challenge1():
@@ -911,6 +920,14 @@ def challenge27():
         assert recovered_key == key
     else:
         assert False
+
+
+def challenge28():
+    """Implement a SHA-1 keyed MAC"""
+    key1 = os.urandom(16)
+    key2 = os.urandom(16)
+    assert create_mac(key1, b"message1") != create_mac(key1, b"message2")
+    assert create_mac(key1, b"message1") != create_mac(key2, b"message1")
 
 
 def test_all_challenges(stdout=sys.stdout):
