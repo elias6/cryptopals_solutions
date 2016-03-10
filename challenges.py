@@ -525,7 +525,7 @@ def challenge14():
     attacker_block_pos = block_size * chunks.index(attacker_block)
     for i in range(block_size):
         chunks = byte_chunks(oracle_fn(b"A" * (3*block_size - i - 1)))
-        if Counter(chunks)[attacker_block] < attacker_block_count:
+        if chunks.count(attacker_block) < attacker_block_count:
             prefix_length = attacker_block_pos - (-i % block_size)
             break
     # TODO: make prefix_length calculation work reliably even if attacker
