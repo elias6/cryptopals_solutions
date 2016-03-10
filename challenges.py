@@ -372,7 +372,7 @@ def challenge6():
         for i in range(10):
             edit_distances[key_size] += edit_distance(chunks[i], chunks[i + 1])
         edit_distances[key_size] /= key_size
-    best_key_size = min(edit_distances, key=lambda key_size: edit_distances[key_size])
+    best_key_size = min(edit_distances, key=edit_distances.get)
 
     cipher_chunks = byte_chunks(cipher_bytes, best_key_size)
     plain_chunks, key = crack_repeating_key_xor(cipher_chunks)
