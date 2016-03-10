@@ -10,14 +10,15 @@ import struct
 import sys
 import warnings
 
-from Crypto.Cipher import AES
 from collections import Counter, defaultdict
 from contextlib import ExitStack, redirect_stdout
 from itertools import chain, count, cycle
 from random import SystemRandom
-from sha1.sha1 import Sha1Hash
 from time import time
 from urllib.parse import parse_qs, quote as url_quote, urlencode
+
+from Crypto.Cipher import AES
+from sha1.sha1 import Sha1Hash
 
 try:
     # Python 3.5
