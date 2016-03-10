@@ -394,9 +394,9 @@ def challenge7():
 
 def challenge8():
     """Detect AES in ECB mode"""
-    ecb_texts = []
     with open("8.txt") as f:
         lines = f.readlines()
+    ecb_texts = []
     for i, line in enumerate(lines):
         cipher_bytes = bytes.fromhex(line.strip())
         if looks_like_ecb(cipher_bytes):
