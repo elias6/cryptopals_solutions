@@ -943,6 +943,10 @@ def test_all_challenges(stdout=sys.stdout):
     for num in sorted(challenges):
         print("running challenge {}".format(num), file=stdout)
         challenges[num]()
+    # If this point is reached, no exceptions occurred in the challenges, so
+    # they all passed. TODO: come up with a less hacky and more flexible way
+    # to test for this.
+    print("All challenges passed.", file=stdout)
 
 
 if __name__ == "__main__":
