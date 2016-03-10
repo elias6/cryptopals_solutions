@@ -888,6 +888,31 @@ def challenge26():
     assert encrypted_string_has_admin(new_cipher_bytes)
 
 
+def challenge27():
+    """Recover the key from CBC with IV=Key"""
+    key = create_random_aes_key()
+    iv = key
+
+    def create_encrypted_string(user_bytes):
+        return AES.new(key, AES.MODE_CBC, iv).encrypt(pkcs7_pad(user_bytes))
+
+    def decrypt(cipher_bytes):
+        plain_bytes = AES.new(key, AES.MODE_CBC, iv).decrypt(cipher_bytes)
+        return pkcs7_unpad(plain_bytes.decode("ascii"))
+
+    cipher_bytes = create_encrypted_string(EXAMPLE_PLAIN_BYTES)
+    modified_cipher_bytes = cipher_bytes[:16] + bytes([0] * 16) + cipher_bytes
+
+    try:
+        decrypted_plaintext = decrypt(modified_cipher_bytes)
+    except UnicodeDecodeError as e:
+        plain_bytes = e.object
+        recovered_key = xor_bytes(plain_bytes[0:16], plain_bytes[32:48])
+        assert recovered_key == key
+    else:
+        assert False
+
+
 def test_all_challenges(stdout=sys.stdout):
     # Pass sys.stdout when this function is created so "running challenge"
     # output shows even if stdout is redirected.
