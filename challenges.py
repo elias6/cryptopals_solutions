@@ -821,9 +821,9 @@ def challenge24():
             print("tried {} seeds".format(seed_guess))
         test_rng = MT19937_RNG(seed_guess)
         # The obvious way to test whether seed_guess is right is to generate
-        # (range(len(cipher_chunks) - 1)) numbers from test_rng and see whether
-        # the last 2 match keystream_numbers. However, that is agonizingly slow,
-        # so I am using partially_twist instead.
+        # (len(cipher_chunks) - 1) numbers from test_rng and see whether the
+        # last 2 match keystream_numbers. However, that is agonizingly slow, so
+        # I am using partially_twist instead.
         partially_twist(test_rng.buffer, len(cipher_chunks) - 1)
         buffer_slice = test_rng.buffer[len(cipher_chunks) - 3 : len(cipher_chunks) - 1]
         if buffer_slice == untempered_numbers:
