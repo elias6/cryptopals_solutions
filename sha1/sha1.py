@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+# This file was obtained from https://github.com/ajalt/python-sha1, but
+# it has been substantially modified.
+
 from __future__ import print_function
 import struct
 import io
@@ -68,21 +71,18 @@ class Sha1Hash(object):
     digest_size = 20
     block_size = 64
 
-    def __init__(self):
+    def __init__(self, initial_register_values=None, prefix_length=0):
         # Initial digest variables
-        self._h = (
-            0x67452301,
-            0xEFCDAB89,
-            0x98BADCFE,
-            0x10325476,
-            0xC3D2E1F0,
-        )
+        if initial_register_values is None:
+            self._h = (0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476, 0xC3D2E1F0)
+        else:
+            self._h = initial_register_values
 
         # bytes object with 0 <= len < 64 used to store the end of the message
         # if the message length is not congruent to 64
         self._unprocessed = b''
         # Length in bytes of all data that has been processed so far
-        self._message_byte_length = 0
+        self._message_byte_length = prefix_length
 
     def update(self, arg):
         """Update the current digest.
@@ -116,22 +116,27 @@ class Sha1Hash(object):
         """Produce the final hash value (big-endian) as a hex string"""
         return '%08x%08x%08x%08x%08x' % self._produce_digest()
 
-    def _produce_digest(self):
-        """Return finalized digest variables for the data processed so far."""
-        # Pre-processing:
-        message = self._unprocessed
-        message_byte_length = self._message_byte_length + len(message)
+    def _produce_padding(self):
+        message_byte_length = self._message_byte_length + len(self._unprocessed)
 
         # append the bit '1' to the message
-        message += b'\x80'
+        result = b'\x80'
 
         # append 0 <= k < 512 bits '0', so that the resulting message length (in bytes)
         # is congruent to 56 (mod 64)
-        message += b'\x00' * ((56 - (message_byte_length + 1) % 64) % 64)
+        result += b'\x00' * ((56 - (message_byte_length + 1) % 64) % 64)
 
         # append length of message (before pre-processing), in bits, as 64-bit big-endian integer
         message_bit_length = message_byte_length * 8
-        message += struct.pack(b'>Q', message_bit_length)
+        result += struct.pack(b'>Q', message_bit_length)
+
+        return result
+
+    def _produce_digest(self):
+        """Return finalized digest variables for the data processed so far."""
+        # Pre-processing:
+        message = self._unprocessed + self._produce_padding()
+        message_byte_length = self._message_byte_length + len(message)
 
         # Process the final chunk
         # At this point, the length of the message is either 64 or 128 bytes.

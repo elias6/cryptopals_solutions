@@ -928,6 +928,33 @@ def challenge28():
     assert create_mac(key1, b"message1") != create_mac(key2, b"message1")
 
 
+def challenge29():
+    """Break a SHA-1 keyed MAC using length extension"""
+    def sha1_padding(message_length):
+        return (b"\x80" +
+            b"\x00" * ((55 - message_length) % 64) +
+            struct.pack(">Q", message_length * 8))
+
+    my_padding = sha1_padding(len(EXAMPLE_PLAIN_BYTES))
+    their_padding = Sha1Hash().update(EXAMPLE_PLAIN_BYTES)._produce_padding()
+    assert their_padding == my_padding
+
+    key = os.urandom(16)
+    query_string = (b"comment1=cooking%20MCs;userdata=foo;"
+        b"comment2=%20like%20a%20pound%20of%20bacon")
+    mac = create_mac(key, query_string)
+
+    glue_padding = sha1_padding(len(key + query_string))
+    new_param = b";admin=true"
+    modified_hash_fn = Sha1Hash(
+        initial_register_values=struct.unpack(">5I", mac),
+        prefix_length=len(key + query_string + glue_padding))
+    new_hash = modified_hash_fn.update(new_param).digest()
+
+    expected_hash = sha1(key + query_string + glue_padding + new_param)
+    assert new_hash == expected_hash
+
+
 def test_all_challenges(stdout=sys.stdout):
     # Pass sys.stdout when this function is created so "running challenge"
     # output shows even if stdout is redirected.
