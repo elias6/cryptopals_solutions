@@ -126,11 +126,11 @@ def best_english_like_score_data(cipher_bytes):
     return result
 
 
-def looks_like_ecb(cipher_bytes, chunk_size=16):
+def looks_like_ecb(cipher_bytes, block_size=16):
     # TODO: use birthday paradox to calculate an estimate for the expected
     # number of duplicate blocks so this function works on big ciphertexts.
-    chunk_counter = Counter(byte_chunks(cipher_bytes, chunk_size))
-    return chunk_counter.most_common(1)[0][1] > 1
+    block_counter = Counter(byte_chunks(cipher_bytes, block_size))
+    return block_counter.most_common(1)[0][1] > 1
 
 
 def crack_repeating_key_xor(ciphertexts):
@@ -163,25 +163,25 @@ def pkcs7_unpad(cipher_bytes, block_size=16):
 
 def cbc_encrypt(key, iv, plain_bytes):
     cipher = AES.new(key, AES.MODE_ECB, iv)
-    last_cipher_chunk = iv
+    last_cipher_block = iv
     result = bytearray()
-    for plain_chunk in byte_chunks(plain_bytes):
-        combined_chunk = xor_bytes(last_cipher_chunk, plain_chunk)
-        cipher_chunk = cipher.encrypt(combined_chunk)
-        result.extend(cipher_chunk)
-        last_cipher_chunk = cipher_chunk
+    for plain_block in byte_chunks(plain_bytes):
+        combined_block = xor_bytes(last_cipher_block, plain_block)
+        cipher_block = cipher.encrypt(combined_block)
+        result.extend(cipher_block)
+        last_cipher_block = cipher_block
     return bytes(result)
 
 
 def cbc_decrypt(key, iv, cipher_bytes):
     cipher = AES.new(key, AES.MODE_ECB, iv)
-    last_cipher_chunk = iv
+    last_cipher_block = iv
     result = bytearray()
-    for cipher_chunk in byte_chunks(cipher_bytes):
-        decrypted_chunk = cipher.decrypt(cipher_chunk)
-        plain_chunk = xor_bytes(last_cipher_chunk, decrypted_chunk)
-        result.extend(plain_chunk)
-        last_cipher_chunk = cipher_chunk
+    for cipher_block in byte_chunks(cipher_bytes):
+        decrypted_block = cipher.decrypt(cipher_block)
+        plain_block = xor_bytes(last_cipher_block, decrypted_block)
+        result.extend(plain_block)
+        last_cipher_block = cipher_block
     return bytes(result)
 
 
@@ -189,8 +189,8 @@ def create_random_aes_key():
     return os.urandom(16)
 
 
-def appears_to_produce_ecb(oracle_fn, chunk_size=16):
-    return any(looks_like_ecb(oracle_fn(b"A" * i), chunk_size) for i in range(1000))
+def appears_to_produce_ecb(oracle_fn, block_size=16):
+    return any(looks_like_ecb(oracle_fn(b"A" * i), block_size) for i in range(1000))
 
 
 def guess_block_size(oracle_fn):
@@ -220,8 +220,8 @@ def crack_ecb_oracle(oracle_fn, prefix_length=0, block_size=16):
         for test_byte in ALL_BYTES:
             test_input = short_input_block + result + test_byte
             output = oracle_fn(test_input)
-            telltale_chunk = byte_chunks(output)[block_index]
-            if telltale_chunk == block_to_look_for:
+            telltale_block = byte_chunks(output)[block_index]
+            if telltale_block == block_to_look_for:
                 result += test_byte
                 break
         else:  # if no byte matches
@@ -486,15 +486,15 @@ def challenge13():
 
 
     profile1 = create_encrypted_user_profile("peter.gregory@piedpiper.com")
-    profile1_chunks = byte_chunks(profile1)
+    profile1_blocks = byte_chunks(profile1)
 
     profile2 = create_encrypted_user_profile("zach.woods@piedpiper.comadmin")
-    profile2_chunks = byte_chunks(profile2)
+    profile2_blocks = byte_chunks(profile2)
 
     profile3 = create_encrypted_user_profile("a@a.com")
-    padding_only_chunk = byte_chunks(profile3)[-1]
+    padding_only_block = byte_chunks(profile3)[-1]
 
-    new_profile = b"".join(profile1_chunks[:3]) + profile2_chunks[2] + padding_only_chunk
+    new_profile = b"".join(profile1_blocks[:3]) + profile2_blocks[2] + padding_only_block
     decrypted_new_profile = decrypt_profile(new_profile)
     assert parse_qs(decrypted_new_profile)["role"] == ["admin"]
     print(decrypted_new_profile)
@@ -515,13 +515,13 @@ def challenge14():
     block_size = guess_block_size(oracle_fn)
     assert block_size == 16
 
-    chunks = byte_chunks(oracle_fn(b"A" * 3*block_size))
-    attacker_block, attacker_block_count = Counter(chunks).most_common(1)[0]
+    blocks = byte_chunks(oracle_fn(b"A" * 3*block_size))
+    attacker_block, attacker_block_count = Counter(blocks).most_common(1)[0]
     assert attacker_block_count >= 2
-    attacker_block_pos = block_size * chunks.index(attacker_block)
+    attacker_block_pos = block_size * blocks.index(attacker_block)
     for i in range(block_size):
-        chunks = byte_chunks(oracle_fn(b"A" * (3*block_size - i - 1)))
-        if chunks.count(attacker_block) < attacker_block_count:
+        blocks = byte_chunks(oracle_fn(b"A" * (3*block_size - i - 1)))
+        if blocks.count(attacker_block) < attacker_block_count:
             prefix_length = attacker_block_pos - (-i % block_size)
             break
     # TODO: make prefix_length calculation work reliably even if attacker
@@ -651,9 +651,9 @@ def challenge18():
 
     plaintext = bytearray()
     ctr_iterator = create_ctr_counter(nonce).__self__
-    for counter_value, chunk in zip(ctr_iterator, byte_chunks(cipher_bytes)):
+    for counter_value, block in zip(ctr_iterator, byte_chunks(cipher_bytes)):
         keystream = ecb_cipher.encrypt(counter_value)
-        plaintext += xor_bytes(keystream[:len(chunk)], chunk)
+        plaintext += xor_bytes(keystream[:len(block)], block)
     print(bytes_to_string(plaintext))
 
     ctr_cipher = AES.new(key, AES.MODE_CTR, counter=create_ctr_counter(nonce))
