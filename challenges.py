@@ -294,10 +294,6 @@ def sha1(message_bytes):
     return Sha1Hash().update(message_bytes).digest()
 
 
-def create_mac(key, message_bytes):
-    return sha1(key + message_bytes)
-
-
 def challenge1():
     """Convert hex to base64"""
     def hex_to_base64(hex_string):
@@ -924,8 +920,8 @@ def challenge28():
     """Implement a SHA-1 keyed MAC"""
     key1 = os.urandom(16)
     key2 = os.urandom(16)
-    assert create_mac(key1, b"message1") != create_mac(key1, b"message2")
-    assert create_mac(key1, b"message1") != create_mac(key2, b"message1")
+    assert sha1(key1 + b"message1") != sha1(key1 + b"message2")
+    assert sha1(key1 + b"message1") != sha1(key2 + b"message2")
 
 
 def challenge29():
@@ -942,7 +938,7 @@ def challenge29():
     key = os.urandom(16)
     query_string = (b"comment1=cooking%20MCs;userdata=foo;"
         b"comment2=%20like%20a%20pound%20of%20bacon")
-    mac = create_mac(key, query_string)
+    mac = sha1(key + query_string)
 
     glue_padding = sha1_padding(len(key + query_string))
     new_param = b";admin=true"
