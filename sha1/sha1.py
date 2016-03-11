@@ -71,12 +71,12 @@ class Sha1Hash(object):
     digest_size = 20
     block_size = 64
 
-    def __init__(self, initial_register_values=None, prefix_length=0):
+    def __init__(self, prefix_hash=None, prefix_length=0):
         # Initial digest variables
-        if initial_register_values is None:
+        if prefix_hash is None:
             self._h = (0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476, 0xC3D2E1F0)
         else:
-            self._h = initial_register_values
+            self._h = struct.unpack(">5I", prefix_hash)
 
         # bytes object with 0 <= len < 64 used to store the end of the message
         # if the message length is not congruent to 64

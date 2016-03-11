@@ -943,7 +943,7 @@ def challenge29():
     glue_padding = sha1_padding(len(key + query_string))
     new_param = b";admin=true"
     modified_hash_fn = Sha1Hash(
-        initial_register_values=struct.unpack(">5I", mac),
+        prefix_hash=mac,
         prefix_length=len(key + query_string + glue_padding))
     new_hash = modified_hash_fn.update(new_param).digest()
 
