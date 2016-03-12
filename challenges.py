@@ -987,7 +987,8 @@ def test_all_challenges(stdout=sys.stdout):
             if callable(var):
                 challenges[num] = var
     for num in sorted(challenges):
-        print("running challenge {}".format(num), file=stdout)
+        print("Running challenge {}: {}".format(num, challenges[num].__doc__),
+            file=stdout)
         challenges[num]()
     # If this point is reached, no exceptions occurred in the challenges, so
     # they all passed. TODO: come up with a less hacky and more flexible way
