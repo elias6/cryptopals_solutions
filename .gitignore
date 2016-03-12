@@ -1,4 +1,6 @@
 
-frequencyTestData.txt
-
 *.pyc
+
+*.sublime-project
+
+*.sublime-workspace
