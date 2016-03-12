@@ -227,6 +227,18 @@ def crack_ecb_oracle(oracle_fn, prefix_length=0, block_size=16):
             return pkcs7_unpad(result)
 
 
+def create_encrypted_query_string(cipher, user_data):
+    query_string = ("comment1=cooking%20MCs;userdata=" + url_quote(user_data) +
+        ";comment2=%20like%20a%20pound%20of%20bacon")
+    bytes_to_encrypt = pkcs7_pad(query_string.encode("utf-8"))
+    return cipher.encrypt(bytes_to_encrypt)
+
+
+def encrypted_string_has_admin(cipher_bytes, cipher):
+    plain_bytes = pkcs7_unpad(cipher.decrypt(cipher_bytes))
+    return b";admin=true;" in plain_bytes
+
+
 def create_ctr_counter(nonce, block_index=0):
     # This is roughly equivalent to the following code:
     # return Crypto.Util.Counter.new(
@@ -555,25 +567,15 @@ def challenge16():
     key = create_random_aes_key()
     iv = os.urandom(16)
 
-    def create_encrypted_string(user_data):
-        cipher = AES.new(key, AES.MODE_CBC, iv)
-        query_string = ("comment1=cooking%20MCs;userdata=" + url_quote(user_data) +
-            ";comment2=%20like%20a%20pound%20of%20bacon")
-        bytes_to_encrypt = pkcs7_pad(query_string.encode("utf-8"))
-        return cipher.encrypt(bytes_to_encrypt)
+    cipher = AES.new(key, AES.MODE_CBC, iv)
+    cipher_bytes = create_encrypted_query_string(cipher, "foo")
 
-    def encrypted_string_has_admin(cipher_bytes):
-        # Create new cipher object because internal IV state in old one gets
-        # messed up after being used.
-        cipher = AES.new(key, AES.MODE_CBC, iv)
-        plain_bytes = pkcs7_unpad(cipher.decrypt(cipher_bytes))
-        return b";admin=true;" in plain_bytes
-
-    cipher_bytes = create_encrypted_string("foo")
     bits_to_flip = (bytes([0] * 32) +
         xor_bytes(b"like%20a%20pound", b";admin=true;foo=") + bytes([0] * 32))
     modified_cipher_bytes = xor_bytes(cipher_bytes, bits_to_flip)
-    assert encrypted_string_has_admin(modified_cipher_bytes)
+
+    cipher = AES.new(key, AES.MODE_CBC, iv)
+    assert encrypted_string_has_admin(modified_cipher_bytes, cipher)
 
 
 def challenge17():
@@ -870,25 +872,15 @@ def challenge26():
     key = create_random_aes_key()
     nonce = random.getrandbits(64)
 
-    def create_encrypted_string(user_data):
-        cipher = AES.new(key, AES.MODE_CTR, counter=create_ctr_counter(nonce))
-        query_string = ("comment1=cooking%20MCs;userdata=" + url_quote(user_data) +
-            ";comment2=%20like%20a%20pound%20of%20bacon")
-        bytes_to_encrypt = pkcs7_pad(query_string.encode("utf-8"))
-        return cipher.encrypt(bytes_to_encrypt)
-
-    def encrypted_string_has_admin(cipher_bytes):
-        cipher = AES.new(key, AES.MODE_CTR, counter=create_ctr_counter(nonce))
-        plain_bytes = pkcs7_unpad(cipher.decrypt(cipher_bytes))
-        return b";admin=true;" in plain_bytes
-
-    cipher_bytes = create_encrypted_string("A" * 16)
+    cipher = AES.new(key, AES.MODE_CTR, counter=create_ctr_counter(nonce))
+    cipher_bytes = create_encrypted_query_string(cipher, "A" * 16)
     new_cipher_bytes = bytearray(cipher_bytes)
     new_cipher_bytes[32:48] = xor_bytes(
         b"A" * 16, b"ha_ha;admin=true", new_cipher_bytes[32:48])
     new_cipher_bytes = bytes(new_cipher_bytes)
 
-    assert encrypted_string_has_admin(new_cipher_bytes)
+    cipher = AES.new(key, AES.MODE_CTR, counter=create_ctr_counter(nonce))
+    assert encrypted_string_has_admin(new_cipher_bytes, cipher)
 
 
 def challenge27():
