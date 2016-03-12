@@ -426,7 +426,7 @@ def challenge10():
 
 def challenge11():
     """An ECB/CBC detection oracle"""
-    def encrypt_with_random_key_and_random_mode(plain_bytes):
+    def encrypt_with_random_mode(plain_bytes):
         key = create_random_aes_key()
         mode = random.choice([AES.MODE_CBC, AES.MODE_ECB])
         # iv is ignored for MODE_ECB
@@ -447,7 +447,7 @@ def challenge11():
         plain_bytes = f.read(3000)
     results = Counter()
     for i in range(1000):
-        cipher_bytes, mode_number = encrypt_with_random_key_and_random_mode(plain_bytes)
+        cipher_bytes, mode_number = encrypt_with_random_mode(plain_bytes)
         mode = {1: "ECB", 2: "CBC"}[mode_number]
         apparent_mode = "ECB" if looks_like_ecb(cipher_bytes) else "CBC"
         results[apparent_mode] += 1
