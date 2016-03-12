@@ -384,7 +384,7 @@ def challenge7():
     """AES in ECB mode"""
     with open("7.txt") as f:
         cipher_bytes = base64.b64decode(f.read())
-    message = AES.new("YELLOW SUBMARINE", AES.MODE_ECB).decrypt(cipher_bytes)
+    message = AES.new(b"YELLOW SUBMARINE", AES.MODE_ECB).decrypt(cipher_bytes)
     print(bytes_to_string(message))
     assert b"white boy" in message
 
