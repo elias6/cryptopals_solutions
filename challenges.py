@@ -112,18 +112,17 @@ def english_like_score(text_bytes):
     return 1e6 / chi_squared / text_length
 
 
-def best_english_like_score_data(cipher_bytes):
+def english_like_score_data(cipher_bytes):
     result = []
     for i in range(256):
         message = xor_encrypt(cipher_bytes, bytes([i]))
         score = english_like_score(message)
-        result.append({
-            "key": [i],
-            "key_binary": "{:08b}".format(i),
-            "message": message,
-            "score": score})
-    result.sort(key=lambda x: x["score"], reverse=True)
+        result.append({"key": i, "message": message, "score": score})
     return result
+
+
+def best_english_like_score_data(cipher_bytes):
+    return max(english_like_score_data(cipher_bytes), key=lambda x: x["score"])
 
 
 def looks_like_ecb(cipher_bytes, block_size=16):
@@ -138,8 +137,8 @@ def crack_repeating_key_xor(ciphertexts):
     for i in count(start=0):
         transposed_block = bytes(c[i] for c in ciphertexts if i < len(c))
         if transposed_block:
-            score_data = best_english_like_score_data(transposed_block)[0]
-            key.extend(score_data["key"])
+            score_data = best_english_like_score_data(transposed_block)
+            key.append(score_data["key"])
         else:
             plaintexts = [xor_encrypt(c, key) for c in ciphertexts]
             return (plaintexts, key)
@@ -320,7 +319,8 @@ def challenge3():
     """Single-byte XOR cipher"""
     cipher_hex = "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736"
     ciphertext = bytes.fromhex(cipher_hex)
-    best_data = best_english_like_score_data(ciphertext)[:5]
+    score_data = english_like_score_data(ciphertext)
+    best_data = sorted(score_data, key=lambda x: x["score"], reverse=True)[:5]
     pp(best_data)
     print(bytes_to_string(best_data[0]["message"]))
     assert best_data[0]["message"] == b"Cooking MC's like a pound of bacon"
@@ -332,7 +332,7 @@ def challenge4():
         ciphertexts = [bytes.fromhex(line.strip()) for line in f.readlines()]
     decoded_string_data = []
     for i, cipher_bytes in enumerate(ciphertexts):
-        decoded_string_data.append(best_english_like_score_data(cipher_bytes)[0])
+        decoded_string_data.append(best_english_like_score_data(cipher_bytes))
         decoded_string_data[-1]["index"] = i
     best_decodings = sorted(decoded_string_data, key=lambda d: d["score"], reverse=True)
     result = best_decodings[:3]
