@@ -12,7 +12,7 @@ import warnings
 
 from collections import Counter, defaultdict
 from contextlib import ExitStack, redirect_stdout
-from itertools import chain, count, cycle
+from itertools import count, cycle
 from random import SystemRandom
 from time import time
 from urllib.parse import parse_qs, quote as url_quote, urlencode
@@ -812,7 +812,7 @@ def challenge24():
     # Get bytes from last 2 chunks, excluding last chunk, which may not have
     # 4 bytes, and therefore may not allow me to determine the keystream
     # numbers.
-    ciphertext_with_my_string = bytes(chain.from_iterable(cipher_chunks[-3:-1]))
+    ciphertext_with_my_string = b"".join(cipher_chunks[-3:-1])
     keystream = xor_encrypt(ciphertext_with_my_string, b"A")
     keystream_numbers = list(struct.unpack(">LL", keystream))
     untempered_numbers = [MT19937_RNG.untemper(x) for x in keystream_numbers]
