@@ -34,8 +34,6 @@ warnings.simplefilter("default", DeprecationWarning)
 
 random = SystemRandom()
 
-ALL_BYTES = [bytes([i]) for i in range(256)]
-
 EXAMPLE_PLAIN_BYTES = (b"Give a man a beer, he'll waste an hour. "
     b"Teach a man to brew, he'll waste a lifetime.")
 
@@ -115,12 +113,12 @@ def english_like_score(text_bytes):
 
 def best_english_like_score_data(cipher_bytes):
     result = []
-    for key in ALL_BYTES:
-        message = xor_encrypt(cipher_bytes, key)
+    for i in range(256):
+        message = xor_encrypt(cipher_bytes, bytes([i]))
         score = english_like_score(message)
         result.append({
-            "key": list(key),
-            "key_binary": ["{:08b}".format(b) for b in key],
+            "key": [i],
+            "key_binary": "{:08b}".format(i),
             "message": message,
             "score": score})
     result.sort(key=lambda x: x["score"], reverse=True)
@@ -218,12 +216,12 @@ def crack_ecb_oracle(oracle_fn, prefix_length=0, block_size=16):
         short_block_output = oracle_fn(short_input_block)
         block_index = (len(result) + prefix_length) // block_size
         block_to_look_for = byte_chunks(short_block_output)[block_index]
-        for test_byte in ALL_BYTES:
-            test_input = short_input_block + result + test_byte
+        for i in range(256):
+            test_input = short_input_block + result + bytes([i])
             output = oracle_fn(test_input)
             telltale_block = byte_chunks(output)[block_index]
             if telltale_block == block_to_look_for:
-                result += test_byte
+                result += bytes([i])
                 break
         else:  # if no byte matches
             return pkcs7_unpad(result)
@@ -623,8 +621,8 @@ def challenge17():
                 padding = bytes([len(recovered_block) + 1] * len(recovered_block))
                 iv_end = xor_bytes(cipher_slice, padding, recovered_block)
                 new_iv = bytearray(prev_cipher_block[:pos] + b"\x00" + iv_end)
-                for guess in ALL_BYTES:
-                    new_iv[pos] = prev_cipher_block[pos] ^ guess[0] ^ (16 - pos)
+                for i in range(256):
+                    new_iv[pos] = prev_cipher_block[pos] ^ i ^ (16 - pos)
                     if has_valid_padding(bytes(new_iv), cipher_block):
                         if not recovered_block:
                             new_iv[14] ^= 2
@@ -633,7 +631,7 @@ def challenge17():
                                 # padding, but this is wrong.
                                 # See https://blog.skullsecurity.org/2013/padding-oracle-attacks-in-depth
                                 continue
-                        recovered_block = guess + recovered_block
+                        recovered_block = bytes([i]) + recovered_block
                         break
             recovered_plaintext += recovered_block
             prev_cipher_block = cipher_block
