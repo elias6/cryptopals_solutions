@@ -18,6 +18,7 @@ from time import time
 from urllib.parse import parse_qs, quote as url_quote, urlencode
 
 from Crypto.Cipher import AES
+from md4.md4 import MD4
 from sha1.sha1 import Sha1Hash
 
 try:
@@ -949,6 +950,29 @@ def challenge29():
 
     expected_hash = sha1(key + query_string + glue_padding + new_param)
     assert new_hash == expected_hash
+
+
+def challenge30():
+    """Break an MD4 keyed MAC using length extension"""
+    def md4_padding(message_length):
+        # Very similar to sha1_padding, but little endian instead of big endian
+        return (b"\x80" +
+            b"\x00" * ((55 - message_length) % 64) +
+            struct.pack("<Q", message_length * 8))
+
+    key = os.urandom(16)
+    query_string = (b"comment1=cooking%20MCs;userdata=foo;"
+        b"comment2=%20like%20a%20pound%20of%20bacon")
+    mac = MD4(key + query_string)
+
+    glue_padding = md4_padding(len(key + query_string))
+    new_param = b";admin=true"
+    new_hash = MD4(new_param,
+        fake_byte_len=len(key + query_string + glue_padding + new_param),
+        state=struct.unpack("<4I", mac))
+
+    expected_hash = MD4(key + query_string + glue_padding + new_param)
+    assert new_hash == expected_hash, (new_hash.hex(), expected_hash.hex())
 
 
 def test_all_challenges(stdout=sys.stdout):
