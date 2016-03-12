@@ -70,7 +70,9 @@ def byte_chunks(input_bytes, chunk_size=16):
 # http://www.macfreek.nl/memory/Letter_Distribution, then rounded to 6
 # decimal places for readability. Numbers for control characters (\x00
 # through \x1f excluding tab (\x09), newline (\x0a), and carriage return
-# (\x0d)) were added by me after observing better results.
+# (\x0d)) were added by me after observing better results. Text should
+# be converted to lowercase before one attempts to analyze it using this
+# dictionary.
 english_byte_frequencies = defaultdict(
     # The following number will be returned for any byte not explicitly
     # represented. 4e-6 was observed to produce the best ratio of score for
@@ -93,12 +95,11 @@ english_byte_frequencies = defaultdict(
 
 
 def english_like_score(text_bytes):
-    # english_byte_frequencies is defined outside of this function mainly as
-    # a performance optimization. In my tests, the time spent in this
-    # function is less than half of what it would be if
-    # english_byte_frequencies were defined inside this function. I am also
-    # using a defaultdict instead of a Counter for the byte counts as a
-    # performance optimization.
+    # english_byte_frequencies is defined outside of this function as a
+    # performance optimization. In my tests, the time spent in this function
+    # is less than half of what it would be if english_byte_frequencies were
+    # defined inside this function. I am also using a defaultdict instead of
+    # a Counter for the byte counts as a performance optimization.
     byte_counts = defaultdict(int)
     for byte in text_bytes.lower():
         byte_counts[byte] += 1
