@@ -1007,14 +1007,14 @@ if __name__ == "__main__":
     else:
         func = test_all_challenges
     with ExitStack() as stack:
+        if args.profile:
+            profile = cProfile.Profile()
+            stack.callback(profile.print_stats, sort="cumtime")
         if args.quiet:
             null_stream = open(os.devnull, "w")
             stack.enter_context(null_stream)
             stack.enter_context(redirect_stdout(null_stream))
         if args.profile:
-            profile = cProfile.Profile()
             profile.runcall(func)
         else:
             func()
-    if args.profile:
-        profile.print_stats(sort="cumtime")
