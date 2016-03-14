@@ -318,14 +318,12 @@ def calculate_hmac(key, message_bytes):
 
 def challenge1():
     """Convert hex to base64"""
-    def hex_to_base64(hex_string):
-        return base64.b64encode(bytes.fromhex(hex_string))
-
-    cipher_hex = ("49276d206b696c6c696e6720796f757220627261696e206c" +
+    encoded_text = ("49276d206b696c6c696e6720796f757220627261696e206c" +
         "696b65206120706f69736f6e6f7573206d757368726f6f6d")
-    result = hex_to_base64(cipher_hex)
+    message = bytes.fromhex(encoded_text)
+    print(bytes_to_string(message))
+    result = base64.b64encode(message)
     assert result == b"SSdtIGtpbGxpbmcgeW91ciBicmFpbiBsaWtlIGEgcG9pc29ub3VzIG11c2hyb29t"
-    print(bytes_to_string(result))
 
 
 def challenge2():
