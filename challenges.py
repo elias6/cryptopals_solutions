@@ -343,7 +343,7 @@ def challenge3():
     cipher_hex = "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736"
     ciphertext = bytes.fromhex(cipher_hex)
     score_data = english_like_score_data(ciphertext)
-    best_data = sorted(score_data, key=lambda x: x["score"], reverse=True)[:5]
+    best_data = nlargest(5, score_data, key=lambda x: x["score"])
     pp(best_data)
     print(bytes_to_string(best_data[0]["message"]))
     assert best_data[0]["message"] == b"Cooking MC's like a pound of bacon"
@@ -357,9 +357,8 @@ def challenge4():
     for i, cipher_bytes in enumerate(ciphertexts):
         decoded_string_data.append(best_english_like_score_data(cipher_bytes))
         decoded_string_data[-1]["index"] = i
-    best_decodings = sorted(decoded_string_data, key=lambda d: d["score"], reverse=True)
-    result = best_decodings[:3]
-    pp(result)
+    best_decodings = nlargest(3, decoded_string_data, key=lambda d: d["score"])
+    pp(best_decodings)
     assert best_decodings[0]["message"] == b"Now that the party is jumping\n"
 
 
