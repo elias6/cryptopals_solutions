@@ -11,10 +11,14 @@ import sys
 import warnings
 
 from collections import Counter, defaultdict
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import ExitStack, redirect_stdout
+from functools import lru_cache
+from heapq import nlargest
 from itertools import count, cycle
 from random import SystemRandom
-from time import time
+from statistics import mean
+from time import sleep, time
 from urllib.parse import parse_qs, quote as url_quote, urlencode
 
 from Crypto.Cipher import AES
@@ -303,6 +307,13 @@ class MT19937_RNG:
 
 def sha1(message_bytes):
     return Sha1Hash().update(message_bytes).digest()
+
+
+def calculate_hmac(key, message_bytes):
+    key_hash = sha1(key)
+    o_key_pad = xor_encrypt(key_hash, b"\x5c")
+    i_key_pad = xor_encrypt(key_hash, b"\x36")
+    return sha1(o_key_pad + sha1(i_key_pad + message_bytes))
 
 
 def challenge1():
@@ -964,6 +975,67 @@ def challenge30():
 
     expected_hash = MD4(key + query_string + glue_padding + new_param)
     assert new_hash == expected_hash, (new_hash.hex(), expected_hash.hex())
+
+
+def challenge31():
+    """Implement and break HMAC-SHA1 with an artificial timing leak"""
+    key = os.urandom(16)
+
+    def secure_compare(data1, data2):
+        return data1 == data2
+
+    def insecure_compare(data1, data2):
+        if len(data1) != len(data2):
+            return False
+        for byte1, byte2 in zip(data1, data2):
+            if byte1 != byte2:
+                return False
+            sleep(0.05)
+        return True
+
+    def bytes_has_valid_signature(data, signature, cmp=secure_compare):
+        return cmp(get_hmac(key, data), signature)
+
+    def recover_signature(data):
+        def try_signature(signature):
+            start_time = time()
+            is_valid = bytes_has_valid_signature(data, signature, insecure_compare)
+            duration = time() - start_time
+            return {"signature": signature, "is_valid": is_valid, "duration": duration}
+
+        recovered_signature = bytearray()
+        with ThreadPoolExecutor(max_workers=300) as executor:
+            for pos in range(20):
+                assert pos == len(recovered_signature)
+                signature_results = []
+                for b in range(256):
+                    sig = bytes(recovered_signature + bytes([b] + [0]*(19 - pos)))
+                    signature_results.append({"signature": sig, "durations": []})
+                test_signatures = [x["signature"] for x in signature_results]
+                for attempt in range(10):
+                    for sig_data in executor.map(try_signature, test_signatures):
+                        byte = sig_data["signature"][pos]
+                        if sig_data["is_valid"]:
+                            return sig_data["signature"]
+                        signature_results[byte]["durations"].append(sig_data["duration"])
+                    slowest_data, second_slowest_data = nlargest(
+                        2, signature_results, key=lambda x: mean(x["durations"]))
+                    slowest_byte_duration = mean(slowest_data["durations"])
+                    second_slowest_byte_duration = mean(second_slowest_data["durations"])
+                    if slowest_byte_duration - second_slowest_byte_duration > 0.02:
+                        recovered_signature.append(slowest_data["signature"][pos])
+                        print("recovered so far: {}".format(list(recovered_signature)))
+                        break
+                else:
+                    raise ValueError("can't recover signature")
+
+    get_hmac = lru_cache()(calculate_hmac)
+
+    print("looking for {}".format(list(get_hmac(key, EXAMPLE_PLAIN_BYTES))))
+    print()
+    signature = recover_signature(EXAMPLE_PLAIN_BYTES)
+    print(list(signature))
+    assert bytes_has_valid_signature(EXAMPLE_PLAIN_BYTES, signature)
 
 
 def test_all_challenges(stdout=sys.stdout):
