@@ -11,10 +11,10 @@ import sys
 import warnings
 
 from collections import Counter, defaultdict
-from concurrent.futures import ThreadPoolExecutor
 from contextlib import ExitStack, redirect_stdout
 from heapq import nlargest
 from itertools import count, cycle
+from multiprocessing.dummy import Pool as ThreadPool
 from random import SystemRandom
 from statistics import mean
 from time import perf_counter, sleep, time
@@ -333,7 +333,7 @@ def recover_signature(data, validate_signature, quiet=True):
         return {"signature": signature, "is_valid": is_valid, "duration": duration}
 
     result = bytearray()
-    with ThreadPoolExecutor(max_workers=300) as executor:
+    with ThreadPool(300) as pool:
         for pos in range(20):
             assert pos == len(result)
             signature_results = []
@@ -342,7 +342,7 @@ def recover_signature(data, validate_signature, quiet=True):
                 signature_results.append({"signature": sig, "durations": []})
             test_signatures = [x["signature"] for x in signature_results]
             for i in range(10):
-                for sig_data in executor.map(try_signature, test_signatures):
+                for sig_data in pool.imap_unordered(try_signature, test_signatures):
                     signature = sig_data["signature"]
                     if sig_data["is_valid"]:
                         return signature
