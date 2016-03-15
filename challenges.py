@@ -17,7 +17,7 @@ from heapq import nlargest
 from itertools import count, cycle
 from random import SystemRandom
 from statistics import mean
-from time import sleep, time
+from time import perf_counter, sleep, time
 from urllib.parse import parse_qs, quote as url_quote, urlencode
 
 from Crypto.Cipher import AES
@@ -327,9 +327,9 @@ def insecure_compare(data1, data2):
 
 def recover_signature(data, validate_signature, quiet=True):
     def try_signature(signature):
-        start_time = time()
+        start_time = perf_counter()
         is_valid = validate_signature(signature)
-        duration = time() - start_time
+        duration = perf_counter() - start_time
         return {"signature": signature, "is_valid": is_valid, "duration": duration}
 
     result = bytearray()
