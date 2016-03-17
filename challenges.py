@@ -325,7 +325,7 @@ def insecure_compare(data1, data2):
     return True
 
 
-def recover_signature(data, validate_signature, quiet=True):
+def recover_signature(validate_signature, quiet=True):
     def try_signature(signature):
         start_time = perf_counter()
         is_valid = validate_signature(signature)
@@ -1030,7 +1030,7 @@ def challenge31():
 
     print("looking for {}".format(list(get_hmac(key, data))))
     print()
-    signature = recover_signature(data, signature_is_valid, quiet=False)
+    signature = recover_signature(signature_is_valid, quiet=False)
     print("recovered signature: {}".format(list(signature)))
     assert get_hmac(key, data) == signature
 
