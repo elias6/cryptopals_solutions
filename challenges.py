@@ -336,24 +336,21 @@ def recover_signature(validate_signature, quiet=True):
     with ThreadPool(300) as pool:
         for pos in range(20):
             assert pos == len(result)
-            signature_results = []
+            sig_durations = {}
             for b in range(256):
                 sig = bytes(result + bytes([b] + [0]*(19 - pos)))
-                signature_results.append({"signature": sig, "durations": []})
-            test_signatures = [x["signature"] for x in signature_results]
+                sig_durations[sig] = []
             for i in range(10):
-                for sig_data in pool.imap_unordered(try_signature, test_signatures):
-                    signature = sig_data["signature"]
+                for sig_data in pool.imap_unordered(try_signature, sig_durations.keys()):
                     if sig_data["is_valid"]:
-                        return signature
-                    durations = signature_results[signature[pos]]["durations"]
-                    durations.append(sig_data["duration"])
-                slowest_result, second_slowest_result = nlargest(
-                    2, signature_results, key=lambda x: mean(x["durations"]))
-                longest_duration = mean(slowest_result["durations"])
-                second_longest_duration = mean(second_slowest_result["durations"])
-                if longest_duration - second_longest_duration > 0.02:
-                    result.append(slowest_result["signature"][pos])
+                        return sig_data["signature"]
+                    sig_durations[sig_data["signature"]].append(sig_data["duration"])
+                slowest_sig, second_slowest_sig = nlargest(
+                    2, sig_durations, key=lambda x: mean(sig_durations[x]))
+                slowest_duration = mean(sig_durations[slowest_sig])
+                second_slowest_duration = mean(sig_durations[second_slowest_sig])
+                if slowest_duration - second_slowest_duration > 0.02:
+                    result.append(slowest_sig[pos])
                     if not quiet:
                         print("recovered so far: {}".format(list(result)))
                     break
