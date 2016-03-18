@@ -1018,12 +1018,12 @@ def challenge30():
 
 def challenge31():
     """Implement and break HMAC-SHA1 with an artificial timing leak"""
+    def signature_is_valid(signature):
+        return insecure_compare(hmac, signature)
+
     key = os.urandom(16)
     data = EXAMPLE_PLAIN_BYTES
     hmac = get_hmac(key, data)
-
-    def signature_is_valid(signature):
-        return insecure_compare(hmac, signature)
 
     print("looking for {}".format(list(get_hmac(key, data))))
     print()
