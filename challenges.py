@@ -10,7 +10,7 @@ import struct
 import sys
 import warnings
 
-from collections import Counter, defaultdict
+from collections import Counter, defaultdict, deque
 from contextlib import ExitStack, redirect_stderr, redirect_stdout
 from functools import lru_cache
 from heapq import nlargest
@@ -19,7 +19,7 @@ from itertools import count, cycle
 from multiprocessing.dummy import Pool as ThreadPool
 from random import SystemRandom
 from socketserver import ForkingMixIn, ThreadingMixIn
-from statistics import mean
+from statistics import median
 from threading import Thread
 from time import perf_counter, sleep, time
 from urllib.error import HTTPError
@@ -324,13 +324,13 @@ def calculate_hmac(key, message_bytes):
 get_hmac = lru_cache()(calculate_hmac)
 
 
-def insecure_compare(data1, data2):
+def insecure_compare(data1, data2, delay):
     if len(data1) != len(data2):
         return False
     for byte1, byte2 in zip(data1, data2):
         if byte1 != byte2:
             return False
-        sleep(0.05)
+        sleep(delay)
     return True
 
 
@@ -359,12 +359,15 @@ class ValidatingRequestHandler(BaseHTTPRequestHandler):
 
 
 def recover_signature(validate_signature, quiet=True, thread_count=300):
+    # TODO: make this more efficient, reliable, and flexible
+
     def try_signature(signature):
         start_time = perf_counter()
         is_valid = validate_signature(signature)
         duration = perf_counter() - start_time
         return {"signature": signature, "is_valid": is_valid, "duration": duration}
 
+    difference_expectations = deque(maxlen=20)
     result = bytearray()
     with ThreadPool(thread_count) as pool:
         for pos in range(20):
@@ -373,22 +376,29 @@ def recover_signature(validate_signature, quiet=True, thread_count=300):
             for b in range(256):
                 sig = bytes(result + bytes([b] + [0]*(19 - pos)))
                 sig_durations[sig] = []
-            for i in range(10):
+            for i in range(20):
                 for sig_data in pool.imap_unordered(try_signature, sig_durations.keys()):
                     if sig_data["is_valid"]:
+                        if not quiet:
+                            print("signature recovered: {}, {} attempts".format(
+                                list(result), i + 1))
                         return sig_data["signature"]
                     sig_durations[sig_data["signature"]].append(sig_data["duration"])
                 slowest_sig, second_slowest_sig = nlargest(
-                    2, sig_durations, key=lambda x: mean(sig_durations[x]))
-                slowest_duration = mean(sig_durations[slowest_sig])
-                second_slowest_duration = mean(sig_durations[second_slowest_sig])
-                if slowest_duration - second_slowest_duration > 0.03:
+                    2, sig_durations, key=lambda x: median(sig_durations[x]))
+                slowest_duration = median(sig_durations[slowest_sig])
+                second_slowest_duration = median(sig_durations[second_slowest_sig])
+                duration_difference = slowest_duration - second_slowest_duration
+                difference_expectations.append(duration_difference)
+                if duration_difference > median(difference_expectations):
                     result.append(slowest_sig[pos])
                     if not quiet:
-                        print("recovered so far: {}".format(list(result)))
+                        print("recovered so far: {}, {} attempts".format(
+                            list(result), i + 1))
                     break
             else:
                 raise ValueError("can't recover signature")
+    raise ValueError("can't recover signature")
 
 
 def challenge1():
@@ -1052,7 +1062,7 @@ def challenge30():
 def challenge31():
     """Implement and break HMAC-SHA1 with an artificial timing leak"""
     def signature_is_valid(signature):
-        return insecure_compare(hmac, signature)
+        return insecure_compare(hmac, signature, 0.05)
 
     key = os.urandom(16)
     data = EXAMPLE_PLAIN_BYTES
@@ -1088,7 +1098,7 @@ def challenge31_with_server():
     FancyHTTPServer = type("FancyHTTPServer", (ThreadingMixIn, HTTPServer), {})
     server = FancyHTTPServer(("localhost", 31415), ValidatingRequestHandler)
     server.hmac_key = key
-    server.validate_signature = insecure_compare
+    server.validate_signature = lambda hmac, sig: insecure_compare(hmac, sig, 0.05)
     try:
         with open(os.devnull, "w") as null_stream:
             with redirect_stderr(null_stream):
@@ -1105,6 +1115,26 @@ def challenge31_with_server():
         server.server_close()
         pp(get_hmac.cache_info())
 
+    assert get_hmac(key, data) == signature
+
+
+def challenge32():
+    """Break HMAC-SHA1 with a slightly less artificial timing leak"""
+    # This works reliably with timing differences down to about 20ms. I am
+    # planning to improve it, probably some time after I get the web server
+    # working.
+
+    def signature_is_valid(signature):
+        return insecure_compare(hmac, signature, 0.025)
+
+    key = os.urandom(16)
+    data = EXAMPLE_PLAIN_BYTES
+    hmac = get_hmac(key, data)
+
+    print("looking for {}".format(list(get_hmac(key, data))))
+    print()
+    signature = recover_signature(signature_is_valid, quiet=False)
+    print("recovered signature: {}".format(list(signature)))
     assert get_hmac(key, data) == signature
 
 
