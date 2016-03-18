@@ -11,14 +11,20 @@ import sys
 import warnings
 
 from collections import Counter, defaultdict
-from contextlib import ExitStack, redirect_stdout
+from contextlib import ExitStack, redirect_stderr, redirect_stdout
+from functools import lru_cache
 from heapq import nlargest
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from itertools import count, cycle
 from multiprocessing.dummy import Pool as ThreadPool
 from random import SystemRandom
+from socketserver import ForkingMixIn, ThreadingMixIn
 from statistics import mean
+from threading import Thread
 from time import perf_counter, sleep, time
-from urllib.parse import parse_qs, quote as url_quote, urlencode
+from urllib.error import HTTPError
+from urllib.parse import parse_qs, quote as url_quote, urlencode, urlparse
+from urllib.request import urlopen
 
 from Crypto.Cipher import AES
 from md4.md4 import MD4
@@ -308,11 +314,14 @@ def sha1(message_bytes):
     return Sha1Hash().update(message_bytes).digest()
 
 
-def get_hmac(key, message_bytes):
+def calculate_hmac(key, message_bytes):
     key_hash = sha1(key)
     o_key_pad = xor_encrypt(key_hash, b"\x5c")
     i_key_pad = xor_encrypt(key_hash, b"\x36")
     return sha1(o_key_pad + sha1(i_key_pad + message_bytes))
+
+
+get_hmac = lru_cache()(calculate_hmac)
 
 
 def insecure_compare(data1, data2):
@@ -325,7 +334,31 @@ def insecure_compare(data1, data2):
     return True
 
 
-def recover_signature(validate_signature, quiet=True):
+class ValidatingRequestHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        url_components = urlparse(self.path)
+        if url_components.path == "/signature_is_valid":
+            query_vars = parse_qs(url_components.query)
+            try:
+                filename = query_vars["file"][0]
+                with open(filename, "rb") as file:
+                    data = file.read()
+                signature = bytes.fromhex(query_vars["signature"][0])
+            except (KeyError, ValueError, FileNotFoundError):
+                self.send_error(400)
+            else:
+                hmac = get_hmac(self.server.hmac_key, data)
+                if self.server.validate_signature(hmac, signature):
+                    self.send_response(200)
+                    self.end_headers()
+                    self.wfile.write(b"Signature matches.")
+                else:
+                    self.send_error(500)
+        else:
+            self.send_error(404)
+
+
+def recover_signature(validate_signature, quiet=True, thread_count=300):
     def try_signature(signature):
         start_time = perf_counter()
         is_valid = validate_signature(signature)
@@ -333,7 +366,7 @@ def recover_signature(validate_signature, quiet=True):
         return {"signature": signature, "is_valid": is_valid, "duration": duration}
 
     result = bytearray()
-    with ThreadPool(300) as pool:
+    with ThreadPool(thread_count) as pool:
         for pos in range(20):
             assert pos == len(result)
             sig_durations = {}
@@ -349,7 +382,7 @@ def recover_signature(validate_signature, quiet=True):
                     2, sig_durations, key=lambda x: mean(sig_durations[x]))
                 slowest_duration = mean(sig_durations[slowest_sig])
                 second_slowest_duration = mean(sig_durations[second_slowest_sig])
-                if slowest_duration - second_slowest_duration > 0.02:
+                if slowest_duration - second_slowest_duration > 0.03:
                     result.append(slowest_sig[pos])
                     if not quiet:
                         print("recovered so far: {}".format(list(result)))
@@ -1029,6 +1062,49 @@ def challenge31():
     print()
     signature = recover_signature(signature_is_valid, quiet=False)
     print("recovered signature: {}".format(list(signature)))
+    assert get_hmac(key, data) == signature
+
+
+def challenge31_with_server():
+    """Challenge 31 with actual server instead of comparison function"""
+    # TODO: use this in place of what I have for challenge 31 when I can
+    # make it work reliably.
+    def signature_is_valid(signature):
+        query = urlencode({"file": "hamlet.txt", "signature": signature.hex()})
+        try:
+            urlopen("http://localhost:31415/signature_is_valid?" + query)
+        except HTTPError:
+            return False
+        else:
+            return True
+
+    key = os.urandom(16)
+    with open("hamlet.txt", "rb") as f:
+        data = f.read()
+    hmac = get_hmac(key, data)
+
+    print("looking for {}".format(list(get_hmac(key, data))))
+    print()
+    FancyHTTPServer = type("FancyHTTPServer", (ThreadingMixIn, HTTPServer), {})
+    server = FancyHTTPServer(("localhost", 31415), ValidatingRequestHandler)
+    server.hmac_key = key
+    server.validate_signature = insecure_compare
+    try:
+        with open(os.devnull, "w") as null_stream:
+            with redirect_stderr(null_stream):
+                Thread(target=server.serve_forever).start()
+                print("Server is running on {}".format(server.server_address))
+                print()
+                signature = recover_signature(
+                    signature_is_valid,
+                    quiet=False,
+                    thread_count=6)
+                print("recovered signature: {}".format(list(signature)))
+    finally:
+        server.shutdown()
+        server.server_close()
+        pp(get_hmac.cache_info())
+
     assert get_hmac(key, data) == signature
 
 
