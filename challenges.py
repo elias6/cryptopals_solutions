@@ -141,7 +141,7 @@ def looks_like_ecb(cipher_bytes, block_size=16):
     return block_counter.most_common(1)[0][1] > 1
 
 
-def crack_repeating_key_xor(ciphertexts):
+def crack_common_xor_key(ciphertexts):
     key = bytearray()
     for i in count(start=0):
         transposed_block = bytes(c[i] for c in ciphertexts if i < len(c))
@@ -476,7 +476,7 @@ def challenge6():
     best_key_size = min(edit_distances, key=edit_distances.get)
 
     cipher_chunks = byte_chunks(cipher_bytes, best_key_size)
-    plain_chunks, key = crack_repeating_key_xor(cipher_chunks)
+    plain_chunks, key = crack_common_xor_key(cipher_chunks)
     plaintext = bytes_to_string(b"".join(plain_chunks))
     print(key)
     print()
@@ -809,7 +809,7 @@ def challenge19():
 
     ciphertexts = [encrypt(x) for x in plaintexts]
 
-    recovered_plaintexts, recovered_key = crack_repeating_key_xor(ciphertexts)
+    recovered_plaintexts, recovered_key = crack_common_xor_key(ciphertexts)
     print("\n".join(bytes_to_string(p) for p in recovered_plaintexts))
 
 
@@ -824,7 +824,7 @@ def challenge20():
     with open("20.txt") as f:
         plaintexts = [base64.b64decode(x) for x in f.readlines()]
     ciphertexts = [encrypt(x) for x in plaintexts]
-    recovered_plaintexts, recovered_key = crack_repeating_key_xor(ciphertexts)
+    recovered_plaintexts, recovered_key = crack_common_xor_key(ciphertexts)
     print("\n".join(bytes_to_string(p) for p in recovered_plaintexts))
 
 
