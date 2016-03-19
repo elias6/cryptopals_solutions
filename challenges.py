@@ -1138,9 +1138,7 @@ def challenge32():
     assert get_hmac(key, data) == signature
 
 
-def test_all_challenges(stdout=sys.stdout):
-    # Pass sys.stdout when this function is created so "running challenge"
-    # output shows even if stdout is redirected.
+def test_all_challenges(output_stream=sys.stdout):
     challenges = {}
     for name, var in globals().copy().items():
         try:
@@ -1152,12 +1150,12 @@ def test_all_challenges(stdout=sys.stdout):
                 challenges[num] = var
     for num in sorted(challenges):
         print("Running challenge {}: {}".format(num, challenges[num].__doc__),
-            file=stdout)
+            file=output_stream)
         challenges[num]()
     # If this point is reached, no exceptions occurred in the challenges, so
     # they all passed. TODO: come up with a less hacky and more flexible way
     # to test for this.
-    print("All challenges passed.", file=stdout)
+    print("All challenges passed.", file=output_stream)
 
 
 if __name__ == "__main__":
@@ -1177,7 +1175,8 @@ if __name__ == "__main__":
         if not func:
             parser.error("Challenge {} not found".format(args.challenge))
     else:
-        func = test_all_challenges
+        real_stdout = sys.stdout
+        func = lambda: test_all_challenges(real_stdout)
     with ExitStack() as stack:
         if args.profile:
             profile = cProfile.Profile()
