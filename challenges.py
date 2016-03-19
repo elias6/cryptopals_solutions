@@ -47,6 +47,14 @@ EXAMPLE_PLAIN_BYTES = (b"Give a man a beer, he'll waste an hour. "
     b"Teach a man to brew, he'll waste a lifetime.")
 
 
+NIST_DIFFIE_HELLMAN_PRIME = int("ffffffffffffffffc90fdaa22168c234c4c6628b80dc1c"
+    "d129024e088a67cc74020bbea63b139b22514a08798e3404ddef9519b3cd3a431b302b0a6d"
+    "f25f14374fe1356d6d51c245e485b576625e7ec6f44c42e9a637ed6b0bff5cb6f406b7edee"
+    "386bfb5a899fa5ae9f24117c4b1fe649286651ece45b3dc2007cb8a163bf0598da48361c55"
+    "d39a69163fa8fd24cf5f83655d23dca3ad961c62f356208552bb9ed529077096966d670c35"
+    "4e4abc9804f1746c08ca237327ffffffffffffffff", 16)
+
+
 def pp(*args, width=120, **kwargs):
     pprint.pprint(*args, width=width, **kwargs)
 
@@ -1148,12 +1156,7 @@ def challenge33():
     B = pow(g, b, p)
     assert pow(A, b, p) == pow(B, a, p)
 
-    p = int("ffffffffffffffffc90fdaa22168c234c4c6628b80dc1cd129024e088a67cc7402"
-        "0bbea63b139b22514a08798e3404ddef9519b3cd3a431b302b0a6df25f14374fe1356d"
-        "6d51c245e485b576625e7ec6f44c42e9a637ed6b0bff5cb6f406b7edee386bfb5a899f"
-        "a5ae9f24117c4b1fe649286651ece45b3dc2007cb8a163bf0598da48361c55d39a6916"
-        "3fa8fd24cf5f83655d23dca3ad961c62f356208552bb9ed529077096966d670c354e4a"
-        "bc9804f1746c08ca237327ffffffffffffffff", 16)
+    p = NIST_DIFFIE_HELLMAN_PRIME
     g = 2
     a = random.randrange(p)
     A = pow(g, a, p)
