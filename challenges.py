@@ -447,13 +447,10 @@ def challenge4():
     """Detect single-character XOR"""
     with open("4.txt") as f:
         ciphertexts = [bytes.fromhex(line.strip()) for line in f.readlines()]
-    decoded_string_data = []
-    for i, ciphertext in enumerate(ciphertexts):
-        decoded_string_data.append(best_english_like_score_data(ciphertext))
-        decoded_string_data[-1]["index"] = i
-    best_decodings = nlargest(3, decoded_string_data, key=lambda d: d["score"])
+    decoded_string_data = enumerate(best_english_like_score_data(c) for c in ciphertexts)
+    best_decodings = nlargest(3, decoded_string_data, key=lambda d: d[1]["score"])
     pp(best_decodings)
-    assert best_decodings[0]["message"] == b"Now that the party is jumping\n"
+    assert best_decodings[0][1]["message"] == b"Now that the party is jumping\n"
 
 
 def challenge5():
