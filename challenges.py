@@ -263,7 +263,10 @@ def create_ctr_counter(nonce, block_index=0):
     #     little_endian=True)
     # I prefer to use my own implementation because it is simpler, more
     # readable, and good enough for my purposes. The nonce and the counter
-    # are encoded as 64-bit little-endian integers.
+    # are encoded as 64-bit little-endian integers. I am returning the
+    # iterator's __next__ method instead of the iterator itself because
+    # PyCrypto's CTR implementation requires a function that returns a new
+    # value each time it is called.
     return (struct.pack("<QQ", nonce, i) for i in count(start=block_index)).__next__
 
 
