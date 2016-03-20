@@ -151,14 +151,11 @@ def looks_like_ecb(ciphertext, block_size=16):
 
 def crack_common_xor_key(ciphertexts):
     key = bytearray()
-    for i in count(start=0):
+    for i in range(max(len(c) for c in ciphertexts)):
         transposed_block = bytes(c[i] for c in ciphertexts if i < len(c))
-        if transposed_block:
-            score_data = best_english_like_score_data(transposed_block)
-            key.append(score_data["key"])
-        else:
-            plaintexts = [xor_encrypt(c, key) for c in ciphertexts]
-            return (plaintexts, key)
+        key.append(best_english_like_score_data(transposed_block)["key"])
+    plaintexts = [xor_encrypt(c, key) for c in ciphertexts]
+    return (plaintexts, key)
 
 
 def pkcs7_pad(input_bytes, block_size=16):
