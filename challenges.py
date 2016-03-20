@@ -129,23 +129,23 @@ def english_like_score(text_bytes):
     return 1e6 / chi_squared / text_length
 
 
-def english_like_score_data(cipher_bytes):
+def english_like_score_data(ciphertext):
     result = []
     for i in range(256):
-        message = xor_encrypt(cipher_bytes, bytes([i]))
+        message = xor_encrypt(ciphertext, bytes([i]))
         score = english_like_score(message)
         result.append({"key": i, "message": message, "score": score})
     return result
 
 
-def best_english_like_score_data(cipher_bytes):
-    return max(english_like_score_data(cipher_bytes), key=lambda x: x["score"])
+def best_english_like_score_data(ciphertext):
+    return max(english_like_score_data(ciphertext), key=lambda x: x["score"])
 
 
-def looks_like_ecb(cipher_bytes, block_size=16):
+def looks_like_ecb(ciphertext, block_size=16):
     # TODO: use birthday paradox to calculate an estimate for the expected
     # number of duplicate blocks so this function works on big ciphertexts.
-    block_counter = Counter(byte_chunks(cipher_bytes, block_size))
+    block_counter = Counter(byte_chunks(ciphertext, block_size))
     return block_counter.most_common(1)[0][1] > 1
 
 
@@ -168,13 +168,13 @@ def pkcs7_pad(input_bytes, block_size=16):
     return input_bytes + bytes([padding_length] * padding_length)
 
 
-def pkcs7_unpad(cipher_bytes, block_size=16):
-    padding_length = cipher_bytes[-1]
+def pkcs7_unpad(ciphertext, block_size=16):
+    padding_length = ciphertext[-1]
     expected_padding = bytes([padding_length]) * padding_length
-    padding = cipher_bytes[-padding_length:]
+    padding = ciphertext[-padding_length:]
     if padding_length > block_size or padding != expected_padding:
         raise ValueError("Invalid padding")
-    return cipher_bytes[:-padding_length]
+    return ciphertext[:-padding_length]
 
 
 def cbc_encrypt(key, iv, plain_bytes):
@@ -189,11 +189,11 @@ def cbc_encrypt(key, iv, plain_bytes):
     return bytes(result)
 
 
-def cbc_decrypt(key, iv, cipher_bytes):
+def cbc_decrypt(key, iv, ciphertext):
     cipher = AES.new(key, AES.MODE_ECB, iv)
     last_cipher_block = iv
     result = bytearray()
-    for cipher_block in byte_chunks(cipher_bytes):
+    for cipher_block in byte_chunks(ciphertext):
         decrypted_block = cipher.decrypt(cipher_block)
         plain_block = xor_bytes(last_cipher_block, decrypted_block)
         result.extend(plain_block)
@@ -212,8 +212,8 @@ def appears_to_produce_ecb(oracle_fn, block_size=16):
 def guess_block_size(oracle_fn):
     seen_sizes = set()
     for plaintext_size in range(33):
-        cipher_bytes = oracle_fn(os.urandom(plaintext_size))
-        seen_sizes.add(len(cipher_bytes))
+        ciphertext = oracle_fn(os.urandom(plaintext_size))
+        seen_sizes.add(len(ciphertext))
     if len(seen_sizes) >= 2:
         result = 0
         for size in seen_sizes:
@@ -251,8 +251,8 @@ def create_encrypted_query_string(cipher, user_data):
     return cipher.encrypt(bytes_to_encrypt)
 
 
-def encrypted_string_has_admin(cipher_bytes, cipher):
-    plain_bytes = pkcs7_unpad(cipher.decrypt(cipher_bytes))
+def encrypted_string_has_admin(ciphertext, cipher):
+    plain_bytes = pkcs7_unpad(cipher.decrypt(ciphertext))
     return b";admin=true;" in plain_bytes
 
 
@@ -318,15 +318,15 @@ class MT19937_RNG:
         return x
 
 
-def sha1(message_bytes):
-    return Sha1Hash().update(message_bytes).digest()
+def sha1(message):
+    return Sha1Hash().update(message).digest()
 
 
-def calculate_hmac(key, message_bytes):
+def calculate_hmac(key, message):
     key_hash = sha1(key)
     o_key_pad = xor_encrypt(key_hash, b"\x5c")
     i_key_pad = xor_encrypt(key_hash, b"\x36")
-    return sha1(o_key_pad + sha1(i_key_pad + message_bytes))
+    return sha1(o_key_pad + sha1(i_key_pad + message))
 
 
 get_hmac = lru_cache()(calculate_hmac)
@@ -445,8 +445,8 @@ def challenge4():
     with open("4.txt") as f:
         ciphertexts = [bytes.fromhex(line.strip()) for line in f.readlines()]
     decoded_string_data = []
-    for i, cipher_bytes in enumerate(ciphertexts):
-        decoded_string_data.append(best_english_like_score_data(cipher_bytes))
+    for i, ciphertext in enumerate(ciphertexts):
+        decoded_string_data.append(best_english_like_score_data(ciphertext))
         decoded_string_data[-1]["index"] = i
     best_decodings = nlargest(3, decoded_string_data, key=lambda d: d["score"])
     pp(best_decodings)
@@ -474,16 +474,16 @@ def challenge6():
 
     assert edit_distance(b"this is a test", b"wokka wokka!!!") == 37
     with open("6.txt") as f:
-        cipher_bytes = base64.b64decode(f.read())
+        ciphertext = base64.b64decode(f.read())
     edit_distances = defaultdict(int)
     for key_size in range(2, 41):
-        chunks = byte_chunks(cipher_bytes, key_size)
+        chunks = byte_chunks(ciphertext, key_size)
         for i in range(10):
             edit_distances[key_size] += edit_distance(chunks[i], chunks[i + 1])
         edit_distances[key_size] /= key_size
     best_key_size = min(edit_distances, key=edit_distances.get)
 
-    cipher_chunks = byte_chunks(cipher_bytes, best_key_size)
+    cipher_chunks = byte_chunks(ciphertext, best_key_size)
     plain_chunks, key = crack_common_xor_key(cipher_chunks)
     plaintext = bytes_to_string(b"".join(plain_chunks))
     print(key)
@@ -495,8 +495,8 @@ def challenge6():
 def challenge7():
     """AES in ECB mode"""
     with open("7.txt") as f:
-        cipher_bytes = base64.b64decode(f.read())
-    message = AES.new(b"YELLOW SUBMARINE", AES.MODE_ECB).decrypt(cipher_bytes)
+        ciphertext = base64.b64decode(f.read())
+    message = AES.new(b"YELLOW SUBMARINE", AES.MODE_ECB).decrypt(ciphertext)
     print(bytes_to_string(message))
     assert b"white boy" in message
 
@@ -507,9 +507,9 @@ def challenge8():
         lines = f.readlines()
     ecb_texts = []
     for i, line in enumerate(lines):
-        cipher_bytes = bytes.fromhex(line.strip())
-        if looks_like_ecb(cipher_bytes):
-            ecb_texts.append({"index": i, "ciphertext": cipher_bytes})
+        ciphertext = bytes.fromhex(line.strip())
+        if looks_like_ecb(ciphertext):
+            ecb_texts.append({"index": i, "ciphertext": ciphertext})
     pp(ecb_texts)
     assert len(ecb_texts) == 1
 
@@ -522,19 +522,19 @@ def challenge9():
 def challenge10():
     """Implement CBC mode"""
     with open("10.txt") as f:
-        cipher_bytes = base64.b64decode(f.read())
+        ciphertext = base64.b64decode(f.read())
     key = b"YELLOW SUBMARINE"
     iv = bytes([0] * 16)
 
-    plain_bytes = cbc_decrypt(key, iv, cipher_bytes)
+    plain_bytes = cbc_decrypt(key, iv, ciphertext)
     assert b"white boy" in plain_bytes
-    assert plain_bytes == AES.new(key, AES.MODE_CBC, iv).decrypt(cipher_bytes)
+    assert plain_bytes == AES.new(key, AES.MODE_CBC, iv).decrypt(ciphertext)
 
     # Create new cipher object because using cipher object messes up
     # internal IV state.
-    new_cipher_bytes = cbc_encrypt(key, iv, plain_bytes)
-    assert new_cipher_bytes == AES.new(key, AES.MODE_CBC, iv).encrypt(plain_bytes)
-    assert new_cipher_bytes == cipher_bytes
+    new_ciphertext = cbc_encrypt(key, iv, plain_bytes)
+    assert new_ciphertext == AES.new(key, AES.MODE_CBC, iv).encrypt(plain_bytes)
+    assert new_ciphertext == ciphertext
 
 
 def challenge11():
@@ -560,9 +560,9 @@ def challenge11():
         plain_bytes = f.read(3000)
     results = Counter()
     for i in range(1000):
-        cipher_bytes, mode_number = encrypt_with_random_mode(plain_bytes)
+        ciphertext, mode_number = encrypt_with_random_mode(plain_bytes)
         mode = {1: "ECB", 2: "CBC"}[mode_number]
-        apparent_mode = "ECB" if looks_like_ecb(cipher_bytes) else "CBC"
+        apparent_mode = "ECB" if looks_like_ecb(ciphertext) else "CBC"
         results[apparent_mode] += 1
         assert mode == apparent_mode, (mode, apparent_mode, results)
 
@@ -669,14 +669,14 @@ def challenge16():
     iv = os.urandom(16)
 
     cipher = AES.new(key, AES.MODE_CBC, iv)
-    cipher_bytes = create_encrypted_query_string(cipher, "foo")
+    ciphertext = create_encrypted_query_string(cipher, "foo")
 
     bits_to_flip = (bytes([0] * 32) +
         xor_bytes(b"like%20a%20pound", b";admin=true;foo=") + bytes([0] * 32))
-    modified_cipher_bytes = xor_bytes(cipher_bytes, bits_to_flip)
+    modified_ciphertext = xor_bytes(ciphertext, bits_to_flip)
 
     cipher = AES.new(key, AES.MODE_CBC, iv)
-    assert encrypted_string_has_admin(modified_cipher_bytes, cipher)
+    assert encrypted_string_has_admin(modified_ciphertext, cipher)
 
 
 def challenge17():
@@ -700,9 +700,9 @@ def challenge17():
         cipher = AES.new(key, AES.MODE_CBC, iv)
         return cipher.encrypt(pkcs7_pad(random_string))
 
-    def has_valid_padding(iv, cipher_bytes):
+    def has_valid_padding(iv, ciphertext):
         cipher = AES.new(key, AES.MODE_CBC, iv)
-        plain_bytes = cipher.decrypt(cipher_bytes)
+        plain_bytes = cipher.decrypt(ciphertext)
         try:
             pkcs7_unpad(plain_bytes)
         except ValueError:
@@ -714,10 +714,10 @@ def challenge17():
     iv = os.urandom(16)
 
     for unknown_string in unknown_strings:
-        cipher_bytes = create_encrypted_string(unknown_string)
+        ciphertext = create_encrypted_string(unknown_string)
         recovered_plaintext = bytearray()
         prev_cipher_block = iv
-        for cipher_block in byte_chunks(cipher_bytes):
+        for cipher_block in byte_chunks(ciphertext):
             recovered_block = bytes()
             for pos in reversed(range(16)):
                 assert len(recovered_block) == 15 - pos
@@ -746,7 +746,7 @@ def challenge17():
 
 def challenge18():
     """Implement CTR, the stream cipher mode"""
-    cipher_bytes = base64.b64decode("L77na/nrFsKvynd6HzOoG7GHTLXsTVu9qvY/"
+    ciphertext = base64.b64decode("L77na/nrFsKvynd6HzOoG7GHTLXsTVu9qvY/"
         "2syLXzhPweyyMTJULu/6/kXX0KSvoOLSFQ==")
     key = b"YELLOW SUBMARINE"
     ecb_cipher = AES.new(key, AES.MODE_ECB)
@@ -754,13 +754,13 @@ def challenge18():
 
     plaintext = bytearray()
     ctr_iterator = create_ctr_counter(nonce).__self__
-    for counter_value, block in zip(ctr_iterator, byte_chunks(cipher_bytes)):
+    for counter_value, block in zip(ctr_iterator, byte_chunks(ciphertext)):
         keystream = ecb_cipher.encrypt(counter_value)
         plaintext += xor_bytes(keystream[:len(block)], block)
     print(bytes_to_string(plaintext))
 
     ctr_cipher = AES.new(key, AES.MODE_CTR, counter=create_ctr_counter(nonce))
-    assert plaintext == ctr_cipher.decrypt(cipher_bytes)
+    assert plaintext == ctr_cipher.decrypt(ciphertext)
 
 
 def challenge19():
@@ -769,9 +769,9 @@ def challenge19():
     # supposed to say.
     key = create_random_aes_key()
 
-    def encrypt(cipher_bytes):
+    def encrypt(ciphertext):
         cipher = AES.new(key, AES.MODE_CTR, counter=create_ctr_counter(0))
-        return cipher.encrypt(cipher_bytes)
+        return cipher.encrypt(ciphertext)
 
     plaintexts = [base64.b64decode(x) for x in [
         "SSBoYXZlIG1ldCB0aGVtIGF0IGNsb3NlIG9mIGRheQ==",
@@ -825,9 +825,9 @@ def challenge20():
     """Break fixed-nonce CTR statistically"""
     key = create_random_aes_key()
 
-    def encrypt(cipher_bytes):
+    def encrypt(ciphertext):
         cipher = AES.new(key, AES.MODE_CTR, counter=create_ctr_counter(0))
-        return cipher.encrypt(cipher_bytes)
+        return cipher.encrypt(ciphertext)
 
     with open("20.txt") as f:
         plaintexts = [base64.b64decode(x) for x in f.readlines()]
@@ -872,9 +872,9 @@ def challenge23():
 
 def challenge24():
     """Create the MT19937 stream cipher and break it"""
-    def encrypt_with_rng(rng, cipher_bytes):
+    def encrypt_with_rng(rng, ciphertext):
         result = bytearray()
-        for chunk in byte_chunks(cipher_bytes, 4):
+        for chunk in byte_chunks(ciphertext, 4):
             # Create 4-byte chunk from rng
             keystream_bytes = struct.pack(">L", rng.get_number())
             result += xor_bytes(chunk, keystream_bytes[:len(chunk)])
@@ -946,14 +946,14 @@ def challenge25():
     key = create_random_aes_key()
     nonce = random.getrandbits(64)
 
-    def edit(cipher_bytes, block_index, new_bytes):
+    def edit(ciphertext, block_index, new_bytes):
         if len(new_bytes) % 16 != 0:
             raise ValueError("new_bytes must be a multiple of 16 bytes long")
         counter = create_ctr_counter(nonce, block_index)
         cipher = AES.new(key, AES.MODE_CTR, counter=counter)
-        new_cipher_bytes = cipher.encrypt(new_bytes)
-        result = bytearray(cipher_bytes)
-        result[16*block_index : 16*block_index + len(new_bytes)] = new_cipher_bytes
+        new_ciphertext = cipher.encrypt(new_bytes)
+        result = bytearray(ciphertext)
+        result[16*block_index : 16*block_index + len(new_bytes)] = new_ciphertext
         return bytes(result)
 
     # 25.txt is identical to 7.txt
@@ -961,10 +961,10 @@ def challenge25():
         temp_bytes = base64.b64decode(f.read())
     plain_bytes = AES.new(b"YELLOW SUBMARINE", AES.MODE_ECB).decrypt(temp_bytes)
     cipher = AES.new(key, AES.MODE_CTR, counter=create_ctr_counter(nonce))
-    cipher_bytes = cipher.encrypt(plain_bytes)
+    ciphertext = cipher.encrypt(plain_bytes)
 
-    keystream = edit(cipher_bytes, 0, bytes([0]) * len(plain_bytes))
-    recovered_plaintext = xor_bytes(cipher_bytes, keystream)
+    keystream = edit(ciphertext, 0, bytes([0]) * len(plain_bytes))
+    recovered_plaintext = xor_bytes(ciphertext, keystream)
     assert recovered_plaintext == plain_bytes
 
 
@@ -974,14 +974,14 @@ def challenge26():
     nonce = random.getrandbits(64)
 
     cipher = AES.new(key, AES.MODE_CTR, counter=create_ctr_counter(nonce))
-    cipher_bytes = create_encrypted_query_string(cipher, "A" * 16)
-    new_cipher_bytes = bytearray(cipher_bytes)
-    new_cipher_bytes[32:48] = xor_bytes(
-        b"A" * 16, b"ha_ha;admin=true", new_cipher_bytes[32:48])
-    new_cipher_bytes = bytes(new_cipher_bytes)
+    ciphertext = create_encrypted_query_string(cipher, "A" * 16)
+    new_ciphertext = bytearray(ciphertext)
+    new_ciphertext[32:48] = xor_bytes(
+        b"A" * 16, b"ha_ha;admin=true", new_ciphertext[32:48])
+    new_ciphertext = bytes(new_ciphertext)
 
     cipher = AES.new(key, AES.MODE_CTR, counter=create_ctr_counter(nonce))
-    assert encrypted_string_has_admin(new_cipher_bytes, cipher)
+    assert encrypted_string_has_admin(new_ciphertext, cipher)
 
 
 def challenge27():
@@ -992,15 +992,15 @@ def challenge27():
     def create_encrypted_string(user_bytes):
         return AES.new(key, AES.MODE_CBC, iv).encrypt(pkcs7_pad(user_bytes))
 
-    def decrypt(cipher_bytes):
-        plain_bytes = AES.new(key, AES.MODE_CBC, iv).decrypt(cipher_bytes)
+    def decrypt(ciphertext):
+        plain_bytes = AES.new(key, AES.MODE_CBC, iv).decrypt(ciphertext)
         return pkcs7_unpad(plain_bytes.decode("ascii"))
 
-    cipher_bytes = create_encrypted_string(EXAMPLE_PLAIN_BYTES)
-    modified_cipher_bytes = cipher_bytes[:16] + bytes([0] * 16) + cipher_bytes
+    ciphertext = create_encrypted_string(EXAMPLE_PLAIN_BYTES)
+    modified_ciphertext = ciphertext[:16] + bytes([0] * 16) + ciphertext
 
     try:
-        decrypted_plaintext = decrypt(modified_cipher_bytes)
+        decrypted_plaintext = decrypt(modified_ciphertext)
     except UnicodeDecodeError as e:
         plain_bytes = e.object
         recovered_key = xor_bytes(plain_bytes[0:16], plain_bytes[32:48])
