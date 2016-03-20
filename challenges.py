@@ -530,8 +530,6 @@ def challenge10():
     assert b"white boy" in plain_bytes
     assert plain_bytes == AES.new(key, AES.MODE_CBC, iv).decrypt(ciphertext)
 
-    # Create new cipher object because using cipher object messes up
-    # internal IV state.
     new_ciphertext = cbc_encrypt(key, iv, plain_bytes)
     assert new_ciphertext == AES.new(key, AES.MODE_CBC, iv).encrypt(plain_bytes)
     assert new_ciphertext == ciphertext
