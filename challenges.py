@@ -1172,7 +1172,7 @@ def test_all_challenges(output_stream=sys.stdout):
     challenges = {}
     for name, var in globals().copy().items():
         try:
-            num = int(re.findall("challenge(\d+)", name)[0])
+            num = int(re.findall("challenge(\d+)$", name)[0])
         except (IndexError, ValueError):
             pass
         else:
