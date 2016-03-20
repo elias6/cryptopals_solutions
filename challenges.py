@@ -1067,7 +1067,7 @@ def challenge30():
         state=struct.unpack("<4I", mac))
 
     expected_hash = MD4(key + query_string + glue_padding + new_param)
-    assert new_hash == expected_hash, (new_hash.hex(), expected_hash.hex())
+    assert new_hash == expected_hash
 
 
 def challenge31():
