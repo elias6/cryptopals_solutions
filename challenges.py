@@ -238,7 +238,7 @@ def crack_ecb_oracle(oracle_fn, prefix_length=0, block_size=16):
             output = oracle_fn(test_input)
             telltale_block = byte_chunks(output)[block_index]
             if telltale_block == block_to_look_for:
-                result += bytes([i])
+                result.append(i)
                 break
         else:  # if no byte matches
             return pkcs7_unpad(result)
