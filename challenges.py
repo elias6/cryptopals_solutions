@@ -409,6 +409,71 @@ def recover_signature(validate_signature, quiet=True, thread_count=300):
     raise ValueError("can't recover signature")
 
 
+class DiffieHellmanUser:
+    def __init__(self, p=NIST_DIFFIE_HELLMAN_PRIME, g=2):
+        self.p = p
+        self.g = g
+        self._shared_keys = {}
+        self.generate_key_pair()
+        self._inbox = defaultdict(list)
+
+    def generate_key_pair(self):
+        self._private_key = random.randrange(self.p)
+        self.public_key = pow(self.g, self._private_key, self.p)
+
+    def initiate_handshake(self, other):
+        other.receive_handshake(self)
+        self.receive_handshake(other)
+
+    def receive_handshake(self, other):
+        key_seed = pow(other.public_key, self._private_key, other.p)
+        key_seed_length = (key_seed.bit_length() // 8) + 1
+        key_seed_bytes = key_seed.to_bytes(key_seed_length, byteorder="big")
+        self._shared_keys[other] = sha1(key_seed_bytes)[:16]
+
+    def send_echo(self, other, message):
+        request_iv = os.urandom(16)
+        request_cipher = AES.new(self._shared_keys[other], AES.MODE_CBC, request_iv)
+        encrypted_message = request_iv + request_cipher.encrypt(pkcs7_pad(message))
+
+        response = other.receive_echo(self, encrypted_message)
+        incoming_iv, incoming_message = response[:16], response[16:]
+        response_cipher = AES.new(self._shared_keys[other], AES.MODE_CBC, incoming_iv)
+        response_message = pkcs7_unpad(response_cipher.decrypt(incoming_message))
+        assert response_message == message
+
+    def receive_echo(self, other, encrypted_message):
+        request_iv, ciphertext = encrypted_message[:16], encrypted_message[16:]
+        cipher = AES.new(self._shared_keys[other], AES.MODE_CBC, request_iv)
+        message = pkcs7_unpad(cipher.decrypt(ciphertext))
+        self._inbox[other].append(message)
+
+        response_iv = os.urandom(16)
+        response_cipher = AES.new(self._shared_keys[other], AES.MODE_CBC, response_iv)
+        return response_iv + response_cipher.encrypt(pkcs7_pad(message))
+
+
+class DiffieHellmanAttacker(DiffieHellmanUser):
+    def __init__(self, victim, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.victim = victim
+
+    def generate_key_pair(self):
+        self._private_key = self.p
+        self.public_key = pow(self.g, self._private_key, self.p)
+
+    def receive_handshake(self, other):
+        if other is not self.victim:
+            self.initiate_handshake(self.victim)
+        super().receive_handshake(other)
+
+    def receive_echo(self, other, encrypted_message):
+        result = super().receive_echo(other, encrypted_message)        
+        message = self._inbox[other][-1]
+        self.send_echo(self.victim, message)
+        return result
+
+
 def challenge1():
     """Convert hex to base64"""
     encoded_text = ("49276d206b696c6c696e6720796f757220627261696e206c" +
@@ -416,6 +481,7 @@ def challenge1():
     message = bytes.fromhex(encoded_text)
     print(bytes_to_string(message))
     result = base64.b64encode(message)
+
     assert result == b"SSdtIGtpbGxpbmcgeW91ciBicmFpbiBsaWtlIGEgcG9pc29ub3VzIG11c2hyb29t"
 
 
@@ -1154,6 +1220,25 @@ def challenge33():
     b = random.randrange(p)
     B = pow(g, b, p)
     assert pow(A, b, p) == pow(B, a, p)
+
+
+def challenge34():
+    """Implement a MITM key-fixing attack on Diffie-Hellman with parameter injection"""
+    alice = DiffieHellmanUser()
+    bob = DiffieHellmanUser()
+    alice.initiate_handshake(bob)
+    assert alice._shared_keys[bob] == bob._shared_keys[alice]
+    alice.send_echo(bob, EXAMPLE_PLAIN_BYTES)
+    assert EXAMPLE_PLAIN_BYTES in bob._inbox[alice]
+
+    # alice thinks mallory is bob; bob thinks mallory is alice.
+    alice = DiffieHellmanUser()
+    bob = DiffieHellmanUser()
+    mallory = DiffieHellmanAttacker(bob)
+    alice.initiate_handshake(mallory)
+    alice.send_echo(mallory, EXAMPLE_PLAIN_BYTES)
+    assert EXAMPLE_PLAIN_BYTES in bob._inbox[mallory]
+    assert EXAMPLE_PLAIN_BYTES in mallory._inbox[alice]
 
 
 def test_all_challenges(output_stream=sys.stdout):
