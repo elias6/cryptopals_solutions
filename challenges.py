@@ -461,6 +461,7 @@ class DiffieHellmanAttacker(DiffieHellmanUser):
     def generate_key_pair(self):
         self._private_key = self.p
         self.public_key = pow(self.g, self._private_key, self.p)
+        assert self.public_key == self.g
 
     def receive_handshake(self, other):
         if other is not self.victim:
