@@ -1205,21 +1205,15 @@ def challenge32():
 
 def challenge33():
     """Implement Diffie-Hellman"""
-    p = 37
-    g = 5
-    a = random.randrange(p)
-    A = pow(g, a, p)
-    b = random.randrange(p)
-    B = pow(g, b, p)
-    assert pow(A, b, p) == pow(B, a, p)
+    alice = DiffieHellmanUser(p=37, g=5)
+    bob = DiffieHellmanUser(p=37, g=5)
+    alice.initiate_handshake(bob)
+    assert alice._shared_keys[bob] == bob._shared_keys[alice]
 
-    p = NIST_DIFFIE_HELLMAN_PRIME
-    g = 2
-    a = random.randrange(p)
-    A = pow(g, a, p)
-    b = random.randrange(p)
-    B = pow(g, b, p)
-    assert pow(A, b, p) == pow(B, a, p)
+    alice = DiffieHellmanUser()
+    bob = DiffieHellmanUser()
+    alice.initiate_handshake(bob)
+    assert alice._shared_keys[bob] == bob._shared_keys[alice]
 
 
 def challenge34():
