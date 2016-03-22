@@ -525,23 +525,22 @@ def challenge5():
 
 def challenge6():
     """Break repeating-key XOR"""
-    def edit_distance(bytes1, bytes2):
-        result = 0
-        for byte1, byte2 in zip(bytes1, bytes2):
-            result += sum(1 for i in range(8) if byte1 & (1 << i) != byte2 & (1 << i))
-        return result
+    def hamming_distance(bytes1, bytes2):
+        return sum(bin(b1 ^ b2).count("1") for b1, b2 in zip(bytes1, bytes2))
 
-    assert edit_distance(b"this is a test", b"wokka wokka!!!") == 37
+    def index_of_coincidence(data, frequency):
+        chunks = byte_chunks(data, frequency)
+        result = 0
+        for i in range(len(chunks) - 1):
+            result += hamming_distance(chunks[i], chunks[i + 1])
+        return result / frequency / len(chunks)
+
+    assert hamming_distance(b"this is a test", b"wokka wokka!!!") == 37
+
     with open("6.txt") as f:
         ciphertext = base64.b64decode(f.read())
-    edit_distances = defaultdict(int)
-    for key_size in range(2, 41):
-        chunks = byte_chunks(ciphertext, key_size)
-        for i in range(10):
-            edit_distances[key_size] += edit_distance(chunks[i], chunks[i + 1])
-        edit_distances[key_size] /= key_size
-    best_key_size = min(edit_distances, key=edit_distances.get)
 
+    best_key_size = min(range(2, 41), key=lambda x: index_of_coincidence(ciphertext, x))
     cipher_chunks = byte_chunks(ciphertext, best_key_size)
     plain_chunks, key = crack_common_xor_key(cipher_chunks)
     plaintext = bytes_to_string(b"".join(plain_chunks))
