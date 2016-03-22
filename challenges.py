@@ -59,10 +59,6 @@ def pp(*args, width=120, **kwargs):
     pprint.pprint(*args, width=width, **kwargs)
 
 
-def bytes_to_string(b):
-    return b.decode(errors="replace")
-
-
 def xor_bytes(*bytes_objects):
     lengths = [len(b) for b in bytes_objects]
     if len(set(lengths)) > 1:
@@ -475,7 +471,7 @@ def challenge1():
     encoded_text = ("49276d206b696c6c696e6720796f757220627261696e206c" +
         "696b65206120706f69736f6e6f7573206d757368726f6f6d")
     message = bytes.fromhex(encoded_text)
-    print(bytes_to_string(message))
+    print(message.decode())
     result = base64.b64encode(message)
 
     assert result == b"SSdtIGtpbGxpbmcgeW91ciBicmFpbiBsaWtlIGEgcG9pc29ub3VzIG11c2hyb29t"
@@ -487,7 +483,7 @@ def challenge2():
         bytes.fromhex("1c0111001f010100061a024b53535009181c"),
         bytes.fromhex("686974207468652062756c6c277320657965"))
     assert output == b"the kid don't play"
-    print(bytes_to_string(output))
+    print(output.decode())
     print(output.hex())
 
 
@@ -498,7 +494,7 @@ def challenge3():
     score_data = english_like_score_data(ciphertext)
     best_data = nlargest(5, score_data, key=lambda x: x["score"])
     pp(best_data)
-    print(bytes_to_string(best_data[0]["message"]))
+    print(best_data[0]["message"].decode())
     assert best_data[0]["message"] == b"Cooking MC's like a pound of bacon"
 
 
@@ -543,8 +539,8 @@ def challenge6():
     best_key_size = min(range(2, 41), key=lambda x: index_of_coincidence(ciphertext, x))
     cipher_chunks = byte_chunks(ciphertext, best_key_size)
     plain_chunks, key = crack_common_xor_key(cipher_chunks)
-    plaintext = bytes_to_string(b"".join(plain_chunks))
-    print("key: {}".format(bytes_to_string(key)))
+    plaintext = b"".join(plain_chunks).decode()
+    print("key: {}".format(key.decode()))
     print()
     print(plaintext)
     assert "white boy" in plaintext
@@ -555,7 +551,7 @@ def challenge7():
     with open("7.txt") as f:
         ciphertext = base64.b64decode(f.read())
     message = AES.new(b"YELLOW SUBMARINE", AES.MODE_ECB).decrypt(ciphertext)
-    print(bytes_to_string(message))
+    print(message.decode())
     assert b"white boy" in message
 
 
@@ -634,7 +630,7 @@ def challenge12():
     assert block_size == 16
 
     plaintext = crack_ecb_oracle(oracle_fn)
-    print(bytes_to_string(plaintext))
+    print(plaintext.decode())
     assert plaintext == unknown_bytes
 
 
@@ -647,7 +643,7 @@ def challenge13():
         return cipher.encrypt(pkcs7_pad(urlencode(profile_data).encode("utf-8")))
 
     def decrypt_profile(encrypted_profile):
-        return bytes_to_string(pkcs7_unpad(cipher.decrypt(encrypted_profile)))
+        return pkcs7_unpad(cipher.decrypt(encrypted_profile)).decode()
 
 
     profile1 = create_encrypted_user_profile("peter.gregory@piedpiper.com")
@@ -793,7 +789,7 @@ def challenge17():
             prev_cipher_block = cipher_block
         recovered_plaintext = pkcs7_unpad(recovered_plaintext)
         assert recovered_plaintext == unknown_string
-        print(bytes_to_string(recovered_plaintext))
+        print(recovered_plaintext.decode())
 
 
 def challenge18():
@@ -809,7 +805,7 @@ def challenge18():
     for counter_value, block in zip(ctr_iterator, byte_chunks(ciphertext)):
         keystream = ecb_cipher.encrypt(counter_value)
         plaintext += xor_bytes(keystream[:len(block)], block)
-    print(bytes_to_string(plaintext))
+    print(plaintext.decode())
 
     ctr_cipher = AES.new(key, AES.MODE_CTR, counter=create_ctr_counter(nonce))
     assert plaintext == ctr_cipher.decrypt(ciphertext)
@@ -870,7 +866,7 @@ def challenge19():
     ciphertexts = [encrypt(x) for x in plaintexts]
 
     recovered_plaintexts, recovered_key = crack_common_xor_key(ciphertexts)
-    print("\n".join(bytes_to_string(p) for p in recovered_plaintexts))
+    print("\n".join(p.decode() for p in recovered_plaintexts))
 
 
 def challenge20():
@@ -885,7 +881,7 @@ def challenge20():
         plaintexts = [base64.b64decode(x) for x in f.readlines()]
     ciphertexts = [encrypt(x) for x in plaintexts]
     recovered_plaintexts, recovered_key = crack_common_xor_key(ciphertexts)
-    print("\n".join(bytes_to_string(p) for p in recovered_plaintexts))
+    print("\n".join(p.decode() for p in recovered_plaintexts))
 
 
 def challenge21():
