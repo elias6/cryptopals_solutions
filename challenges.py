@@ -524,12 +524,12 @@ def challenge6():
     def hamming_distance(bytes1, bytes2):
         return sum(bin(b1 ^ b2).count("1") for b1, b2 in zip(bytes1, bytes2))
 
-    def index_of_coincidence(data, frequency):
-        chunks = byte_chunks(data, frequency)
+    def index_of_coincidence(data, key_size):
+        chunks = byte_chunks(data, key_size)
         result = 0
         for i in range(len(chunks) - 1):
             result += hamming_distance(chunks[i], chunks[i + 1])
-        return result / frequency / len(chunks)
+        return result / key_size / len(chunks)
 
     assert hamming_distance(b"this is a test", b"wokka wokka!!!") == 37
 
