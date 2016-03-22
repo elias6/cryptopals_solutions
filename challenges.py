@@ -60,7 +60,7 @@ def pp(*args, width=120, **kwargs):
 
 
 def bytes_to_string(b):
-    return b.decode("utf-8", errors="replace")
+    return b.decode(errors="replace")
 
 
 def xor_bytes(*bytes_objects):
