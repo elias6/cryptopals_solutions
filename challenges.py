@@ -544,7 +544,7 @@ def challenge6():
     cipher_chunks = byte_chunks(ciphertext, best_key_size)
     plain_chunks, key = crack_common_xor_key(cipher_chunks)
     plaintext = bytes_to_string(b"".join(plain_chunks))
-    print(key)
+    print("key: {}".format(bytes_to_string(key)))
     print()
     print(plaintext)
     assert "white boy" in plaintext
