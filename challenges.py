@@ -409,13 +409,11 @@ class DiffieHellmanUser:
     def __init__(self, p=NIST_DIFFIE_HELLMAN_PRIME, g=2):
         self.p = p
         self.g = g
-        self._shared_keys = {}
-        self._private_key = self.generate_private_key()
+        self._private_key = random.randrange(self.p)
         self.public_key = pow(self.g, self._private_key, self.p)
-        self._inbox = defaultdict(list)
-
-    def generate_private_key(self):
-        return random.randrange(self.p)
+        self._shared_keys = {}
+        self.inbox = defaultdict(list)
+        self._decrypted_messages = defaultdict(list)
 
     def exchange_public_keys_with(self, other):
         self._shared_keys[other] = self.create_shared_key_with(other)
@@ -425,45 +423,30 @@ class DiffieHellmanUser:
         return pow(other.public_key, self._private_key, other.p)
 
     def send_echo_request(self, other, message):
-        encrypted_message = self.encrypt_message(message, other)
+        encrypted_message = self.encrypt_message(message, self._shared_keys[other])
         response = other.respond_to_echo_request(self, encrypted_message)
-        assert self.decrypt_message(response, other) == message
+        assert self.decrypt_message(response, self._shared_keys[other]) == message
 
     def respond_to_echo_request(self, other, encrypted_message):
-        message = self.decrypt_message(encrypted_message, other)
-        self._inbox[other].append(message)
-        return self.encrypt_message(message, other)
+        self.inbox[other].append(encrypted_message)
+        message = self.decrypt_message(encrypted_message, self._shared_keys[other])
+        self._decrypted_messages[other].append(message)
+        return self.encrypt_message(message, self._shared_keys[other])
 
     def generate_symmetric_key(self, shared_key):
         shared_key_length = (shared_key.bit_length() // 8) + 1
         shared_key_bytes = shared_key.to_bytes(shared_key_length, byteorder="big")
         return sha1(shared_key_bytes)[:16]
 
-    def encrypt_message(self, message, other):
-        key = self.generate_symmetric_key(self._shared_keys[other])
+    def encrypt_message(self, message, shared_key):
+        key = self.generate_symmetric_key(shared_key)
         iv = os.urandom(16)
         return iv + AES.new(key, AES.MODE_CBC, iv).encrypt(pkcs7_pad(message))
 
-    def decrypt_message(self, encrypted_message, other):
-        key = self.generate_symmetric_key(self._shared_keys[other])
+    def decrypt_message(self, encrypted_message, shared_key):
+        key = self.generate_symmetric_key(shared_key)
         iv, ciphertext = encrypted_message[:16], encrypted_message[16:]
         return pkcs7_unpad(AES.new(key, AES.MODE_CBC, iv).decrypt(ciphertext))
-
-
-class DiffieHellmanKeyFixingAttacker(DiffieHellmanUser):
-    def __init__(self, victim, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.victim = victim
-        self.exchange_public_keys_with(victim)
-        assert self.public_key == self.g
-
-    def generate_private_key(self):
-        return self.p
-
-    def respond_to_echo_request(self, other, encrypted_message):
-        result = super().respond_to_echo_request(other, encrypted_message)        
-        self.send_echo_request(self.victim, self._inbox[other][-1])
-        return result
 
 
 def challenge1():
@@ -1213,15 +1196,29 @@ def challenge34():
     bob = DiffieHellmanUser()
     alice.exchange_public_keys_with(bob)
     alice.send_echo_request(bob, EXAMPLE_PLAIN_BYTES)
-    assert EXAMPLE_PLAIN_BYTES in bob._inbox[alice]
+    assert EXAMPLE_PLAIN_BYTES in bob._decrypted_messages[alice]
 
     alice = DiffieHellmanUser()
     bob = DiffieHellmanUser()
-    mallory = DiffieHellmanKeyFixingAttacker(victim=bob)
+    mallory = DiffieHellmanUser()
+    mallory.public_key = mallory.p
     alice.exchange_public_keys_with(mallory)
-    alice.send_echo_request(mallory, EXAMPLE_PLAIN_BYTES)
-    assert EXAMPLE_PLAIN_BYTES in mallory._inbox[alice]
-    assert EXAMPLE_PLAIN_BYTES in bob._inbox[mallory]
+    assert alice._shared_keys[mallory] == 0
+    mallory.exchange_public_keys_with(bob)
+    assert bob._shared_keys[mallory] == 0
+    try:
+        alice.send_echo_request(mallory, EXAMPLE_PLAIN_BYTES)
+    except ValueError:
+        # Invalid padding. Mallory shouldn't be able to decrypt request
+        # normally, but encrypted message will still reach Mallory's inbox.
+        pass
+    else:
+        assert False
+    encrypted_request = mallory.inbox[alice][-1]
+    # Mallory decrypts request without any key.
+    assert mallory.decrypt_message(encrypted_request, 0) == EXAMPLE_PLAIN_BYTES
+    bob.respond_to_echo_request(mallory, encrypted_request)
+    assert EXAMPLE_PLAIN_BYTES in bob._decrypted_messages[mallory]
 
 
 def test_all_challenges(output_stream=sys.stdout):
