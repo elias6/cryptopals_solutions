@@ -409,7 +409,7 @@ class DiffieHellmanUser:
     def __init__(self, p=NIST_DIFFIE_HELLMAN_PRIME, g=2):
         self.p = p
         self.g = g
-        self._private_key = random.randrange(self.p)
+        self._private_key = random.randint(1, self.p - 1)
         self.public_key = pow(self.g, self._private_key, self.p)
         self._shared_keys = {}
         self.inbox = defaultdict(list)
