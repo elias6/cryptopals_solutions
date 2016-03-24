@@ -1212,8 +1212,6 @@ def challenge34():
         # Invalid padding. Mallory shouldn't be able to decrypt request
         # normally, but encrypted message will still reach Mallory's inbox.
         pass
-    else:
-        assert False
     encrypted_request = mallory.inbox[alice][-1]
     # Mallory decrypts request without any key.
     assert mallory.decrypt_message(encrypted_request, 0) == EXAMPLE_PLAIN_BYTES
