@@ -406,9 +406,12 @@ def recover_signature(validate_signature, quiet=True, thread_count=300):
 
 
 class DiffieHellmanUser:
-    def __init__(self, p=NIST_DIFFIE_HELLMAN_PRIME, g=2):
+    def __init__(self, p=NIST_DIFFIE_HELLMAN_PRIME, g=2, private_key=None):
         self.p = p
-        self._private_key = random.randint(1, p - 1)
+        if private_key is None:
+            self._private_key = random.randint(1, p - 1)
+        else:
+            self._private_key = private_key
         self.public_key = pow(g, self._private_key, p)
         self._shared_keys = {}
         self._decrypted_messages = defaultdict(list)
@@ -1236,10 +1239,9 @@ def challenge35():
     # Mallory tricks Alice and Bob into using g=NIST_DIFFIE_HELLMAN_PRIME - 1
     alice = DiffieHellmanUser(g=NIST_DIFFIE_HELLMAN_PRIME - 1)
     bob = DiffieHellmanUser(g=NIST_DIFFIE_HELLMAN_PRIME - 1)
-    while True:
-        mallory = DiffieHellmanUser(g=NIST_DIFFIE_HELLMAN_PRIME - 1)
-        if mallory._private_key % 2 == 0:
-            break
+    # Private key must be even.
+    mallory = DiffieHellmanUser(g=NIST_DIFFIE_HELLMAN_PRIME - 1,
+        private_key=random.randrange(0, NIST_DIFFIE_HELLMAN_PRIME, 2))
     assert mallory.public_key == 1
     assert alice.get_shared_key_for(mallory) == 1
     assert bob.get_shared_key_for(mallory) == 1
