@@ -79,6 +79,10 @@ def byte_chunks(input_bytes, chunk_size=16):
         for i in range(0, len(input_bytes), chunk_size)]
 
 
+def int_to_bytes(x):
+    return x.to_bytes(length=(x.bit_length() // 8) + 1, byteorder="big")
+
+
 # Character frequencies were taken from raw letter averages at
 # http://www.macfreek.nl/memory/Letter_Distribution, then rounded to 6
 # decimal places for readability. Numbers for control characters (\x00
@@ -432,10 +436,7 @@ class DiffieHellmanUser:
         return self._encrypt_message(message, other)
 
     def _generate_symmetric_key(self, other):
-        shared_key = self.get_shared_key_for(other)
-        shared_key_length = (shared_key.bit_length() // 8) + 1
-        shared_key_bytes = shared_key.to_bytes(shared_key_length, byteorder="big")
-        return sha1(shared_key_bytes)[:16]
+        return sha1(int_to_bytes(self.get_shared_key_for(other)))[:16]
 
     def _encrypt_message(self, message, other):
         iv = os.urandom(16)
