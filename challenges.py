@@ -253,6 +253,10 @@ def encrypted_string_has_admin(ciphertext, cipher):
     return b";admin=true;" in plain_bytes
 
 
+def ctr_iterator(nonce, block_index=0):
+    return (struct.pack("<QQ", nonce, i) for i in count(start=block_index))
+
+
 def ctr_counter(nonce, block_index=0):
     # This is roughly equivalent to the following code:
     # return Crypto.Util.Counter.new(
@@ -264,7 +268,7 @@ def ctr_counter(nonce, block_index=0):
     # iterator's __next__ method instead of the iterator itself because
     # PyCrypto's CTR implementation requires a function that returns a new
     # value each time it is called.
-    return (struct.pack("<QQ", nonce, i) for i in count(start=block_index)).__next__
+    return ctr_iterator(nonce, block_index).__next__
 
 
 class MT19937_RNG:
@@ -782,8 +786,7 @@ def challenge18():
     nonce = 0
 
     plaintext = bytearray()
-    ctr_iterator = ctr_counter(nonce).__self__
-    for counter_value, block in zip(ctr_iterator, byte_chunks(ciphertext)):
+    for counter_value, block in zip(ctr_iterator(nonce), byte_chunks(ciphertext)):
         keystream = ecb_cipher.encrypt(counter_value)
         plaintext += xor_bytes(keystream[:len(block)], block)
     print(plaintext.decode())
