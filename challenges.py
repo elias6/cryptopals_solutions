@@ -323,14 +323,14 @@ class MT19937_RNG:
 
 
 def sha1(message):
-    return Sha1Hash().update(message).digest()
+    return Sha1Hash().update(message)
 
 
 def calculate_hmac(key, message):
-    key_hash = sha1(key)
+    key_hash = sha1(key).digest()
     o_key_pad = xor_encrypt(key_hash, b"\x5c")
     i_key_pad = xor_encrypt(key_hash, b"\x36")
-    return sha1(o_key_pad + sha1(i_key_pad + message))
+    return sha1(o_key_pad + sha1(i_key_pad + message).digest()).digest()
 
 
 get_hmac = lru_cache()(calculate_hmac)
@@ -440,7 +440,7 @@ class DiffieHellmanUser:
         return self._encrypt_message(message, other)
 
     def _generate_symmetric_key(self, other):
-        return sha1(int_to_bytes(self.get_shared_key_for(other)))[:16]
+        return sha1(int_to_bytes(self.get_shared_key_for(other))).digest()[:16]
 
     def _encrypt_message(self, message, other):
         iv = os.urandom(16)
@@ -1044,8 +1044,8 @@ def challenge28():
     """Implement a SHA-1 keyed MAC"""
     key1 = os.urandom(16)
     key2 = os.urandom(16)
-    assert sha1(key1 + b"message1") != sha1(key1 + b"message2")
-    assert sha1(key1 + b"message1") != sha1(key2 + b"message2")
+    assert sha1(key1 + b"message1").digest() != sha1(key1 + b"message2").digest()
+    assert sha1(key1 + b"message1").digest() != sha1(key2 + b"message2").digest()
 
 
 def challenge29():
@@ -1062,7 +1062,7 @@ def challenge29():
     key = os.urandom(16)
     query_string = (b"comment1=cooking%20MCs;userdata=foo;"
         b"comment2=%20like%20a%20pound%20of%20bacon")
-    mac = sha1(key + query_string)
+    mac = sha1(key + query_string).digest()
 
     glue_padding = sha1_padding(len(key + query_string))
     new_param = b";admin=true"
@@ -1071,7 +1071,7 @@ def challenge29():
         prefix_length=len(key + query_string + glue_padding))
     new_hash = modified_hash_fn.update(new_param).digest()
 
-    expected_hash = sha1(key + query_string + glue_padding + new_param)
+    expected_hash = sha1(key + query_string + glue_padding + new_param).digest()
     assert new_hash == expected_hash
 
 
