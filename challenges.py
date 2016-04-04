@@ -1042,10 +1042,8 @@ def challenge27():
 
 def challenge28():
     """Implement a SHA-1 keyed MAC"""
-    key1 = os.urandom(16)
-    key2 = os.urandom(16)
-    assert sha1(key1 + b"message1").digest() != sha1(key1 + b"message2").digest()
-    assert sha1(key1 + b"message1").digest() != sha1(key2 + b"message2").digest()
+    key = os.urandom(16)
+    assert sha1(key + b"message1").digest() != sha1(key + b"message2").digest()
 
 
 def challenge29():
