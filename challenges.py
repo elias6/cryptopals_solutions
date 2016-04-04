@@ -198,7 +198,7 @@ def cbc_decrypt(key, iv, ciphertext):
     return bytes(result)
 
 
-def create_random_aes_key():
+def random_aes_key():
     return os.urandom(16)
 
 
@@ -241,7 +241,7 @@ def crack_ecb_oracle(oracle_fn, prefix_length=0, block_size=16):
             return pkcs7_unpad(result)
 
 
-def create_encrypted_query_string(cipher, user_data):
+def encrypted_query_string(cipher, user_data):
     query_string = ("comment1=cooking%20MCs;userdata=" + url_quote(user_data) +
         ";comment2=%20like%20a%20pound%20of%20bacon")
     bytes_to_encrypt = pkcs7_pad(query_string.encode("utf-8"))
@@ -253,7 +253,7 @@ def encrypted_string_has_admin(ciphertext, cipher):
     return b";admin=true;" in plain_bytes
 
 
-def create_ctr_counter(nonce, block_index=0):
+def ctr_counter(nonce, block_index=0):
     # This is roughly equivalent to the following code:
     # return Crypto.Util.Counter.new(
     #     nbits=64, prefix=struct.pack("<Q", nonce), initial_value=block_index,
@@ -570,7 +570,7 @@ def challenge10():
 def challenge11():
     """An ECB/CBC detection oracle"""
     def encrypt_with_random_mode(plain_bytes):
-        key = create_random_aes_key()
+        key = random_aes_key()
         mode = random.choice([AES.MODE_CBC, AES.MODE_ECB])
         # iv is ignored for MODE_ECB
         iv = os.urandom(16)
@@ -603,7 +603,7 @@ def challenge12():
         "Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkgaGFpciBjYW"
         "4gYmxvdwpUaGUgZ2lybGllcyBvbiBzdGFuZGJ5IHdhdmluZyBqdXN0IHRvIHNheSBoaQpE"
         "aWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUgYnkK")
-    cipher = AES.new(create_random_aes_key(), AES.MODE_ECB)
+    cipher = AES.new(random_aes_key(), AES.MODE_ECB)
 
     def oracle_fn(attacker_bytes):
         return cipher.encrypt(pkcs7_pad(attacker_bytes + unknown_bytes))
@@ -618,9 +618,9 @@ def challenge12():
 
 def challenge13():
     """ECB cut-and-paste"""
-    cipher = AES.new(create_random_aes_key(), mode=AES.MODE_ECB)
+    cipher = AES.new(random_aes_key(), mode=AES.MODE_ECB)
 
-    def create_encrypted_user_profile(email_address):
+    def encrypted_user_profile(email_address):
         profile_data = [("email", email_address), ("uid", "10"), ("role", "user")]
         return cipher.encrypt(pkcs7_pad(urlencode(profile_data).encode("utf-8")))
 
@@ -628,13 +628,13 @@ def challenge13():
         return pkcs7_unpad(cipher.decrypt(encrypted_profile)).decode()
 
 
-    profile1 = create_encrypted_user_profile("peter.gregory@piedpiper.com")
+    profile1 = encrypted_user_profile("peter.gregory@piedpiper.com")
     profile1_blocks = byte_chunks(profile1)
 
-    profile2 = create_encrypted_user_profile("zach.woods@piedpiper.comadmin")
+    profile2 = encrypted_user_profile("zach.woods@piedpiper.comadmin")
     profile2_blocks = byte_chunks(profile2)
 
-    profile3 = create_encrypted_user_profile("a@a.com")
+    profile3 = encrypted_user_profile("a@a.com")
     padding_only_block = byte_chunks(profile3)[-1]
 
     new_profile = b"".join(profile1_blocks[:3]) + profile2_blocks[2] + padding_only_block
@@ -647,7 +647,7 @@ def challenge13():
 
 def challenge14():
     """Byte-at-a-time ECB decryption (Harder)"""
-    cipher = AES.new(create_random_aes_key(), AES.MODE_ECB)
+    cipher = AES.new(random_aes_key(), AES.MODE_ECB)
     random_bytes = os.urandom(random.randint(0, 64))
     target_bytes = EXAMPLE_PLAIN_BYTES
 
@@ -695,11 +695,11 @@ def challenge15():
 
 def challenge16():
     """CBC bitflipping attacks"""
-    key = create_random_aes_key()
+    key = random_aes_key()
     iv = os.urandom(16)
 
     cipher = AES.new(key, AES.MODE_CBC, iv)
-    ciphertext = create_encrypted_query_string(cipher, "foo")
+    ciphertext = encrypted_query_string(cipher, "foo")
 
     bits_to_flip = (bytes([0] * 32) +
         xor_bytes(b"like%20a%20pound", b";admin=true;foo=") + bytes([0] * 32))
@@ -726,7 +726,7 @@ def challenge17():
 
     random.shuffle(unknown_strings)
 
-    def create_encrypted_string(random_string):
+    def encrypted_string(random_string):
         cipher = AES.new(key, AES.MODE_CBC, iv)
         return cipher.encrypt(pkcs7_pad(random_string))
 
@@ -740,14 +740,13 @@ def challenge17():
         else:
             return True
 
-    key = create_random_aes_key()
+    key = random_aes_key()
     iv = os.urandom(16)
 
     for unknown_string in unknown_strings:
-        ciphertext = create_encrypted_string(unknown_string)
         recovered_plaintext = bytearray()
         prev_cipher_block = iv
-        for cipher_block in byte_chunks(ciphertext):
+        for cipher_block in byte_chunks(encrypted_string(unknown_string)):
             recovered_block = bytes()
             for pos in reversed(range(16)):
                 assert len(recovered_block) == 15 - pos
@@ -783,13 +782,13 @@ def challenge18():
     nonce = 0
 
     plaintext = bytearray()
-    ctr_iterator = create_ctr_counter(nonce).__self__
+    ctr_iterator = ctr_counter(nonce).__self__
     for counter_value, block in zip(ctr_iterator, byte_chunks(ciphertext)):
         keystream = ecb_cipher.encrypt(counter_value)
         plaintext += xor_bytes(keystream[:len(block)], block)
     print(plaintext.decode())
 
-    ctr_cipher = AES.new(key, AES.MODE_CTR, counter=create_ctr_counter(nonce))
+    ctr_cipher = AES.new(key, AES.MODE_CTR, counter=ctr_counter(nonce))
     assert plaintext == ctr_cipher.decrypt(ciphertext)
 
 
@@ -797,10 +796,10 @@ def challenge19():
     """Break fixed-nonce CTR mode using substitions"""
     # [sic]. "substitions" looks like a typo but I don't know what it is
     # supposed to say.
-    key = create_random_aes_key()
+    key = random_aes_key()
 
     def encrypt(ciphertext):
-        cipher = AES.new(key, AES.MODE_CTR, counter=create_ctr_counter(0))
+        cipher = AES.new(key, AES.MODE_CTR, counter=ctr_counter(0))
         return cipher.encrypt(ciphertext)
 
     plaintexts = [base64.b64decode(x) for x in [
@@ -853,10 +852,10 @@ def challenge19():
 
 def challenge20():
     """Break fixed-nonce CTR statistically"""
-    key = create_random_aes_key()
+    key = random_aes_key()
 
     def encrypt(ciphertext):
-        cipher = AES.new(key, AES.MODE_CTR, counter=create_ctr_counter(0))
+        cipher = AES.new(key, AES.MODE_CTR, counter=ctr_counter(0))
         return cipher.encrypt(ciphertext)
 
     with open("20.txt") as f:
@@ -973,14 +972,13 @@ def challenge24():
 
 def challenge25():
     """Break "random access read/write" AES CTR"""
-    key = create_random_aes_key()
+    key = random_aes_key()
     nonce = random.getrandbits(64)
 
     def edit(ciphertext, block_index, new_bytes):
         if len(new_bytes) % 16 != 0:
             raise ValueError("new_bytes must be a multiple of 16 bytes long")
-        counter = create_ctr_counter(nonce, block_index)
-        cipher = AES.new(key, AES.MODE_CTR, counter=counter)
+        cipher = AES.new(key, AES.MODE_CTR, counter=ctr_counter(nonce, block_index))
         new_ciphertext = cipher.encrypt(new_bytes)
         result = bytearray(ciphertext)
         result[16*block_index : 16*block_index + len(new_bytes)] = new_ciphertext
@@ -990,7 +988,7 @@ def challenge25():
     with open("25.txt") as f:
         temp_bytes = base64.b64decode(f.read())
     plain_bytes = AES.new(b"YELLOW SUBMARINE", AES.MODE_ECB).decrypt(temp_bytes)
-    cipher = AES.new(key, AES.MODE_CTR, counter=create_ctr_counter(nonce))
+    cipher = AES.new(key, AES.MODE_CTR, counter=ctr_counter(nonce))
     ciphertext = cipher.encrypt(plain_bytes)
 
     keystream = edit(ciphertext, 0, bytes([0]) * len(plain_bytes))
@@ -1000,33 +998,33 @@ def challenge25():
 
 def challenge26():
     """CTR bitflipping"""
-    key = create_random_aes_key()
+    key = random_aes_key()
     nonce = random.getrandbits(64)
 
-    cipher = AES.new(key, AES.MODE_CTR, counter=create_ctr_counter(nonce))
-    ciphertext = create_encrypted_query_string(cipher, "A" * 16)
+    cipher = AES.new(key, AES.MODE_CTR, counter=ctr_counter(nonce))
+    ciphertext = encrypted_query_string(cipher, "A" * 16)
     new_ciphertext = bytearray(ciphertext)
     new_ciphertext[32:48] = xor_bytes(
         b"A" * 16, b"ha_ha;admin=true", new_ciphertext[32:48])
     new_ciphertext = bytes(new_ciphertext)
 
-    cipher = AES.new(key, AES.MODE_CTR, counter=create_ctr_counter(nonce))
+    cipher = AES.new(key, AES.MODE_CTR, counter=ctr_counter(nonce))
     assert encrypted_string_has_admin(new_ciphertext, cipher)
 
 
 def challenge27():
     """Recover the key from CBC with IV=Key"""
-    key = create_random_aes_key()
+    key = random_aes_key()
     iv = key
 
-    def create_encrypted_string(user_bytes):
+    def encrypted_string(user_bytes):
         return AES.new(key, AES.MODE_CBC, iv).encrypt(pkcs7_pad(user_bytes))
 
     def decrypt(ciphertext):
         plain_bytes = AES.new(key, AES.MODE_CBC, iv).decrypt(ciphertext)
         return pkcs7_unpad(plain_bytes.decode("ascii"))
 
-    ciphertext = create_encrypted_string(EXAMPLE_PLAIN_BYTES)
+    ciphertext = encrypted_string(EXAMPLE_PLAIN_BYTES)
     modified_ciphertext = ciphertext[:16] + bytes([0] * 16) + ciphertext
 
     try:
