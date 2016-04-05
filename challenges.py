@@ -13,6 +13,7 @@ import warnings
 from collections import Counter, defaultdict, deque
 from contextlib import ExitStack, redirect_stderr, redirect_stdout
 from functools import lru_cache
+from hashlib import sha256
 from heapq import nlargest
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from itertools import count, cycle
@@ -450,6 +451,67 @@ class DiffieHellmanUser:
     def _decrypt_message(self, iv, ciphertext, other):
         key = self._generate_symmetric_key(other)
         return pkcs7_unpad(AES.new(key, AES.MODE_CBC, iv).decrypt(ciphertext))
+
+
+def scramble_srp_keys(A, B):
+    return int(sha256(int_to_bytes(A) + int_to_bytes(B)).hexdigest(), 16)
+
+
+class SRPServer:
+    N = NIST_DIFFIE_HELLMAN_PRIME
+    g = 2
+    k = 3
+
+    def __init__(self):
+        self.users = {}
+
+    def _respond_to_sign_up_request(self, username, salt, verifier):
+        self.users[username] = {"salt": salt, "verifier": verifier}
+
+    def _respond_to_login_request(self, username, A):
+        # A == public ephemeral number from client
+        user = self.users[username]
+        b = random.randint(1, self.N - 1)  # private ephemeral number
+        # B == public ephemeral number
+        B = (self.k * user["verifier"]) + pow(self.g, b, self.N)
+        u = scramble_srp_keys(A, B)
+        S = pow(A * pow(user["verifier"], u, self.N), b, self.N)
+        user["shared_session_key"] = sha256(int_to_bytes(S)).digest()
+        return (user["salt"], B)
+
+    def _verify_hmac(self, hmac, username):
+        user = self.users[username]
+        return hmac == get_hmac(user["shared_session_key"], user["salt"], sha256)
+
+
+class SRPClient:
+    N = NIST_DIFFIE_HELLMAN_PRIME
+    g = 2
+    k = 3
+
+    def sign_up(self, server, username, password):
+        salt = os.urandom(16)
+        x = self._generate_private_key(username, password, salt)
+        verifier = pow(self.g, x, self.N)
+        server._respond_to_sign_up_request(username, salt, verifier)
+
+    def log_in(self, server, username, password):
+        a = random.randint(1, self.N - 1)  # private ephemeral number
+        A = pow(self.g, a, self.N)  # public ephemeral number
+        # B == public ephemeral number from server
+        salt, B = server._respond_to_login_request(username, A)
+
+        u = scramble_srp_keys(A, B)
+        x = self._generate_private_key(username, password, salt)
+        S = pow(B - self.k * pow(self.g, x, self.N), a + u*x, self.N)
+        # S == pow(self.g, server.b, self.N)
+        shared_session_key = sha256(int_to_bytes(S)).digest()  # called "K" in challenge
+        hmac = get_hmac(shared_session_key, salt, sha256)
+        return server._verify_hmac(hmac, username)
+
+    def _generate_private_key(self, username, password, salt):
+        inner_hash = sha256(username + b":" + password).digest()
+        return int(sha256(salt + inner_hash).hexdigest(), 16)
 
 
 def challenge1():
@@ -1250,6 +1312,20 @@ def challenge35():
     assert EXAMPLE_PLAIN_BYTES in mallory._decrypted_messages[alice]
     mallory.send_echo_request(bob, EXAMPLE_PLAIN_BYTES)
     assert EXAMPLE_PLAIN_BYTES in bob._decrypted_messages[mallory]
+
+
+def challenge36():
+    """Implement Secure Remote Password (SRP)"""
+    username = b"peter.gregory@piedpiper.com"
+    password = b"letmein"
+    wrong_password = b"qwerty"
+
+    server = SRPServer()
+    client = SRPClient()
+    client.sign_up(server, username, password)
+
+    assert client.log_in(server, username, password)
+    assert not client.log_in(server, username, wrong_password)
 
 
 def test_all_challenges(output_stream=sys.stdout):
