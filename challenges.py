@@ -1328,6 +1328,25 @@ def challenge36():
     assert not client.log_in(server, username, wrong_password)
 
 
+def challenge37():
+    """Break SRP with a zero key"""
+    username = b"peter.gregory@piedpiper.com"
+    password = b"letmein"
+
+    server = SRPServer()
+    client = SRPClient()
+    client.sign_up(server, username, password)
+
+    for i in range(10):
+        # Attacker tricks server into computing easily derivable session key
+        salt, B = server._respond_to_login_request(username, i * client.N)
+        # Attacker derives shared session key without password
+        shared_session_key = sha256(int_to_bytes(0)).digest()
+        hmac = get_hmac(shared_session_key, salt, sha256)
+        # Attacker logs in without password
+        assert server._verify_hmac(hmac, username)
+
+
 def test_all_challenges(output_stream=sys.stdout):
     challenges = {}
     for name, var in globals().copy().items():
