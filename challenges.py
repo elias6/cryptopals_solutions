@@ -326,11 +326,11 @@ def sha1(message):
     return Sha1Hash().update(message)
 
 
-def calculate_hmac(key, message):
-    key_hash = sha1(key).digest()
+def calculate_hmac(key, message, hash_fn=sha1):
+    key_hash = hash_fn(key).digest()
     o_key_pad = xor_encrypt(key_hash, b"\x5c")
     i_key_pad = xor_encrypt(key_hash, b"\x36")
-    return sha1(o_key_pad + sha1(i_key_pad + message).digest()).digest()
+    return hash_fn(o_key_pad + hash_fn(i_key_pad + message).digest()).digest()
 
 
 get_hmac = lru_cache()(calculate_hmac)
