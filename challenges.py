@@ -347,6 +347,11 @@ def insecure_compare(data1, data2, delay):
     return True
 
 
+class FancyHTTPServer(ThreadingMixIn, HTTPServer):
+    def server_activate(self):
+        self.socket.listen(128)
+
+
 class ValidatingRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         url_components = urlparse(self.path)
@@ -1194,7 +1199,6 @@ def challenge31_with_server():
 
     print("looking for {}".format(list(get_hmac(key, data))))
     print()
-    FancyHTTPServer = type("FancyHTTPServer", (ThreadingMixIn, HTTPServer), {})
     server = FancyHTTPServer(("localhost", 31415), ValidatingRequestHandler)
     server.hmac_key = key
     server.validate_signature = lambda hmac, sig: insecure_compare(hmac, sig, 0.05)
@@ -1207,7 +1211,7 @@ def challenge31_with_server():
                 signature = recover_signature(
                     signature_is_valid,
                     quiet=False,
-                    thread_count=6)
+                    thread_count=50)
                 print("recovered signature: {}".format(list(signature)))
     finally:
         server.shutdown()
