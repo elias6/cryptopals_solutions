@@ -509,7 +509,6 @@ class SRPClient:
         u = scramble_srp_keys(A, B)
         x = self._generate_private_key(username, password, salt)
         S = pow(B - self.k * pow(self.g, x, self.N), a + u*x, self.N)
-        # S == pow(self.g, server.b, self.N)
         shared_session_key = sha256(int_to_bytes(S)).digest()  # called "K" in challenge
         hmac = get_hmac(shared_session_key, salt, sha256)
         return server._verify_hmac(hmac, username)
