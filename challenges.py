@@ -465,7 +465,6 @@ def scramble_srp_keys(A, B):
 class SRPServer:
     N = NIST_DIFFIE_HELLMAN_PRIME
     g = 2
-    k = 3
 
     def __init__(self):
         self.users = {}
@@ -473,12 +472,14 @@ class SRPServer:
     def _respond_to_sign_up_request(self, username, salt, verifier):
         self.users[username] = {"salt": salt, "verifier": verifier}
 
-    def _respond_to_login_request(self, username, A):
+    def _respond_to_login_request(self, username, A, k=3):
         # A == public ephemeral number from client
         user = self.users[username]
         b = random.randint(1, self.N - 1)  # private ephemeral number
-        # B == public ephemeral number
-        B = (self.k * user["verifier"]) + pow(self.g, b, self.N)
+        # B == public ephemeral number. Usually, B depends on the password, but
+        # if k == 0, it is a completely random Diffie-Hellman public key, which
+        # causes u to be essentially random.
+        B = (k * user["verifier"]) + pow(self.g, b, self.N)
         u = scramble_srp_keys(A, B)
         S = pow(A * pow(user["verifier"], u, self.N), b, self.N)
         user["shared_session_key"] = sha256(int_to_bytes(S)).digest()
@@ -492,7 +493,6 @@ class SRPServer:
 class SRPClient:
     N = NIST_DIFFIE_HELLMAN_PRIME
     g = 2
-    k = 3
 
     def sign_up(self, server, username, password):
         salt = os.urandom(16)
@@ -500,15 +500,15 @@ class SRPClient:
         verifier = pow(self.g, x, self.N)
         server._respond_to_sign_up_request(username, salt, verifier)
 
-    def log_in(self, server, username, password):
+    def log_in(self, server, username, password, k=3):
         a = random.randint(1, self.N - 1)  # private ephemeral number
         A = pow(self.g, a, self.N)  # public ephemeral number
         # B == public ephemeral number from server
-        salt, B = server._respond_to_login_request(username, A)
+        salt, B = server._respond_to_login_request(username, A, k=k)
 
         u = scramble_srp_keys(A, B)
         x = self._generate_private_key(username, password, salt)
-        S = pow(B - self.k * pow(self.g, x, self.N), a + u*x, self.N)
+        S = pow(B - k * pow(self.g, x, self.N), a + u*x, self.N)
         shared_session_key = sha256(int_to_bytes(S)).digest()  # called "K" in challenge
         hmac = get_hmac(shared_session_key, salt, sha256)
         return server._verify_hmac(hmac, username)
@@ -1348,6 +1348,19 @@ def challenge37():
         hmac = get_hmac(shared_session_key, salt, sha256)
         # Attacker logs in without password
         assert server._verify_hmac(hmac, username)
+
+
+def challenge38():
+    """Offline dictionary attack on simplified SRP"""
+    username = b"peter.gregory@piedpiper.com"
+    password = b"letmein"
+    wrong_password = b"qwerty"
+
+    server = SRPServer()
+    client = SRPClient()
+    client.sign_up(server, username, password)
+    assert client.log_in(server, username, password, k=0)
+    assert not client.log_in(server, username, wrong_password, k=0)
 
 
 def test_all_challenges(output_stream=sys.stdout):
