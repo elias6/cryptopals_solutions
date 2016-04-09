@@ -479,7 +479,7 @@ class SRPServer:
         # B == public ephemeral number. Usually, B depends on the password, but
         # if k == 0, it is a completely random Diffie-Hellman public key, which
         # causes u to be essentially random.
-        B = (k * user["verifier"]) + pow(self.g, b, self.N)
+        B = ((k * user["verifier"]) + pow(self.g, b, self.N)) % self.N
         u = scramble_srp_keys(A, B)
         S = pow(A * pow(user["verifier"], u, self.N), b, self.N)
         user["shared_session_key"] = sha256(int_to_bytes(S)).digest()
