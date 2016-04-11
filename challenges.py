@@ -376,7 +376,7 @@ class ValidatingRequestHandler(BaseHTTPRequestHandler):
             self.send_error(404)
 
 
-def recover_signature(validate_signature, quiet=True, thread_count=300):
+def recover_signature(validate_signature, thread_count=300):
     # TODO: make this more efficient, reliable, and flexible
 
     def try_signature(signature):
@@ -397,9 +397,8 @@ def recover_signature(validate_signature, quiet=True, thread_count=300):
             for i in range(20):
                 for sig_data in pool.imap_unordered(try_signature, sig_durations.keys()):
                     if sig_data["is_valid"]:
-                        if not quiet:
-                            print("signature recovered: {}, {} attempts".format(
-                                list(result), i + 1))
+                        print("signature recovered: {}, {} attempts".format(
+                            list(result), i + 1))
                         return sig_data["signature"]
                     sig_durations[sig_data["signature"]].append(sig_data["duration"])
                 slowest_sig, second_slowest_sig = nlargest(
@@ -410,9 +409,8 @@ def recover_signature(validate_signature, quiet=True, thread_count=300):
                 difference_expectations.append(duration_difference)
                 if duration_difference > median(difference_expectations):
                     result.append(slowest_sig[pos])
-                    if not quiet:
-                        print("recovered so far: {}, {} attempts".format(
-                            list(result), i + 1))
+                    print("recovered so far: {}, {} attempts".format(
+                        list(result), i + 1))
                     break
             else:
                 raise ValueError("can't recover signature")
@@ -1173,7 +1171,7 @@ def challenge31():
 
     print("looking for {}".format(list(get_hmac(key, data))))
     print()
-    signature = recover_signature(signature_is_valid, quiet=False)
+    signature = recover_signature(signature_is_valid)
     print("recovered signature: {}".format(list(signature)))
     assert get_hmac(key, data) == signature
 
@@ -1209,7 +1207,6 @@ def challenge31_with_server():
                 print()
                 signature = recover_signature(
                     signature_is_valid,
-                    quiet=False,
                     thread_count=50)
                 print("recovered signature: {}".format(list(signature)))
     finally:
@@ -1235,7 +1232,7 @@ def challenge32():
 
     print("looking for {}".format(list(get_hmac(key, data))))
     print()
-    signature = recover_signature(signature_is_valid, quiet=False)
+    signature = recover_signature(signature_is_valid)
     print("recovered signature: {}".format(list(signature)))
     assert get_hmac(key, data) == signature
 
