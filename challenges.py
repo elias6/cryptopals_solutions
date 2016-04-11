@@ -378,6 +378,16 @@ class ValidatingRequestHandler(BaseHTTPRequestHandler):
         pass
 
 
+def server_approves_of_signature(signature):
+    query = urlencode({"file": "hamlet.txt", "signature": signature.hex()})
+    try:
+        urlopen("http://localhost:31415/signature_is_valid?" + query)
+    except HTTPError:
+        return False
+    else:
+        return True
+
+
 def recover_signature(validate_signature, thread_count, threshold):
     # TODO: make this function faster and more reliable. Also make this
     # function figure out threshold on its own
@@ -1168,15 +1178,6 @@ def challenge30():
 
 def challenge31():
     """Implement and break HMAC-SHA1 with an artificial timing leak"""
-    def signature_is_valid(signature):
-        query = urlencode({"file": "hamlet.txt", "signature": signature.hex()})
-        try:
-            urlopen("http://localhost:31415/signature_is_valid?" + query)
-        except HTTPError:
-            return False
-        else:
-            return True
-
     key = os.urandom(16)
     with open("hamlet.txt", "rb") as f:
         data = f.read()
@@ -1192,7 +1193,7 @@ def challenge31():
         print("Server is running on {}".format(server.server_address))
         print()
         signature = recover_signature(
-            signature_is_valid,
+            server_approves_of_signature,
             thread_count=20,
             threshold=0.02)
         print("recovered signature: {}".format(list(signature)))
@@ -1205,15 +1206,6 @@ def challenge31():
 
 def challenge32():
     """Break HMAC-SHA1 with a slightly less artificial timing leak"""
-    def signature_is_valid(signature):
-        query = urlencode({"file": "hamlet.txt", "signature": signature.hex()})
-        try:
-            urlopen("http://localhost:31415/signature_is_valid?" + query)
-        except HTTPError:
-            return False
-        else:
-            return True
-
     key = os.urandom(16)
     with open("hamlet.txt", "rb") as f:
         data = f.read()
@@ -1229,7 +1221,7 @@ def challenge32():
         print("Server is running on {}".format(server.server_address))
         print()
         signature = recover_signature(
-            signature_is_valid,
+            server_approves_of_signature,
             thread_count=15,
             threshold=0.006)
         print("recovered signature: {}".format(list(signature)))
