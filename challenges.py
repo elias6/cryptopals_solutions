@@ -399,9 +399,10 @@ def recover_signature(validate_signature, thread_count, threshold):
             for i in range(20):
                 for sig_data in pool.imap_unordered(try_signature, sig_durations.keys()):
                     if sig_data["is_valid"]:
+                        result = sig_data["signature"]
                         print("signature recovered: {}, "
                             "{} attempt(s) for last byte".format(list(result), i + 1))
-                        return sig_data["signature"]
+                        return result
                     sig_durations[sig_data["signature"]].append(sig_data["duration"])
                 slowest_sig, second_slowest_sig = nlargest(
                     2, sig_durations, key=lambda x: median(sig_durations[x]))
@@ -410,10 +411,14 @@ def recover_signature(validate_signature, thread_count, threshold):
                 duration_difference = slowest_duration - second_slowest_duration
                 if duration_difference > threshold:
                     result.append(slowest_sig[pos])
-                    print("recovered so far: {}, {} attempt(s) for last byte".format(
-                        list(result), i + 1))
+                    print("recovered so far: {}, {} attempt(s) for last byte, "
+                        "duration difference: {:.3f} ms".format(list(result), i + 1,
+                        1000 * duration_difference))
                     break
             else:
+                print("recovered so far: {}, {} attempt(s) for last byte, "
+                    "duration difference: {:.3f} ms".format(list(result), i + 1,
+                    1000 * duration_difference))
                 raise ValueError("can't recover signature")
     raise ValueError("can't recover signature")
 
