@@ -1183,7 +1183,7 @@ def challenge31():
         data = f.read()
     hmac = get_hmac(key, data)
 
-    print("looking for {}".format(list(get_hmac(key, data))))
+    print("looking for {}".format(list(hmac)))
     print()
     server = FancyHTTPServer(("localhost", 31415), ValidatingRequestHandler)
     server.hmac_key = key
@@ -1201,7 +1201,7 @@ def challenge31():
         server.shutdown()
         server.server_close()
 
-    assert get_hmac(key, data) == signature
+    assert signature == hmac
 
 
 def challenge32():
@@ -1211,7 +1211,7 @@ def challenge32():
         data = f.read()
     hmac = get_hmac(key, data)
 
-    print("looking for {}".format(list(get_hmac(key, data))))
+    print("looking for {}".format(list(hmac)))
     print()
     server = FancyHTTPServer(("localhost", 31415), ValidatingRequestHandler)
     server.hmac_key = key
@@ -1229,7 +1229,7 @@ def challenge32():
         server.shutdown()
         server.server_close()
 
-    assert get_hmac(key, data) == signature
+    assert signature == hmac
 
 
 def challenge33():
