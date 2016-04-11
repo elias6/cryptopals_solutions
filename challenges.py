@@ -10,7 +10,7 @@ import struct
 import sys
 import warnings
 
-from collections import Counter, defaultdict, deque
+from collections import Counter, defaultdict
 from contextlib import ExitStack, redirect_stderr, redirect_stdout
 from functools import lru_cache
 from hashlib import sha256
@@ -348,8 +348,7 @@ def insecure_compare(data1, data2, delay):
 
 
 class FancyHTTPServer(ThreadingMixIn, HTTPServer):
-    def server_activate(self):
-        self.socket.listen(128)
+    request_queue_size = 128
 
 
 class ValidatingRequestHandler(BaseHTTPRequestHandler):
@@ -376,8 +375,9 @@ class ValidatingRequestHandler(BaseHTTPRequestHandler):
             self.send_error(404)
 
 
-def recover_signature(validate_signature, thread_count=300):
-    # TODO: make this more efficient, reliable, and flexible
+def recover_signature(validate_signature, thread_count, threshold):
+    # TODO: make this function faster and more reliable. Also make this
+    # function figure out threshold on its own
 
     def try_signature(signature):
         start_time = perf_counter()
@@ -385,7 +385,6 @@ def recover_signature(validate_signature, thread_count=300):
         duration = perf_counter() - start_time
         return {"signature": signature, "is_valid": is_valid, "duration": duration}
 
-    difference_expectations = deque(maxlen=20)
     result = bytearray()
     with ThreadPool(thread_count) as pool:
         for pos in range(20):
@@ -397,8 +396,8 @@ def recover_signature(validate_signature, thread_count=300):
             for i in range(20):
                 for sig_data in pool.imap_unordered(try_signature, sig_durations.keys()):
                     if sig_data["is_valid"]:
-                        print("signature recovered: {}, {} attempts".format(
-                            list(result), i + 1))
+                        print("signature recovered: {}, "
+                            "{} attempt(s) for last byte".format(list(result), i + 1))
                         return sig_data["signature"]
                     sig_durations[sig_data["signature"]].append(sig_data["duration"])
                 slowest_sig, second_slowest_sig = nlargest(
@@ -406,10 +405,9 @@ def recover_signature(validate_signature, thread_count=300):
                 slowest_duration = median(sig_durations[slowest_sig])
                 second_slowest_duration = median(sig_durations[second_slowest_sig])
                 duration_difference = slowest_duration - second_slowest_duration
-                difference_expectations.append(duration_difference)
-                if duration_difference > median(difference_expectations):
+                if duration_difference > threshold:
                     result.append(slowest_sig[pos])
-                    print("recovered so far: {}, {} attempts".format(
+                    print("recovered so far: {}, {} attempt(s) for last byte".format(
                         list(result), i + 1))
                     break
             else:
@@ -1163,24 +1161,6 @@ def challenge30():
 def challenge31():
     """Implement and break HMAC-SHA1 with an artificial timing leak"""
     def signature_is_valid(signature):
-        return insecure_compare(hmac, signature, 0.05)
-
-    key = os.urandom(16)
-    data = EXAMPLE_PLAIN_BYTES
-    hmac = get_hmac(key, data)
-
-    print("looking for {}".format(list(get_hmac(key, data))))
-    print()
-    signature = recover_signature(signature_is_valid)
-    print("recovered signature: {}".format(list(signature)))
-    assert get_hmac(key, data) == signature
-
-
-def challenge31_with_server():
-    """Challenge 31 with actual server instead of comparison function"""
-    # TODO: use this in place of what I have for challenge 31 when I can
-    # make it work reliably.
-    def signature_is_valid(signature):
         query = urlencode({"file": "hamlet.txt", "signature": signature.hex()})
         try:
             urlopen("http://localhost:31415/signature_is_valid?" + query)
@@ -1207,12 +1187,12 @@ def challenge31_with_server():
                 print()
                 signature = recover_signature(
                     signature_is_valid,
-                    thread_count=50)
+                    thread_count=20,
+                    threshold=0.02)
                 print("recovered signature: {}".format(list(signature)))
     finally:
         server.shutdown()
         server.server_close()
-        pp(get_hmac.cache_info())
 
     assert get_hmac(key, data) == signature
 
@@ -1232,7 +1212,10 @@ def challenge32():
 
     print("looking for {}".format(list(get_hmac(key, data))))
     print()
-    signature = recover_signature(signature_is_valid)
+    signature = recover_signature(
+        signature_is_valid,
+        thread_count=50,
+        threshold=0.01)
     print("recovered signature: {}".format(list(signature)))
     assert get_hmac(key, data) == signature
 
