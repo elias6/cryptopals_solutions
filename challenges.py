@@ -374,6 +374,9 @@ class ValidatingRequestHandler(BaseHTTPRequestHandler):
         else:
             self.send_error(404)
 
+    def log_message(self, format, *args):
+        pass
+
 
 def recover_signature(validate_signature, thread_count, threshold):
     # TODO: make this function faster and more reliable. Also make this
@@ -1180,16 +1183,14 @@ def challenge31():
     server.hmac_key = key
     server.validate_signature = lambda hmac, sig: insecure_compare(hmac, sig, 0.05)
     try:
-        with open(os.devnull, "w") as null_stream:
-            with redirect_stderr(null_stream):
-                Thread(target=server.serve_forever).start()
-                print("Server is running on {}".format(server.server_address))
-                print()
-                signature = recover_signature(
-                    signature_is_valid,
-                    thread_count=20,
-                    threshold=0.02)
-                print("recovered signature: {}".format(list(signature)))
+        Thread(target=server.serve_forever).start()
+        print("Server is running on {}".format(server.server_address))
+        print()
+        signature = recover_signature(
+            signature_is_valid,
+            thread_count=20,
+            threshold=0.02)
+        print("recovered signature: {}".format(list(signature)))
     finally:
         server.shutdown()
         server.server_close()
