@@ -1200,24 +1200,38 @@ def challenge31():
 
 def challenge32():
     """Break HMAC-SHA1 with a slightly less artificial timing leak"""
-    # This works reliably with timing differences down to about 20ms. I am
-    # planning to improve it, probably some time after I get the web server
-    # working.
-
     def signature_is_valid(signature):
-        return insecure_compare(hmac, signature, 0.025)
+        query = urlencode({"file": "hamlet.txt", "signature": signature.hex()})
+        try:
+            urlopen("http://localhost:31415/signature_is_valid?" + query)
+        except HTTPError:
+            return False
+        else:
+            return True
 
     key = os.urandom(16)
-    data = EXAMPLE_PLAIN_BYTES
+    with open("hamlet.txt", "rb") as f:
+        data = f.read()
     hmac = get_hmac(key, data)
 
     print("looking for {}".format(list(get_hmac(key, data))))
     print()
-    signature = recover_signature(
-        signature_is_valid,
-        thread_count=50,
-        threshold=0.01)
-    print("recovered signature: {}".format(list(signature)))
+    server = FancyHTTPServer(("localhost", 31415), ValidatingRequestHandler)
+    server.hmac_key = key
+    server.validate_signature = lambda hmac, sig: insecure_compare(hmac, sig, 0.025)
+    try:
+        Thread(target=server.serve_forever).start()
+        print("Server is running on {}".format(server.server_address))
+        print()
+        signature = recover_signature(
+            signature_is_valid,
+            thread_count=15,
+            threshold=0.006)
+        print("recovered signature: {}".format(list(signature)))
+    finally:
+        server.shutdown()
+        server.server_close()
+
     assert get_hmac(key, data) == signature
 
 
