@@ -11,7 +11,7 @@ import sys
 import warnings
 
 from collections import Counter, defaultdict
-from contextlib import ExitStack, redirect_stderr, redirect_stdout
+from contextlib import ExitStack, redirect_stdout
 from functools import lru_cache
 from hashlib import sha256
 from heapq import nlargest
