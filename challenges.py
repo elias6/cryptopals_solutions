@@ -1371,9 +1371,10 @@ def challenge38():
     # interaction (signup and login), or for the login only. I am doing the
     # whole interaction, which allows me to easily steal the password just
     # by passing the data back and forth, and then doing an online
-    # dictionary attack. I researched offline dictionary attacks against
-    # SRP, and it is unclear to me how to steal the password by only
-    # attacking the login, or if it is even possible.
+    # dictionary attack. Also figure out whether it is OK to access the list
+    # of verifiers on the real server. I researched offline dictionary
+    # attacks against SRP, and it is unclear to me how to steal the password
+    # by only attacking the login, or if it is even possible.
 
     username = "peter.gregory@piedpiper.com"
     password = "letmein"
