@@ -521,8 +521,8 @@ class MitmSRPServer(SRPServer):
             "abc123", "mustang", "michael", "shadow", "master", "jennifer", "111111"]
 
         for test_password in common_passwords:
-            if self.fake_client.log_in(self.real_server, username, test_password.encode(), k=k):
-                self.users[username]["password"] = test_password.encode()
+            if self.fake_client.log_in(self.real_server, username, test_password, k=k):
+                self.users[username]["password"] = test_password
                 return super()._respond_to_login_request(username, A, k=k)
 
 
@@ -550,7 +550,7 @@ class SRPClient:
         return server._verify_hmac(hmac, username)
 
     def _generate_private_key(self, username, password, salt):
-        inner_hash = sha256(username + b":" + password).digest()
+        inner_hash = sha256((username + ":" + password).encode()).digest()
         return int(sha256(salt + inner_hash).hexdigest(), 16)
 
 
@@ -1333,9 +1333,9 @@ def challenge35():
 
 def challenge36():
     """Implement Secure Remote Password (SRP)"""
-    username = b"peter.gregory@piedpiper.com"
-    password = b"letmein"
-    wrong_password = b"qwerty"
+    username = "peter.gregory@piedpiper.com"
+    password = "letmein"
+    wrong_password = "qwerty"
 
     server = SRPServer()
     client = SRPClient()
@@ -1347,8 +1347,8 @@ def challenge36():
 
 def challenge37():
     """Break SRP with a zero key"""
-    username = b"peter.gregory@piedpiper.com"
-    password = b"letmein"
+    username = "peter.gregory@piedpiper.com"
+    password = "letmein"
 
     server = SRPServer()
     client = SRPClient()
@@ -1375,9 +1375,9 @@ def challenge38():
     # SRP, and it is unclear to me how to steal the password by only
     # attacking the login, or if it is even possible.
 
-    username = b"peter.gregory@piedpiper.com"
-    password = b"letmein"
-    wrong_password = b"qwerty"
+    username = "peter.gregory@piedpiper.com"
+    password = "letmein"
+    wrong_password = "qwerty"
 
     server = SRPServer()
     client = SRPClient()
