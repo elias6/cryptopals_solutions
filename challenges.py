@@ -249,11 +249,6 @@ def encrypted_query_string(cipher, user_data):
     return cipher.encrypt(bytes_to_encrypt)
 
 
-def encrypted_string_has_admin(ciphertext, cipher):
-    plain_bytes = pkcs7_unpad(cipher.decrypt(ciphertext))
-    return b";admin=true;" in plain_bytes
-
-
 def ctr_iterator(nonce, block_index=0):
     return (struct.pack("<QQ", nonce, i) for i in count(start=block_index))
 
@@ -807,12 +802,13 @@ def challenge16():
     cipher = AES.new(key, AES.MODE_CBC, iv)
     ciphertext = encrypted_query_string(cipher, "foo")
 
-    bits_to_flip = (bytes([0] * 32) +
-        xor_bytes(b"like%20a%20pound", b";admin=true;foo=") + bytes([0] * 32))
-    modified_ciphertext = xor_bytes(ciphertext, bits_to_flip)
+    new_ciphertext = bytearray(ciphertext)
+    new_ciphertext[32:48] = xor_bytes(
+        b"like%20a%20pound", b";admin=true;foo=", new_ciphertext[32:48])
+    new_ciphertext = bytes(new_ciphertext)
 
     cipher = AES.new(key, AES.MODE_CBC, iv)
-    assert encrypted_string_has_admin(modified_ciphertext, cipher)
+    assert b";admin=true;" in pkcs7_unpad(cipher.decrypt(new_ciphertext))
 
 
 def challenge17():
@@ -1114,7 +1110,7 @@ def challenge26():
     new_ciphertext = bytes(new_ciphertext)
 
     cipher = AES.new(key, AES.MODE_CTR, counter=ctr_counter(nonce))
-    assert encrypted_string_has_admin(new_ciphertext, cipher)
+    assert b";admin=true;" in pkcs7_unpad(cipher.decrypt(new_ciphertext))
 
 
 def challenge27():
