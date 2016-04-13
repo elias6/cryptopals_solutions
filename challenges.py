@@ -504,6 +504,28 @@ class SRPServer:
         return hmac == get_hmac(user["shared_session_key"], user["salt"], sha256)
 
 
+class MitmSRPServer(SRPServer):
+    def __init__(self, real_server):
+        super().__init__()
+        self.real_server = real_server
+        self.fake_client = SRPClient()
+
+    def _respond_to_sign_up_request(self, username, salt, verifier):
+        super()._respond_to_sign_up_request(username, salt, verifier)
+        self.real_server._respond_to_sign_up_request(username, salt, verifier)
+
+    def _respond_to_login_request(self, username, A, k=3):
+        # 20 most common passwords according to xato.net
+        common_passwords = ["password", "123456", "12345678", "1234", "qwerty", "12345",
+            "dragon", "pussy", "baseball", "football", "letmein", "monkey", "696969",
+            "abc123", "mustang", "michael", "shadow", "master", "jennifer", "111111"]
+
+        for test_password in common_passwords:
+            if self.fake_client.log_in(self.real_server, username, test_password.encode(), k=k):
+                self.users[username]["password"] = test_password.encode()
+                return super()._respond_to_login_request(username, A, k=k)
+
+
 class SRPClient:
     N = NIST_DIFFIE_HELLMAN_PRIME
     g = 2
@@ -1344,6 +1366,15 @@ def challenge37():
 
 def challenge38():
     """Offline dictionary attack on simplified SRP"""
+    # TODO: figure out what this challenge really wants me to do, and
+    # whether it is OK to impersonate the server throughout the whole
+    # interaction (signup and login), or for the login only. I am doing the
+    # whole interaction, which allows me to easily steal the password just
+    # by passing the data back and forth, and then doing an online
+    # dictionary attack. I researched offline dictionary attacks against
+    # SRP, and it is unclear to me how to steal the password by only
+    # attacking the login, or if it is even possible.
+
     username = b"peter.gregory@piedpiper.com"
     password = b"letmein"
     wrong_password = b"qwerty"
@@ -1353,6 +1384,12 @@ def challenge38():
     client.sign_up(server, username, password)
     assert client.log_in(server, username, password, k=0)
     assert not client.log_in(server, username, wrong_password, k=0)
+
+    server = SRPServer()
+    mallory_server = MitmSRPServer(server)
+    client.sign_up(mallory_server, username, password)
+    client.log_in(mallory_server, username, password, k=0)
+    assert mallory_server.users[username]["password"] == password
 
 
 def test_all_challenges(output_stream=sys.stdout):
