@@ -497,7 +497,7 @@ class SRPServer:
         u = scramble_srp_keys(A, B)
         S = pow(A * pow(user["verifier"], u, self.N), b, self.N)
         user["shared_session_key"] = sha256(int_to_bytes(S)).digest()
-        return (user["salt"], B)
+        return (user["salt"], B, u)
 
     def _verify_hmac(self, hmac, username):
         user = self.users[username]
@@ -518,9 +518,9 @@ class SRPClient:
         a = random.randint(1, self.N - 1)  # private ephemeral number
         A = pow(self.g, a, self.N)  # public ephemeral number
         # B == public ephemeral number from server
-        salt, B = server._respond_to_login_request(username, A, k=k)
+        salt, B, u = server._respond_to_login_request(username, A, k=k)
 
-        u = scramble_srp_keys(A, B)
+        assert u == scramble_srp_keys(A, B)
         x = self._generate_private_key(username, password, salt)
         S = pow(B - k * pow(self.g, x, self.N), a + u*x, self.N)
         shared_session_key = sha256(int_to_bytes(S)).digest()  # called "K" in challenge
@@ -1334,7 +1334,7 @@ def challenge37():
 
     for i in range(10):
         # Attacker tricks server into computing easily derivable session key
-        salt, B = server._respond_to_login_request(username, i * client.N)
+        salt, _, _ = server._respond_to_login_request(username, i * client.N)
         # Attacker derives shared session key without password
         shared_session_key = sha256(int_to_bytes(0)).digest()
         hmac = get_hmac(shared_session_key, salt, sha256)
