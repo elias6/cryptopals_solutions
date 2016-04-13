@@ -505,11 +505,17 @@ class MitmSRPServer(SRPServer):
         self.real_server = real_server
         self.fake_client = SRPClient()
 
-    def _respond_to_sign_up_request(self, username, salt, verifier):
-        super()._respond_to_sign_up_request(username, salt, verifier)
-        self.real_server._respond_to_sign_up_request(username, salt, verifier)
-
     def _respond_to_login_request(self, username, A, k=3):
+        if k != 0:
+            raise ValueError("k must be 0")
+        fake_b = 0
+        fake_B = pow(self.g, fake_b, self.N)
+        fake_u = scramble_srp_keys(A, fake_B)
+        fake_salt = b"\x00" * 16
+        user = self.users[username] = {"salt": fake_salt, "verifier": 0}
+        S = pow(A * pow(fake_verifier, fake_u, self.N), fake_b, self.N)
+        user["shared_session_key"] = sha256(int_to_bytes(S)).digest()
+
         # 20 most common passwords according to xato.net
         common_passwords = ["password", "123456", "12345678", "1234", "qwerty", "12345",
             "dragon", "pussy", "baseball", "football", "letmein", "monkey", "696969",
@@ -517,8 +523,8 @@ class MitmSRPServer(SRPServer):
 
         for test_password in common_passwords:
             if self.fake_client.log_in(self.real_server, username, test_password, k=k):
-                self.users[username]["password"] = test_password
-                return super()._respond_to_login_request(username, A, k=k)
+                user["password"] = test_password
+                return (fake_salt, fake_B, fake_u)
 
 
 class SRPClient:
@@ -1362,15 +1368,13 @@ def challenge37():
 
 def challenge38():
     """Offline dictionary attack on simplified SRP"""
-    # TODO: figure out what this challenge really wants me to do, and
-    # whether it is OK to impersonate the server throughout the whole
-    # interaction (signup and login), or for the login only. I am doing the
-    # whole interaction, which allows me to easily steal the password just
-    # by passing the data back and forth, and then doing an online
-    # dictionary attack. Also figure out whether it is OK to access the list
-    # of verifiers on the real server. I researched offline dictionary
-    # attacks against SRP, and it is unclear to me how to steal the password
-    # by only attacking the login, or if it is even possible.
+    # TODO: make this an offline attack, which guesses the password without
+    # repeatedly making login requests to the server. I researched offline
+    # dictionary attacks against SRP, and it is unclear to me how to steal
+    # the password by only attacking the login, or if it is even possible. I
+    # have a feeling that the fact that k == 0 in this simplified protocol,
+    # and the B value returned by the server doesn't depend on the password,
+    # will somehow allow me to guess the password offline.
 
     username = "peter.gregory@piedpiper.com"
     password = "letmein"
@@ -1384,8 +1388,9 @@ def challenge38():
 
     server = SRPServer()
     mallory_server = MitmSRPServer(server)
-    client.sign_up(mallory_server, username, password)
-    client.log_in(mallory_server, username, password, k=0)
+    client.sign_up(server, username, password)
+    login_is_valid = client.log_in(mallory_server, username, password, k=0)
+    assert login_is_valid
     assert mallory_server.users[username]["password"] == password
 
 
