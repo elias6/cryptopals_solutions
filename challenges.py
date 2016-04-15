@@ -1409,9 +1409,6 @@ def test_all_challenges(output_stream=sys.stdout):
         print("Running challenge {}: {}".format(num, challenges[num].__doc__),
             file=output_stream)
         challenges[num]()
-    # If this point is reached, no exceptions occurred in the challenges, so
-    # they all passed. TODO: come up with a less hacky and more flexible way
-    # to test for this.
     print("All challenges passed.", file=output_stream)
 
 
