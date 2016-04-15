@@ -1400,7 +1400,7 @@ def test_all_challenges(output_stream=sys.stdout):
     for name, var in globals().items():
         try:
             num = int(re.findall("^challenge(\d+)$", name)[0])
-        except (IndexError, ValueError):
+        except IndexError:
             pass
         else:
             if callable(var):
