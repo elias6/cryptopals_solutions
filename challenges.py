@@ -503,28 +503,34 @@ class MitmSRPServer(SRPServer):
     def __init__(self, real_server):
         super().__init__()
         self.real_server = real_server
-        self.fake_client = SRPClient()
 
     def _respond_to_login_request(self, username, A, k=3):
         if k != 0:
             raise ValueError("k must be 0")
-        fake_b = 0
-        fake_B = pow(self.g, fake_b, self.N)
-        fake_u = scramble_srp_keys(A, fake_B)
-        fake_salt = b"\x00" * 16
-        user = self.users[username] = {"salt": fake_salt, "verifier": 0}
-        S = pow(A * pow(fake_verifier, fake_u, self.N), fake_b, self.N)
-        user["shared_session_key"] = sha256(int_to_bytes(S)).digest()
+        salt, _, _ = self.real_server._respond_to_login_request(username, A, k=k)
+        b = random.randint(1, self.N - 1)
+        self.users[username] = {"salt": salt, "A": A, "b": b}
+        u = 1
+        B = pow(self.g, b, self.N)
+        return (salt, B, u)
 
+    def _verify_hmac(self, hmac, username):
+        user = self.users[username]
         # 20 most common passwords according to xato.net
         common_passwords = ["password", "123456", "12345678", "1234", "qwerty", "12345",
             "dragon", "pussy", "baseball", "football", "letmein", "monkey", "696969",
             "abc123", "mustang", "michael", "shadow", "master", "jennifer", "111111"]
-
+        u = 1
         for test_password in common_passwords:
-            if self.fake_client.log_in(self.real_server, username, test_password, k=k):
+            test_x = SRPClient._generate_private_key(
+                username, test_password, user["salt"])
+            test_verifier = pow(self.g, test_x, self.N)
+            test_S = pow(user["A"] * pow(test_verifier, u, self.N), user["b"], self.N)
+            test_session_key = sha256(int_to_bytes(test_S)).digest()
+            if get_hmac(test_session_key, user["salt"], sha256) == hmac:
                 user["password"] = test_password
-                return (fake_salt, fake_B, fake_u)
+                return True
+        return False
 
 
 class SRPClient:
@@ -543,14 +549,17 @@ class SRPClient:
         # B == public ephemeral number from server
         salt, B, u = server._respond_to_login_request(username, A, k=k)
 
-        assert u == scramble_srp_keys(A, B)
+        # TODO: figure out if it is possible to make the offline attack work if
+        # the following line is uncommented
+        # assert u == scramble_srp_keys(A, B)
         x = self._generate_private_key(username, password, salt)
         S = pow(B - k * pow(self.g, x, self.N), a + u*x, self.N)
         shared_session_key = sha256(int_to_bytes(S)).digest()  # called "K" in challenge
         hmac = get_hmac(shared_session_key, salt, sha256)
         return server._verify_hmac(hmac, username)
 
-    def _generate_private_key(self, username, password, salt):
+    @staticmethod
+    def _generate_private_key(username, password, salt):
         inner_hash = sha256((username + ":" + password).encode()).digest()
         return int(sha256(salt + inner_hash).hexdigest(), 16)
 
@@ -1368,14 +1377,6 @@ def challenge37():
 
 def challenge38():
     """Offline dictionary attack on simplified SRP"""
-    # TODO: make this an offline attack, which guesses the password without
-    # repeatedly making login requests to the server. I researched offline
-    # dictionary attacks against SRP, and it is unclear to me how to steal
-    # the password by only attacking the login, or if it is even possible. I
-    # have a feeling that the fact that k == 0 in this simplified protocol,
-    # and the B value returned by the server doesn't depend on the password,
-    # will somehow allow me to guess the password offline.
-
     username = "peter.gregory@piedpiper.com"
     password = "letmein"
     wrong_password = "qwerty"
