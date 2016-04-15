@@ -860,6 +860,9 @@ def challenge17():
     key = random_aes_key()
     iv = os.urandom(16)
 
+    # The following code does a padding oracle attack. Details of how it
+    # works can be found at
+    # https://blog.skullsecurity.org/2013/padding-oracle-attacks-in-depth
     for unknown_string in unknown_strings:
         recovered_plaintext = bytearray()
         prev_cipher_block = iv
@@ -874,12 +877,9 @@ def challenge17():
                 for i in range(256):
                     new_iv[pos] = prev_cipher_block[pos] ^ i ^ (16 - pos)
                     if has_valid_padding(bytes(new_iv), cipher_block):
-                        if not recovered_block:
+                        if pos == 15:
                             new_iv[14] ^= 2
                             if not has_valid_padding(bytes(new_iv), cipher_block):
-                                # Last byte of cipher_block appears to have \x01 for
-                                # padding, but this is wrong.
-                                # See https://blog.skullsecurity.org/2013/padding-oracle-attacks-in-depth
                                 continue
                         recovered_block = bytes([i]) + recovered_block
                         break
