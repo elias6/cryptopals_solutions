@@ -19,7 +19,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from itertools import count, cycle
 from multiprocessing.dummy import Pool as ThreadPool
 from random import SystemRandom
-from socketserver import ForkingMixIn, ThreadingMixIn
+from socketserver import ThreadingMixIn
 from statistics import median
 from threading import Thread
 from time import perf_counter, sleep, time
