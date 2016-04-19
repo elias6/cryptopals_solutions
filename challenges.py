@@ -383,7 +383,7 @@ def server_approves_of_signature(signature):
         return True
 
 
-def recover_signature(validate_signature, thread_count, threshold):
+def recover_signature(validate_signature, thread_count, threshold, attempt_limit=20):
     # TODO: make this function faster and more reliable. Also make this
     # function figure out threshold on its own
 
@@ -401,7 +401,7 @@ def recover_signature(validate_signature, thread_count, threshold):
             for b in range(256):
                 sig = bytes(result + bytes([b] + [0]*(19 - pos)))
                 sig_durations[sig] = []
-            for i in range(20):
+            for i in range(attempt_limit):
                 for sig_data in pool.imap_unordered(try_signature, sig_durations.keys()):
                     if sig_data["is_valid"]:
                         result = sig_data["signature"]
@@ -1228,7 +1228,8 @@ def challenge31():
         signature = recover_signature(
             server_approves_of_signature,
             thread_count=20,
-            threshold=0.02)
+            threshold=0.02,
+            attempt_limit=20)
         print("recovered signature: {}".format(list(signature)))
     finally:
         server.shutdown()
@@ -1256,7 +1257,8 @@ def challenge32():
         signature = recover_signature(
             server_approves_of_signature,
             thread_count=15,
-            threshold=0.006)
+            threshold=0.006,
+            attempt_limit=20)
         print("recovered signature: {}".format(list(signature)))
     finally:
         server.shutdown()
