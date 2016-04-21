@@ -387,9 +387,8 @@ class CantRecoverSignatureError(Exception):
     pass
 
 
-def recover_signature(validate_signature, thread_count, threshold, attempt_limit=20):
-    # TODO: make this function faster and more reliable. Also make this
-    # function figure out threshold on its own
+def recover_signature(validate_signature, thread_count, threshold, attempt_limit):
+    # TODO: make this function figure out threshold on its own
 
     def try_signature(signature):
         start_time = perf_counter()
@@ -401,20 +400,18 @@ def recover_signature(validate_signature, thread_count, threshold, attempt_limit
     with ThreadPool(thread_count) as pool:
         for pos in range(20):
             assert pos == len(result)
-            sig_durations = {}
-            for b in range(256):
-                sig = bytes(result + bytes([b] + [0]*(19 - pos)))
-                sig_durations[sig] = []
+            test_sigs = [bytes(result + bytes([b] + [0]*(19 - pos))) for b in range(256)]
+            sig_durations = defaultdict(list)
             for i in range(attempt_limit):
-                for sig_data in pool.imap_unordered(try_signature, sig_durations.keys()):
+                for sig_data in pool.imap_unordered(try_signature, test_sigs):
+                    signature = sig_data["signature"]
                     if sig_data["is_valid"]:
-                        result = sig_data["signature"]
                         print("signature recovered: {}, "
                             "{} attempt(s) for last byte".format(list(result), i + 1))
-                        return result
-                    sig_durations[sig_data["signature"]].append(sig_data["duration"])
+                        return signature
+                    sig_durations[signature].append(sig_data["duration"])
                 slowest_sig, second_slowest_sig = nlargest(
-                    2, sig_durations, key=lambda x: median(sig_durations[x]))
+                    2, test_sigs, key=lambda x: median(sig_durations[x]))
                 slowest_duration = median(sig_durations[slowest_sig])
                 second_slowest_duration = median(sig_durations[second_slowest_sig])
                 duration_difference = slowest_duration - second_slowest_duration
