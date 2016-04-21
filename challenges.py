@@ -383,6 +383,10 @@ def server_approves_of_signature(signature):
         return True
 
 
+class CantRecoverSignatureError(Exception):
+    pass
+
+
 def recover_signature(validate_signature, thread_count, threshold, attempt_limit=20):
     # TODO: make this function faster and more reliable. Also make this
     # function figure out threshold on its own
@@ -424,8 +428,8 @@ def recover_signature(validate_signature, thread_count, threshold, attempt_limit
                 print("recovered so far: {}, {} attempt(s) for last byte, "
                     "duration difference: {:.3f} ms".format(list(result), i + 1,
                     1000 * duration_difference))
-                raise ValueError("can't recover signature")
-    raise ValueError("can't recover signature")
+                raise CantRecoverSignatureError("can't recover signature")
+    raise CantRecoverSignatureError("can't recover signature")
 
 
 class DiffieHellmanUser:
