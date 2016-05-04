@@ -397,11 +397,11 @@ def recover_signature(validate_signature, thread_count, threshold, attempt_limit
         return {"signature": signature, "is_valid": is_valid, "duration": duration}
 
     result = bytearray()
+    sig_durations = defaultdict(list)
     with ThreadPool(thread_count) as pool:
         for pos in range(20):
             assert pos == len(result)
             test_sigs = [bytes(result + bytes([b] + [0]*(19 - pos))) for b in range(256)]
-            sig_durations = defaultdict(list)
             for i in range(attempt_limit):
                 for sig_data in pool.imap_unordered(try_signature, test_sigs):
                     signature = sig_data["signature"]
