@@ -49,7 +49,7 @@ EXAMPLE_PLAIN_BYTES = (b"Give a man a beer, he'll waste an hour. "
     b"Teach a man to brew, he'll waste a lifetime.")
 
 
-NIST_DIFFIE_HELLMAN_PRIME = int("ffffffffffffffffc90fdaa22168c234c4c6628b80dc1c"
+IETF_DIFFIE_HELLMAN_PRIME = int("ffffffffffffffffc90fdaa22168c234c4c6628b80dc1c"
     "d129024e088a67cc74020bbea63b139b22514a08798e3404ddef9519b3cd3a431b302b0a6d"
     "f25f14374fe1356d6d51c245e485b576625e7ec6f44c42e9a637ed6b0bff5cb6f406b7edee"
     "386bfb5a899fa5ae9f24117c4b1fe649286651ece45b3dc2007cb8a163bf0598da48361c55"
@@ -431,7 +431,7 @@ def recover_signature(validate_signature, thread_count, threshold, attempt_limit
 
 
 class DiffieHellmanUser:
-    def __init__(self, p=NIST_DIFFIE_HELLMAN_PRIME, g=2, private_key=None):
+    def __init__(self, p=IETF_DIFFIE_HELLMAN_PRIME, g=2, private_key=None):
         self.p = p
         if private_key is None:
             self._private_key = random.randint(1, p - 1)
@@ -474,7 +474,7 @@ def scramble_srp_keys(A, B):
 
 
 class SRPServer:
-    N = NIST_DIFFIE_HELLMAN_PRIME
+    N = IETF_DIFFIE_HELLMAN_PRIME
     g = 2
 
     def __init__(self):
@@ -536,7 +536,7 @@ class MitmSRPServer(SRPServer):
 
 
 class SRPClient:
-    N = NIST_DIFFIE_HELLMAN_PRIME
+    N = IETF_DIFFIE_HELLMAN_PRIME
     g = 2
 
     def sign_up(self, server, username, password):
@@ -1315,10 +1315,10 @@ def challenge35():
     mallory.send_echo_request(bob, EXAMPLE_PLAIN_BYTES)
     assert EXAMPLE_PLAIN_BYTES in bob._decrypted_messages[mallory]
 
-    # Mallory tricks Alice and Bob into using g=NIST_DIFFIE_HELLMAN_PRIME
-    alice = DiffieHellmanUser(g=NIST_DIFFIE_HELLMAN_PRIME)
-    bob = DiffieHellmanUser(g=NIST_DIFFIE_HELLMAN_PRIME)
-    mallory = DiffieHellmanUser(g=NIST_DIFFIE_HELLMAN_PRIME)
+    # Mallory tricks Alice and Bob into using g=IETF_DIFFIE_HELLMAN_PRIME
+    alice = DiffieHellmanUser(g=IETF_DIFFIE_HELLMAN_PRIME)
+    bob = DiffieHellmanUser(g=IETF_DIFFIE_HELLMAN_PRIME)
+    mallory = DiffieHellmanUser(g=IETF_DIFFIE_HELLMAN_PRIME)
     assert mallory.public_key == 0
     assert alice.get_shared_key_for(mallory) == 0
     assert bob.get_shared_key_for(mallory) == 0
@@ -1328,12 +1328,12 @@ def challenge35():
     mallory.send_echo_request(bob, EXAMPLE_PLAIN_BYTES)
     assert EXAMPLE_PLAIN_BYTES in bob._decrypted_messages[mallory]
 
-    # Mallory tricks Alice and Bob into using g=NIST_DIFFIE_HELLMAN_PRIME - 1
-    alice = DiffieHellmanUser(g=NIST_DIFFIE_HELLMAN_PRIME - 1)
-    bob = DiffieHellmanUser(g=NIST_DIFFIE_HELLMAN_PRIME - 1)
+    # Mallory tricks Alice and Bob into using g=IETF_DIFFIE_HELLMAN_PRIME - 1
+    alice = DiffieHellmanUser(g=IETF_DIFFIE_HELLMAN_PRIME - 1)
+    bob = DiffieHellmanUser(g=IETF_DIFFIE_HELLMAN_PRIME - 1)
     # Private key must be even.
-    mallory = DiffieHellmanUser(g=NIST_DIFFIE_HELLMAN_PRIME - 1,
-        private_key=random.randrange(0, NIST_DIFFIE_HELLMAN_PRIME, 2))
+    mallory = DiffieHellmanUser(g=IETF_DIFFIE_HELLMAN_PRIME - 1,
+        private_key=random.randrange(0, IETF_DIFFIE_HELLMAN_PRIME, 2))
     assert mallory.public_key == 1
     assert alice.get_shared_key_for(mallory) == 1
     assert bob.get_shared_key_for(mallory) == 1
