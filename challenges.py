@@ -8,6 +8,7 @@ import pprint
 import re
 import struct
 import sys
+import traceback
 import warnings
 
 from collections import Counter, defaultdict
@@ -1409,7 +1410,12 @@ def test_all_challenges(output_stream=sys.stdout):
     for num in sorted(challenges):
         print("Running challenge {}: {}".format(num, challenges[num].__doc__),
             file=output_stream)
-        challenges[num]()
+        try:
+            challenges[num]()
+        except Exception as e:
+            traceback.print_exc(file=output_stream)
+        else:
+            print("Challenge {} passed.".format(num), file=output_stream)
     print("All challenges passed.", file=output_stream)
 
 
