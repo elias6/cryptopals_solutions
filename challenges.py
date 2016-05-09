@@ -844,13 +844,14 @@ def challenge17():
 
     random.shuffle(unknown_strings)
 
-    def encrypted_string(random_string):
-        cipher = AES.new(key, AES.MODE_CBC, iv)
-        return cipher.encrypt(pkcs7_pad(random_string))
+    key = random_aes_key()
+    iv = os.urandom(16)
+
+    def encrypt(unknown_string):
+        return AES.new(key, AES.MODE_CBC, iv).encrypt(pkcs7_pad(unknown_string))
 
     def has_valid_padding(iv, ciphertext):
-        cipher = AES.new(key, AES.MODE_CBC, iv)
-        plain_bytes = cipher.decrypt(ciphertext)
+        plain_bytes = AES.new(key, AES.MODE_CBC, bytes(iv)).decrypt(ciphertext)
         try:
             pkcs7_unpad(plain_bytes)
         except ValueError:
@@ -858,16 +859,13 @@ def challenge17():
         else:
             return True
 
-    key = random_aes_key()
-    iv = os.urandom(16)
-
     # The following code does a padding oracle attack. Details of how it
     # works can be found at
     # https://blog.skullsecurity.org/2013/padding-oracle-attacks-in-depth
     for unknown_string in unknown_strings:
         recovered_plaintext = bytearray()
         prev_cipher_block = iv
-        for cipher_block in byte_chunks(encrypted_string(unknown_string)):
+        for cipher_block in byte_chunks(encrypt(unknown_string)):
             recovered_block = bytes()
             for pos in reversed(range(16)):
                 assert len(recovered_block) == 15 - pos
@@ -877,10 +875,10 @@ def challenge17():
                 new_iv = bytearray(prev_cipher_block[:pos] + b"\x00" + iv_end)
                 for i in range(256):
                     new_iv[pos] = prev_cipher_block[pos] ^ i ^ (16 - pos)
-                    if has_valid_padding(bytes(new_iv), cipher_block):
+                    if has_valid_padding(new_iv, cipher_block):
                         if pos == 15:
                             new_iv[14] ^= 2
-                            if not has_valid_padding(bytes(new_iv), cipher_block):
+                            if not has_valid_padding(new_iv, cipher_block):
                                 continue
                         recovered_block = bytes([i]) + recovered_block
                         break
@@ -1134,14 +1132,14 @@ def challenge27():
     key = random_aes_key()
     iv = key
 
-    def encrypted_string(user_bytes):
+    def encrypt(user_bytes):
         return AES.new(key, AES.MODE_CBC, iv).encrypt(pkcs7_pad(user_bytes))
 
     def decrypt(ciphertext):
         plain_bytes = AES.new(key, AES.MODE_CBC, iv).decrypt(ciphertext)
         return pkcs7_unpad(plain_bytes.decode("ascii"))
 
-    ciphertext = encrypted_string(EXAMPLE_PLAIN_BYTES)
+    ciphertext = encrypt(EXAMPLE_PLAIN_BYTES)
     modified_ciphertext = ciphertext[:16] + bytes([0] * 16) + ciphertext
 
     try:
