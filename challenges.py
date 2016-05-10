@@ -1456,7 +1456,6 @@ def test_all_challenges(output_stream=sys.stdout):
             traceback.print_exc(file=output_stream)
         else:
             print("Challenge {} passed.".format(num), file=output_stream)
-    print("All challenges passed.", file=output_stream)
 
 
 if __name__ == "__main__":
