@@ -583,6 +583,20 @@ def invmod(a, m):
         return x % m
 
 
+def generate_rsa_key_pair():
+    public_exponent = 3
+    while True:
+        p = getStrongPrime(512)
+        q = getStrongPrime(512)
+        modulus = p * q
+        totient = (p - 1) * (q - 1)
+        assert totient > public_exponent
+        if gcd(public_exponent, totient) == 1:
+            private_exponent = invmod(public_exponent, totient)
+            assert (public_exponent * private_exponent) % totient == 1
+            return (modulus, private_exponent, public_exponent)
+
+
 def challenge1():
     """Convert hex to base64"""
     encoded_text = ("49276d206b696c6c696e6720796f757220627261696e206c" +
@@ -1418,22 +1432,13 @@ def challenge39():
     """Implement RSA"""
     assert invmod(17, 3120) == 2753
 
-    public_exponent = 3  # called "e" in challenge
-    while True:
-        p = getStrongPrime(512)
-        q = getStrongPrime(512)
-        n = p * q
-        totient = (p - 1) * (q - 1)  # called "et" in challenge
-        assert totient > public_exponent
-        if gcd(public_exponent, totient) == 1:
-            break
+    # called "n", "d", "e" in challenge
+    modulus, private_exponent, public_exponent = generate_rsa_key_pair()
 
-    private_exponent = invmod(public_exponent, totient)  # called "d" in challenge
-    assert (public_exponent * private_exponent) % totient == 1
     message = int.from_bytes(EXAMPLE_PLAIN_BYTES, byteorder="big")
-    assert message < n
-    ciphertext = pow(message, public_exponent, n)
-    plaintext = pow(ciphertext, private_exponent, n)
+    assert message < modulus
+    ciphertext = pow(message, public_exponent, modulus)
+    plaintext = pow(ciphertext, private_exponent, modulus)
     assert plaintext == message
 
 
