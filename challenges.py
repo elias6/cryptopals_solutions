@@ -597,6 +597,20 @@ def generate_rsa_key_pair():
             return (modulus, private_exponent, public_exponent)
 
 
+def rsa_encrypt(plaintext, public_exponent, modulus):
+    message = int.from_bytes(plaintext, byteorder="big")
+    if message >= modulus:
+        raise ValueError("message is too big for modulus")
+    cipher_int = pow(message, public_exponent, modulus)
+    return int_to_bytes(cipher_int)
+
+
+def rsa_decrypt(ciphertext, private_exponent, modulus):
+    cipher_int = int.from_bytes(ciphertext, byteorder="big")
+    plain_int = pow(cipher_int, private_exponent, modulus)
+    return int_to_bytes(plain_int)
+
+
 def challenge1():
     """Convert hex to base64"""
     encoded_text = ("49276d206b696c6c696e6720796f757220627261696e206c" +
@@ -1435,11 +1449,9 @@ def challenge39():
     # called "n", "d", "e" in challenge
     modulus, private_exponent, public_exponent = generate_rsa_key_pair()
 
-    message = int.from_bytes(EXAMPLE_PLAIN_BYTES, byteorder="big")
-    assert message < modulus
-    ciphertext = pow(message, public_exponent, modulus)
-    plaintext = pow(ciphertext, private_exponent, modulus)
-    assert plaintext == message
+    ciphertext = rsa_encrypt(EXAMPLE_PLAIN_BYTES, public_exponent, modulus)
+    plaintext = rsa_decrypt(ciphertext, private_exponent, modulus)
+    assert plaintext == EXAMPLE_PLAIN_BYTES
 
 
 def test_all_challenges(output_stream=sys.stdout):
