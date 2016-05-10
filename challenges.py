@@ -585,16 +585,15 @@ def invmod(a, m):
 
 def generate_rsa_key_pair():
     public_exponent = 3
-    while True:
-        p = getStrongPrime(512)
-        q = getStrongPrime(512)
-        modulus = p * q
-        totient = (p - 1) * (q - 1)
-        assert totient > public_exponent
-        if gcd(public_exponent, totient) == 1:
-            private_exponent = invmod(public_exponent, totient)
-            assert (public_exponent * private_exponent) % totient == 1
-            return (modulus, private_exponent, public_exponent)
+    p = getStrongPrime(512, e=public_exponent)
+    q = getStrongPrime(512, e=public_exponent)
+    modulus = p * q
+    totient = (p - 1) * (q - 1)
+    assert totient > public_exponent
+    assert gcd(public_exponent, totient) == 1
+    private_exponent = invmod(public_exponent, totient)
+    assert (public_exponent * private_exponent) % totient == 1
+    return (modulus, private_exponent, public_exponent)
 
 
 def rsa_encrypt(plaintext, public_exponent, modulus):
