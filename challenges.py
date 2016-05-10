@@ -29,6 +29,7 @@ from urllib.parse import parse_qs, quote as url_quote, urlencode, urlparse
 from urllib.request import urlopen
 
 from Crypto.Cipher import AES
+from Crypto.Util.number import getStrongPrime
 from md4.md4 import MD4
 from sha1.sha1 import Sha1Hash
 
@@ -564,6 +565,22 @@ class SRPClient:
     def _generate_private_key(username, password, salt):
         inner_hash = sha256((username + ":" + password).encode()).digest()
         return int(sha256(salt + inner_hash).hexdigest(), 16)
+
+
+def extended_gcd(a, b):
+    if a == 0:
+        return (b, 0, 1)
+    else:
+        g, y, x = extended_gcd(b % a, a)
+        return (g, x - (b // a) * y, y)
+
+
+def invmod(a, m):
+    g, x, y = extended_gcd(a, m)
+    if g != 1:
+        raise ValueError("modular inverse does not exist")
+    else:
+        return x % m
 
 
 def challenge1():
@@ -1395,6 +1412,29 @@ def challenge38():
     login_is_valid = client.log_in(mallory_server, username, password, k=0)
     assert login_is_valid
     assert mallory_server.users[username]["password"] == password
+
+
+def challenge39():
+    """Implement RSA"""
+    assert invmod(17, 3120) == 2753
+
+    public_exponent = 3  # called "e" in challenge
+    while True:
+        p = getStrongPrime(512)
+        q = getStrongPrime(512)
+        n = p * q
+        totient = (p - 1) * (q - 1)  # called "et" in challenge
+        assert totient > public_exponent
+        if gcd(public_exponent, totient) == 1:
+            break
+
+    private_exponent = invmod(public_exponent, totient)  # called "d" in challenge
+    assert (public_exponent * private_exponent) % totient == 1
+    message = int.from_bytes(EXAMPLE_PLAIN_BYTES, byteorder="big")
+    assert message < n
+    ciphertext = pow(message, public_exponent, n)
+    plaintext = pow(ciphertext, private_exponent, n)
+    assert plaintext == message
 
 
 def test_all_challenges(output_stream=sys.stdout):
