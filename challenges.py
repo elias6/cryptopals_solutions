@@ -597,10 +597,10 @@ def generate_rsa_key_pair():
 
 
 def rsa_encrypt(plaintext, public_exponent, modulus):
-    message = int.from_bytes(plaintext, byteorder="big")
-    if message >= modulus:
-        raise ValueError("message is too big for modulus")
-    cipher_int = pow(message, public_exponent, modulus)
+    plain_int = int.from_bytes(plaintext, byteorder="big")
+    if plain_int >= modulus:
+        raise ValueError("plaintext is too big for modulus")
+    cipher_int = pow(plain_int, public_exponent, modulus)
     return int_to_bytes(cipher_int)
 
 
