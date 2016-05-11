@@ -1459,11 +1459,10 @@ def challenge40():
     ciphertext_data = []
     modulus_product = 1
     for i in range(3):
-        modulus, private_exponent, public_exponent = generate_rsa_key_pair()
+        modulus, _, public_exponent = generate_rsa_key_pair()
         ciphertext = rsa_encrypt(EXAMPLE_PLAIN_BYTES, public_exponent, modulus)
         ciphertext_data.append({
             "modulus": modulus,
-            "private_exponent": private_exponent,
             "public_exponent": public_exponent,
             "ciphertext": ciphertext,
             "cipher_int": int.from_bytes(ciphertext, byteorder="big"),
