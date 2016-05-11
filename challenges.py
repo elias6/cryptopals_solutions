@@ -1464,7 +1464,6 @@ def challenge40():
         ciphertext_data.append({
             "modulus": modulus,
             "public_exponent": public_exponent,
-            "ciphertext": ciphertext,
             "cipher_int": int.from_bytes(ciphertext, byteorder="big"),
         })
         modulus_product *= modulus
