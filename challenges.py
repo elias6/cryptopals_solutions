@@ -3,6 +3,7 @@
 import argparse
 import base64
 import cProfile
+import decimal
 import os
 import pprint
 import re
@@ -17,7 +18,7 @@ from functools import lru_cache
 from hashlib import sha256
 from heapq import nlargest
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from itertools import count, cycle
+from itertools import combinations, count, cycle
 from multiprocessing.dummy import Pool as ThreadPool
 from random import SystemRandom
 from socketserver import ThreadingMixIn
@@ -1450,6 +1451,47 @@ def challenge39():
 
     ciphertext = rsa_encrypt(EXAMPLE_PLAIN_BYTES, public_exponent, modulus)
     plaintext = rsa_decrypt(ciphertext, private_exponent, modulus)
+    assert plaintext == EXAMPLE_PLAIN_BYTES
+
+
+def challenge40():
+    """Implement an E=3 RSA Broadcast attack"""
+    ciphertext_data = []
+    modulus_product = 1
+    for i in range(3):
+        modulus, private_exponent, public_exponent = generate_rsa_key_pair()
+        ciphertext = rsa_encrypt(EXAMPLE_PLAIN_BYTES, public_exponent, modulus)
+        ciphertext_data.append({
+            "modulus": modulus,
+            "private_exponent": private_exponent,
+            "public_exponent": public_exponent,
+            "ciphertext": ciphertext,
+            "cipher_int": int.from_bytes(ciphertext, byteorder="big"),
+        })
+        modulus_product *= modulus
+
+    assert all(gcd(x["modulus"], y["modulus"]) == 1
+        for x, y in combinations(ciphertext_data, 2))
+
+    cube = 0
+    for i, x in enumerate(ciphertext_data):
+        m_s_ = 1    # strange name picked for similarity to notation in challenge
+        for j in range(3):
+            if j != i:
+                m_s_ *= ciphertext_data[j]["modulus"]
+        cube += x["cipher_int"] * m_s_ * invmod(m_s_, x["modulus"])
+
+    # TODO: find out why this doesn't work without the next line, even
+    # though the challenge said I didn't need it.
+    cube %= modulus_product
+    assert all(x["cipher_int"] == cube % x["modulus"] for x in ciphertext_data)
+
+    with decimal.localcontext() as context:
+        # Guesstimate as to how much precision is needed to get the right result
+        context.prec = 3 * len(str(cube))
+        root = round(decimal.Decimal(cube) ** (decimal.Decimal(1) / decimal.Decimal(3)))
+        assert root ** 3 == cube
+    plaintext = int_to_bytes(int(root))
     assert plaintext == EXAMPLE_PLAIN_BYTES
 
 
