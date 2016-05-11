@@ -1,4 +1,4 @@
-This repository will some day contain solutions to all of the [Matasano crypto challenges](http://cryptopals.com/). This is still an incomplete work in progress.
+This repository will some day contain solutions to all of the [Cryptopals crypto challenges](http://cryptopals.com/) (formerly the Matasano crypto challenges). This is still an incomplete work in progress.
 
 This project requires Python 3 and PyCrypto. PyCrypto can be installed by running `pip3 install pycrypto` from the command line.
 
