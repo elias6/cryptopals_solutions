@@ -1493,6 +1493,40 @@ def challenge40():
     assert plaintext == EXAMPLE_PLAIN_BYTES
 
 
+def challenge41():
+    """Implement unpadded message recovery oracle"""
+    seen_message_hashes = set()
+    modulus, private_exponent, public_exponent = generate_rsa_key_pair()
+
+    class AccessDeniedError(Exception):
+        pass
+
+    def decrypt(ciphertext):
+        plaintext = rsa_decrypt(ciphertext, private_exponent, modulus)
+        plaintext_hash = sha256(plaintext).digest()
+        if plaintext_hash in seen_message_hashes:
+            raise AccessDeniedError()
+        seen_message_hashes.add(plaintext_hash)
+        return plaintext
+
+    ciphertext = rsa_encrypt(EXAMPLE_PLAIN_BYTES, public_exponent, modulus)
+    plaintext = decrypt(ciphertext)
+    try:
+        decrypt(ciphertext)
+    except AccessDeniedError:
+        pass
+    else:
+        assert False
+
+    cipher_int = int.from_bytes(ciphertext, byteorder="big")
+    random_number = random.randint(2, modulus - 1)
+    modified_ciphertext = int_to_bytes(cipher_int * random_number**public_exponent)
+    new_plaintext = decrypt(modified_ciphertext)
+    new_plain_int = int.from_bytes(new_plaintext, byteorder="big")
+    plaintext = int_to_bytes((new_plain_int * invmod(random_number, modulus)) % modulus)
+    assert plaintext == EXAMPLE_PLAIN_BYTES
+
+
 def test_all_challenges(output_stream=sys.stdout):
     challenges = {}
     for name, var in globals().items():
