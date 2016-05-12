@@ -1486,7 +1486,7 @@ def challenge40():
 
     with decimal.localcontext() as context:
         # Guesstimate as to how much precision is needed to get the right result
-        context.prec = 3 * len(str(cube))
+        context.prec = len(str(cube)) // 3 + 4
         root = round(decimal.Decimal(cube) ** (decimal.Decimal(1) / decimal.Decimal(3)))
         assert root ** 3 == cube
     plaintext = int_to_bytes(int(root))
