@@ -954,9 +954,7 @@ def challenge18():
 
 
 def challenge19():
-    """Break fixed-nonce CTR mode using substitions"""
-    # [sic]. "substitions" looks like a typo but I don't know what it is
-    # supposed to say.
+    """Break fixed-nonce CTR mode using substitutions"""
     key = random_aes_key()
 
     def encrypt(ciphertext):
