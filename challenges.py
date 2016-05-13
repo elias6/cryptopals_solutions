@@ -1180,14 +1180,14 @@ def challenge27():
         return AES.new(key, AES.MODE_CBC, iv).encrypt(pkcs7_pad(user_bytes))
 
     def decrypt(ciphertext):
-        plain_bytes = AES.new(key, AES.MODE_CBC, iv).decrypt(ciphertext)
-        return pkcs7_unpad(plain_bytes.decode("ascii"))
+        # If plaintext has any non-ASCII bytes, raise exception, else do nothing
+        AES.new(key, AES.MODE_CBC, iv).decrypt(ciphertext).decode("ascii")
 
     ciphertext = encrypt(EXAMPLE_PLAIN_BYTES)
     modified_ciphertext = ciphertext[:16] + bytes([0] * 16) + ciphertext
 
     try:
-        decrypted_plaintext = decrypt(modified_ciphertext)
+        decrypt(modified_ciphertext)
     except UnicodeDecodeError as e:
         plain_bytes = e.object
         recovered_key = xor_bytes(plain_bytes[0:16], plain_bytes[32:48])
