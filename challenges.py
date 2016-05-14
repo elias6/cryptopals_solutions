@@ -1269,8 +1269,8 @@ def challenge31():
         print()
         signature = recover_signature(
             server_approves_of_signature,
-            thread_count=20,
-            threshold=0.02,
+            thread_count=15,
+            threshold=0.01,
             attempt_limit=20)
         print("recovered signature: {}".format(list(signature)))
     finally:
