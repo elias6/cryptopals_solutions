@@ -224,7 +224,7 @@ def guess_block_size(oracle_fn):
         raise ValueError("Could not guess block size")
 
 
-def crack_ecb_oracle(oracle_fn, prefix_length=0, block_size=16):
+def crack_ecb_oracle(oracle_fn, block_size=16, prefix_length=0):
     assert appears_to_produce_ecb(oracle_fn)
 
     result = bytearray()
@@ -774,7 +774,7 @@ def challenge12():
     block_size = guess_block_size(oracle_fn)
     assert block_size == 16
 
-    plaintext = crack_ecb_oracle(oracle_fn)
+    plaintext = crack_ecb_oracle(oracle_fn, block_size, prefix_length=0)
     print(plaintext.decode())
     assert plaintext == unknown_bytes
 
@@ -817,7 +817,6 @@ def challenge14():
     def oracle_fn(attacker_bytes):
         return cipher.encrypt(pkcs7_pad(random_bytes + attacker_bytes + target_bytes))
 
-    assert appears_to_produce_ecb(oracle_fn)
     block_size = guess_block_size(oracle_fn)
     assert block_size == 16
 
@@ -833,7 +832,7 @@ def challenge14():
     # TODO: make prefix_length calculation work reliably even if attacker
     # bytes look like random bytes or target bytes.
 
-    plaintext = crack_ecb_oracle(oracle_fn, prefix_length=prefix_length)
+    plaintext = crack_ecb_oracle(oracle_fn, block_size, prefix_length)
     assert plaintext == target_bytes
 
 
