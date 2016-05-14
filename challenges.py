@@ -225,7 +225,7 @@ def guess_block_size(oracle_fn):
 
 
 def crack_ecb_oracle(oracle_fn, block_size=16, prefix_length=0):
-    assert appears_to_produce_ecb(oracle_fn)
+    assert appears_to_produce_ecb(oracle_fn, block_size)
 
     result = bytearray()
     while True:
