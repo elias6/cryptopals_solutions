@@ -1460,7 +1460,6 @@ def challenge40():
         ciphertext = rsa_encrypt(EXAMPLE_PLAIN_BYTES, public_exponent, modulus)
         ciphertext_data.append({
             "modulus": modulus,
-            "public_exponent": public_exponent,
             "cipher_int": int.from_bytes(ciphertext, byteorder="big"),
         })
         modulus_product *= modulus
@@ -1469,11 +1468,11 @@ def challenge40():
         for x, y in combinations(ciphertext_data, 2))
 
     cube = 0
-    for i, x in enumerate(ciphertext_data):
+    for x in ciphertext_data:
         m_s_ = 1    # strange name picked for similarity to notation in challenge
-        for j in range(3):
-            if j != i:
-                m_s_ *= ciphertext_data[j]["modulus"]
+        for y in ciphertext_data:
+            if x != y:
+                m_s_ *= y["modulus"]
         cube += x["cipher_int"] * m_s_ * invmod(m_s_, x["modulus"])
 
     # TODO: find out why this doesn't work without the next line, even
