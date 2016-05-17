@@ -1474,9 +1474,6 @@ def challenge40():
             if x != y:
                 m_s_ *= y["modulus"]
         cube += x["cipher_int"] * m_s_ * invmod(m_s_, x["modulus"])
-
-    # TODO: find out why this doesn't work without the next line, even
-    # though the challenge said I didn't need it.
     cube %= modulus_product
     assert all(x["cipher_int"] == cube % x["modulus"] for x in ciphertext_data)
 
