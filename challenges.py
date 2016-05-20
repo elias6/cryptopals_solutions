@@ -608,7 +608,7 @@ def rsa_calculate(message, key):
     if message_int >= key.modulus:
         raise ValueError("message is too big for modulus")
     cipher_int = pow(message_int, key.exponent, key.modulus)
-    return int_to_bytes(cipher_int)
+    return cipher_int.to_bytes(length=len(int_to_bytes(key.modulus)), byteorder="big")
 
 
 def rsa_encrypt(plaintext, key):
@@ -1488,7 +1488,11 @@ def challenge39():
     public_key, private_key = generate_rsa_key_pair()
 
     ciphertext = rsa_encrypt(EXAMPLE_PLAIN_BYTES, public_key)
-    plaintext = rsa_decrypt(ciphertext, private_key)
+
+    # rsa_encrypt left-pads its result to make it as long as the modulus.
+    # This is equivalent to padding with block type 0. rsa_unpad is needed
+    # to properly recover the plaintext.
+    plaintext = rsa_unpad(rsa_decrypt(ciphertext, private_key))
     assert plaintext == EXAMPLE_PLAIN_BYTES
 
 
@@ -1544,7 +1548,10 @@ def challenge41():
         return plaintext
 
     ciphertext = rsa_encrypt(EXAMPLE_PLAIN_BYTES, public_key)
-    plaintext = decrypt(ciphertext)
+    # rsa_encrypt left-pads its result to make it as long as the modulus.
+    # This is equivalent to padding with block type 0. rsa_unpad is needed
+    # to properly recover the plaintext.
+    plaintext = rsa_unpad(decrypt(ciphertext))
     try:
         decrypt(ciphertext)
     except AccessDeniedError:
