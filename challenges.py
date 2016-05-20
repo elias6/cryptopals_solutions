@@ -12,7 +12,7 @@ import sys
 import traceback
 import warnings
 
-from collections import Counter, defaultdict
+from collections import Counter, defaultdict, namedtuple
 from contextlib import ExitStack, redirect_stdout
 from functools import lru_cache
 from hashlib import sha256
@@ -584,6 +584,10 @@ def invmod(a, m):
         return x % m
 
 
+RsaKeyPair = namedtuple("RsaKeyPair", ["public_key", "private_key"])
+RsaKey = namedtuple("RsaKey", ["modulus", "exponent"])
+
+
 def generate_rsa_key_pair():
     public_exponent = 3
     p = getStrongPrime(512, e=public_exponent)
@@ -594,21 +598,25 @@ def generate_rsa_key_pair():
     assert gcd(public_exponent, totient) == 1
     private_exponent = invmod(public_exponent, totient)
     assert (public_exponent * private_exponent) % totient == 1
-    return (modulus, private_exponent, public_exponent)
+    public_key = RsaKey(modulus, public_exponent)
+    private_key = RsaKey(modulus, private_exponent)
+    return RsaKeyPair(public_key, private_key)
 
 
-def rsa_encrypt(plaintext, public_exponent, modulus):
-    plain_int = int.from_bytes(plaintext, byteorder="big")
-    if plain_int >= modulus:
-        raise ValueError("plaintext is too big for modulus")
-    cipher_int = pow(plain_int, public_exponent, modulus)
+def rsa_calculate(message, key):
+    message_int = int.from_bytes(message, byteorder="big")
+    if message_int >= key.modulus:
+        raise ValueError("message is too big for modulus")
+    cipher_int = pow(message_int, key.exponent, key.modulus)
     return int_to_bytes(cipher_int)
 
 
-def rsa_decrypt(ciphertext, private_exponent, modulus):
-    cipher_int = int.from_bytes(ciphertext, byteorder="big")
-    plain_int = pow(cipher_int, private_exponent, modulus)
-    return int_to_bytes(plain_int)
+def rsa_encrypt(plaintext, key):
+    return rsa_calculate(plaintext, key)
+
+
+def rsa_decrypt(ciphertext, key):
+    return rsa_calculate(ciphertext, key)
 
 
 def challenge1():
@@ -1443,11 +1451,10 @@ def challenge39():
     """Implement RSA"""
     assert invmod(17, 3120) == 2753
 
-    # called "n", "d", "e" in challenge
-    modulus, private_exponent, public_exponent = generate_rsa_key_pair()
+    public_key, private_key = generate_rsa_key_pair()
 
-    ciphertext = rsa_encrypt(EXAMPLE_PLAIN_BYTES, public_exponent, modulus)
-    plaintext = rsa_decrypt(ciphertext, private_exponent, modulus)
+    ciphertext = rsa_encrypt(EXAMPLE_PLAIN_BYTES, public_key)
+    plaintext = rsa_decrypt(ciphertext, private_key)
     assert plaintext == EXAMPLE_PLAIN_BYTES
 
 
@@ -1456,13 +1463,13 @@ def challenge40():
     ciphertext_data = []
     modulus_product = 1
     for i in range(3):
-        modulus, _, public_exponent = generate_rsa_key_pair()
-        ciphertext = rsa_encrypt(EXAMPLE_PLAIN_BYTES, public_exponent, modulus)
+        public_key, _ = generate_rsa_key_pair()
+        ciphertext = rsa_encrypt(EXAMPLE_PLAIN_BYTES, public_key)
         ciphertext_data.append({
-            "modulus": modulus,
+            "modulus": public_key.modulus,
             "cipher_int": int.from_bytes(ciphertext, byteorder="big"),
         })
-        modulus_product *= modulus
+        modulus_product *= public_key.modulus
 
     assert all(gcd(x["modulus"], y["modulus"]) == 1
         for x, y in combinations(ciphertext_data, 2))
@@ -1489,20 +1496,20 @@ def challenge40():
 def challenge41():
     """Implement unpadded message recovery oracle"""
     seen_message_hashes = set()
-    modulus, private_exponent, public_exponent = generate_rsa_key_pair()
+    public_key, private_key = generate_rsa_key_pair()
 
     class AccessDeniedError(Exception):
         pass
 
     def decrypt(ciphertext):
-        plaintext = rsa_decrypt(ciphertext, private_exponent, modulus)
+        plaintext = rsa_decrypt(ciphertext, private_key)
         plaintext_hash = sha256(plaintext).digest()
         if plaintext_hash in seen_message_hashes:
             raise AccessDeniedError()
         seen_message_hashes.add(plaintext_hash)
         return plaintext
 
-    ciphertext = rsa_encrypt(EXAMPLE_PLAIN_BYTES, public_exponent, modulus)
+    ciphertext = rsa_encrypt(EXAMPLE_PLAIN_BYTES, public_key)
     plaintext = decrypt(ciphertext)
     try:
         decrypt(ciphertext)
@@ -1512,12 +1519,14 @@ def challenge41():
         assert False
 
     cipher_int = int.from_bytes(ciphertext, byteorder="big")
+    modulus = public_key.modulus
     random_number = random.randint(2, modulus - 1)
-    modified_ciphertext = int_to_bytes(cipher_int * random_number**public_exponent)
-    new_plaintext = decrypt(modified_ciphertext)
-    new_plain_int = int.from_bytes(new_plaintext, byteorder="big")
-    plaintext = int_to_bytes((new_plain_int * invmod(random_number, modulus)) % modulus)
-    assert plaintext == EXAMPLE_PLAIN_BYTES
+    modified_cipher_int = (cipher_int * random_number**public_key.exponent) % modulus
+    modified_ciphertext = int_to_bytes(modified_cipher_int)
+    oracle_int = int.from_bytes(decrypt(modified_ciphertext), byteorder="big")
+    recovered_plain_int = (oracle_int * invmod(random_number, modulus)) % modulus
+    recovered_plaintext = int_to_bytes(recovered_plain_int)
+    assert recovered_plaintext == plaintext
 
 
 def test_all_challenges(output_stream=sys.stdout):
