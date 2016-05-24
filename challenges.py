@@ -4,6 +4,7 @@ import argparse
 import base64
 import cProfile
 import os
+import pprint as pprint_module
 import re
 import struct
 import sys
@@ -34,7 +35,7 @@ from mersenne_twister import MT19937_RNG
 from timing_server import (FancyHTTPServer, ValidatingRequestHandler, insecure_compare,
     recover_signature, server_approves_of_signature)
 from util import (IETF_PRIME, big_int_cube_root, chunks, gcd, get_hmac, int_to_bytes,
-    invmod, pkcs7_pad, pkcs7_unpad, pprint, random, sha1, xor_bytes, xor_encrypt)
+    invmod, pkcs7_pad, pkcs7_unpad, random, sha1, xor_bytes, xor_encrypt)
 
 warnings.simplefilter("default", BytesWarning)
 warnings.simplefilter("default", ResourceWarning)
@@ -42,6 +43,10 @@ warnings.simplefilter("default", DeprecationWarning)
 
 EXAMPLE_PLAIN_BYTES = (b"Give a man a beer, he'll waste an hour. "
     b"Teach a man to brew, he'll waste a lifetime.")
+
+
+def pprint(*args, width=120, **kwargs):
+    pprint_module.pprint(*args, width=width, **kwargs)
 
 
 def encrypted_query_string(cipher, user_data):

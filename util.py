@@ -1,6 +1,5 @@
 import decimal
 import os
-import pprint as pprint_module
 
 from functools import lru_cache
 from itertools import cycle
@@ -25,10 +24,6 @@ IETF_PRIME = int("ffffffffffffffffc90fdaa22168c234c4c6628b80dc1cd129024e088a67c"
     "e9f24117c4b1fe649286651ece45b3dc2007cb8a163bf0598da48361c55d39a69163fa8fd2"
     "4cf5f83655d23dca3ad961c62f356208552bb9ed529077096966d670c354e4abc9804f1746"
     "c08ca237327ffffffffffffffff", 16)
-
-
-def pprint(*args, width=120, **kwargs):
-    pprint_module.pprint(*args, width=width, **kwargs)
 
 
 def xor_bytes(*bytes_objects):
