@@ -29,6 +29,8 @@ import util
 from block_cipher import (crack_ecb_oracle, ctr_counter, ctr_iterator, guess_block_size,
     looks_like_ecb, random_aes_key)
 from mersenne_twister import MT19937_RNG
+from timing_server import (FancyHTTPServer, ValidatingRequestHandler, insecure_compare,
+    recover_signature, server_approves_of_signature)
 from util import gcd, random
 
 warnings.simplefilter("default", BytesWarning)
@@ -720,15 +722,15 @@ def challenge31():
 
     print("looking for {}".format(list(hmac)))
     print()
-    server = util.FancyHTTPServer(("localhost", 31415), util.ValidatingRequestHandler)
+    server = FancyHTTPServer(("localhost", 31415), ValidatingRequestHandler)
     server.hmac_key = key
-    server.validate_signature = lambda hmac, sig: util.insecure_compare(hmac, sig, 0.05)
+    server.validate_signature = lambda hmac, sig: insecure_compare(hmac, sig, 0.05)
     try:
         Thread(target=server.serve_forever).start()
         print("Server is running on {}".format(server.server_address))
         print()
-        signature = util.recover_signature(
-            util.server_approves_of_signature,
+        signature = recover_signature(
+            server_approves_of_signature,
             thread_count=15,
             threshold=0.01,
             attempt_limit=20)
@@ -749,15 +751,15 @@ def challenge32():
 
     print("looking for {}".format(list(hmac)))
     print()
-    server = util.FancyHTTPServer(("localhost", 31415), util.ValidatingRequestHandler)
+    server = FancyHTTPServer(("localhost", 31415), ValidatingRequestHandler)
     server.hmac_key = key
-    server.validate_signature = lambda hmac, sig: util.insecure_compare(hmac, sig, 0.025)
+    server.validate_signature = lambda hmac, sig: insecure_compare(hmac, sig, 0.025)
     try:
         Thread(target=server.serve_forever).start()
         print("Server is running on {}".format(server.server_address))
         print()
-        signature = util.recover_signature(
-            util.server_approves_of_signature,
+        signature = recover_signature(
+            server_approves_of_signature,
             thread_count=15,
             threshold=0.006,
             attempt_limit=20)
