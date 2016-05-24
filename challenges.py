@@ -23,6 +23,7 @@ from Crypto.Cipher import AES
 from md4 import MD4
 from sha1.sha1 import Sha1Hash
 
+import diffie_hellman
 import english
 import util
 
@@ -773,25 +774,25 @@ def challenge32():
 
 def challenge33():
     """Implement Diffie-Hellman"""
-    alice = util.DiffieHellmanUser(p=37, g=5)
-    bob = util.DiffieHellmanUser(p=37, g=5)
+    alice = diffie_hellman.User(p=37, g=5)
+    bob = diffie_hellman.User(p=37, g=5)
     assert alice.get_shared_key_for(bob) == bob.get_shared_key_for(alice)
 
-    alice = util.DiffieHellmanUser()
-    bob = util.DiffieHellmanUser()
+    alice = diffie_hellman.User()
+    bob = diffie_hellman.User()
     assert alice.get_shared_key_for(bob) == bob.get_shared_key_for(alice)
 
 
 def challenge34():
     """Implement a MITM key-fixing attack on Diffie-Hellman with parameter injection"""
-    alice = util.DiffieHellmanUser()
-    bob = util.DiffieHellmanUser()
+    alice = diffie_hellman.User()
+    bob = diffie_hellman.User()
     alice.send_echo_request(bob, EXAMPLE_PLAIN_BYTES)
     assert EXAMPLE_PLAIN_BYTES in bob._decrypted_messages[alice]
 
-    alice = util.DiffieHellmanUser()
-    bob = util.DiffieHellmanUser()
-    mallory = util.DiffieHellmanUser()
+    alice = diffie_hellman.User()
+    bob = diffie_hellman.User()
+    mallory = diffie_hellman.User()
     mallory.public_key = mallory.p
     assert alice.get_shared_key_for(mallory) == 0
     mallory._shared_keys[alice] = 0
@@ -807,9 +808,9 @@ def challenge34():
 def challenge35():
     """Implement DH with negotiated groups, and break with malicious "g" parameters"""
     # Mallory tricks Alice and Bob into using g=1
-    alice = util.DiffieHellmanUser(g=1)
-    bob = util.DiffieHellmanUser(g=1)
-    mallory = util.DiffieHellmanUser(g=1)
+    alice = diffie_hellman.User(g=1)
+    bob = diffie_hellman.User(g=1)
+    mallory = diffie_hellman.User(g=1)
     assert mallory.public_key == 1
     assert alice.get_shared_key_for(mallory) == 1
     assert bob.get_shared_key_for(mallory) == 1
@@ -820,9 +821,9 @@ def challenge35():
     assert EXAMPLE_PLAIN_BYTES in bob._decrypted_messages[mallory]
 
     # Mallory tricks Alice and Bob into using g=IETF_DIFFIE_HELLMAN_PRIME
-    alice = util.DiffieHellmanUser(g=util.IETF_DIFFIE_HELLMAN_PRIME)
-    bob = util.DiffieHellmanUser(g=util.IETF_DIFFIE_HELLMAN_PRIME)
-    mallory = util.DiffieHellmanUser(g=util.IETF_DIFFIE_HELLMAN_PRIME)
+    alice = diffie_hellman.User(g=util.IETF_DIFFIE_HELLMAN_PRIME)
+    bob = diffie_hellman.User(g=util.IETF_DIFFIE_HELLMAN_PRIME)
+    mallory = diffie_hellman.User(g=util.IETF_DIFFIE_HELLMAN_PRIME)
     assert mallory.public_key == 0
     assert alice.get_shared_key_for(mallory) == 0
     assert bob.get_shared_key_for(mallory) == 0
@@ -833,10 +834,10 @@ def challenge35():
     assert EXAMPLE_PLAIN_BYTES in bob._decrypted_messages[mallory]
 
     # Mallory tricks Alice and Bob into using g=IETF_DIFFIE_HELLMAN_PRIME - 1
-    alice = util.DiffieHellmanUser(g=util.IETF_DIFFIE_HELLMAN_PRIME - 1)
-    bob = util.DiffieHellmanUser(g=util.IETF_DIFFIE_HELLMAN_PRIME - 1)
+    alice = diffie_hellman.User(g=util.IETF_DIFFIE_HELLMAN_PRIME - 1)
+    bob = diffie_hellman.User(g=util.IETF_DIFFIE_HELLMAN_PRIME - 1)
     # Private key must be even.
-    mallory = util.DiffieHellmanUser(g=util.IETF_DIFFIE_HELLMAN_PRIME - 1,
+    mallory = diffie_hellman.User(g=util.IETF_DIFFIE_HELLMAN_PRIME - 1,
         private_key=random.randrange(0, util.IETF_DIFFIE_HELLMAN_PRIME, 2))
     assert mallory.public_key == 1
     assert alice.get_shared_key_for(mallory) == 1
