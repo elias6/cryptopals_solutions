@@ -619,6 +619,40 @@ def rsa_decrypt(ciphertext, key):
     return rsa_calculate(ciphertext, key)
 
 
+def rsa_pad(message, modulus, block_type=2):
+    # block types 0 and 1 are for private keys, 2 is for public keys.
+    # Block type 0 is ambiguous with messages beginning with null bytes and
+    # is not recommended.
+    if block_type not in [0, 1, 2]:
+        raise ValueError("block_type must be 0, 1, or 2")
+    modulus_length = len(int_to_bytes(modulus))
+    if modulus_length < 12:
+        raise ValueError("modulus must be at least 12 bytes")
+    if len(message) > modulus_length - 11:
+        raise ValueError("message is too big for modulus")
+    padding_length = modulus_length - 3 - len(message)
+    padding = {
+        0: b"\x00" * padding_length,
+        1: b"\xff" * padding_length,
+        2: bytes(random.randint(1, 255) for _ in range(padding_length)),
+    }[block_type]
+    return b"\x00" + bytes([block_type]) + padding + b"\x00" + message
+
+
+def rsa_unpad(message):
+    matches = re.fullmatch(b"\x00([\x00-\x02])(.{8,})\x00(.*)", message, re.DOTALL)
+    if not matches:
+        raise ValueError("invalid message")
+    block_type_byte, padding, message = matches.groups()
+    if block_type_byte == [0] and any(x != 0 for x in padding):
+        raise ValueError("invalid padding")
+    elif block_type_byte == [1] and any(x != 0xff for x in padding):
+        raise ValueError("invalid padding")
+    elif block_type_byte == [2] and any(x == 0 for x in padding):
+        raise ValueError("invalid padding")
+    return message
+
+
 def challenge1():
     """Convert hex to base64"""
     encoded_text = ("49276d206b696c6c696e6720796f757220627261696e206c" +
