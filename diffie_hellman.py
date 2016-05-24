@@ -1,6 +1,5 @@
-import os
-
 from collections import defaultdict
+from os import urandom
 
 from Crypto.Cipher import AES
 
@@ -37,7 +36,7 @@ class User:
         return sha1(int_to_bytes(self.get_shared_key_for(other))).digest()[:16]
 
     def _encrypt_message(self, message, other):
-        iv = os.urandom(16)
+        iv = urandom(16)
         key = self._generate_symmetric_key(other)
         return (iv, AES.new(key, AES.MODE_CBC, iv).encrypt(pkcs7_pad(message)))
 

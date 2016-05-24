@@ -1,9 +1,9 @@
-import os
 import struct
 
 from collections import Counter
 from itertools import count
 
+from os import urandom
 from util import chunks, gcd, pkcs7_unpad
 
 def looks_like_ecb(ciphertext, block_size=16):
@@ -18,13 +18,13 @@ def appears_to_produce_ecb(oracle_fn, block_size=16):
 
 
 def random_aes_key():
-    return os.urandom(16)
+    return urandom(16)
 
 
 def guess_block_size(oracle_fn):
     seen_sizes = set()
     for plaintext_size in range(33):
-        ciphertext = oracle_fn(os.urandom(plaintext_size))
+        ciphertext = oracle_fn(urandom(plaintext_size))
         seen_sizes.add(len(ciphertext))
     if len(seen_sizes) >= 2:
         result = 0

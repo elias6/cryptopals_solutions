@@ -1,6 +1,5 @@
-import os
-
 from hashlib import sha256
+from os import urandom
 
 from util import IETF_DIFFIE_HELLMAN_PRIME, get_hmac, int_to_bytes, random
 
@@ -70,7 +69,7 @@ class Client:
     g = 2
 
     def sign_up(self, server, username, password):
-        salt = os.urandom(16)
+        salt = urandom(16)
         x = generate_private_key(username, password, salt)
         verifier = pow(self.g, x, self.N)
         server._respond_to_sign_up_request(username, salt, verifier)
