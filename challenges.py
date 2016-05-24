@@ -78,9 +78,8 @@ def xor_encrypt(input_bytes, key):
     return bytes(a ^ b for a, b in zip(input_bytes, cycle(key)))
 
 
-def byte_chunks(input_bytes, chunk_size=16):
-    return [input_bytes[i : i + chunk_size]
-        for i in range(0, len(input_bytes), chunk_size)]
+def chunks(x, chunk_size=16):
+    return [x[i : i + chunk_size] for i in range(0, len(x), chunk_size)]
 
 
 def int_to_bytes(x):
@@ -149,7 +148,7 @@ def best_english_like_score_data(ciphertext):
 def looks_like_ecb(ciphertext, block_size=16):
     # TODO: use birthday paradox to calculate an estimate for the expected
     # number of duplicate blocks so this function works on big ciphertexts.
-    block_counter = Counter(byte_chunks(ciphertext, block_size))
+    block_counter = Counter(chunks(ciphertext, block_size))
     return block_counter.most_common(1)[0][1] > 1
 
 
@@ -182,7 +181,7 @@ def cbc_encrypt(key, iv, plain_bytes):
     cipher = AES.new(key, AES.MODE_ECB, iv)
     last_cipher_block = iv
     result = bytearray()
-    for plain_block in byte_chunks(plain_bytes):
+    for plain_block in chunks(plain_bytes):
         combined_block = xor_bytes(last_cipher_block, plain_block)
         cipher_block = cipher.encrypt(combined_block)
         result.extend(cipher_block)
@@ -194,7 +193,7 @@ def cbc_decrypt(key, iv, ciphertext):
     cipher = AES.new(key, AES.MODE_ECB, iv)
     last_cipher_block = iv
     result = bytearray()
-    for cipher_block in byte_chunks(ciphertext):
+    for cipher_block in chunks(ciphertext):
         decrypted_block = cipher.decrypt(cipher_block)
         plain_block = xor_bytes(last_cipher_block, decrypted_block)
         result.extend(plain_block)
@@ -233,11 +232,11 @@ def crack_ecb_oracle(oracle_fn, block_size=16, prefix_length=0):
         short_input_block = b"A" * short_block_length
         short_block_output = oracle_fn(short_input_block)
         block_index = (len(result) + prefix_length) // block_size
-        block_to_look_for = byte_chunks(short_block_output)[block_index]
+        block_to_look_for = chunks(short_block_output)[block_index]
         for i in range(256):
             test_input = short_input_block + result + bytes([i])
             output = oracle_fn(test_input)
-            telltale_block = byte_chunks(output)[block_index]
+            telltale_block = chunks(output)[block_index]
             if telltale_block == block_to_look_for:
                 result.append(i)
                 break
@@ -772,11 +771,11 @@ def challenge6():
         return sum(bin(b1 ^ b2).count("1") for b1, b2 in zip(bytes1, bytes2))
 
     def index_of_coincidence(data, key_size):
-        chunks = byte_chunks(data, key_size)
+        data_chunks = chunks(data, key_size)
         result = 0
-        for i in range(len(chunks) - 1):
-            result += hamming_distance(chunks[i], chunks[i + 1])
-        return result / key_size / len(chunks)
+        for i in range(len(data_chunks) - 1):
+            result += hamming_distance(data_chunks[i], data_chunks[i + 1])
+        return result / key_size / len(data_chunks)
 
     assert hamming_distance(b"this is a test", b"wokka wokka!!!") == 37
 
@@ -784,7 +783,7 @@ def challenge6():
         ciphertext = base64.b64decode(f.read())
 
     best_key_size = min(range(2, 41), key=lambda x: index_of_coincidence(ciphertext, x))
-    cipher_chunks = byte_chunks(ciphertext, best_key_size)
+    cipher_chunks = chunks(ciphertext, best_key_size)
     plain_chunks, key = crack_common_xor_key(cipher_chunks)
     plaintext = b"".join(plain_chunks).decode()
     print("key: {}".format(key.decode()))
@@ -894,13 +893,13 @@ def challenge13():
 
 
     profile1 = encrypted_user_profile("peter.gregory@piedpiper.com")
-    profile1_blocks = byte_chunks(profile1)
+    profile1_blocks = chunks(profile1)
 
     profile2 = encrypted_user_profile("zach.woods@piedpiper.comadmin")
-    profile2_blocks = byte_chunks(profile2)
+    profile2_blocks = chunks(profile2)
 
     profile3 = encrypted_user_profile("a@a.com")
-    padding_only_block = byte_chunks(profile3)[-1]
+    padding_only_block = chunks(profile3)[-1]
 
     new_profile = b"".join(profile1_blocks[:3]) + profile2_blocks[2] + padding_only_block
     decrypted_new_profile = decrypt_profile(new_profile)
@@ -922,12 +921,12 @@ def challenge14():
     block_size = guess_block_size(oracle_fn)
     assert block_size == 16
 
-    blocks = byte_chunks(oracle_fn(b"A" * 3*block_size))
+    blocks = chunks(oracle_fn(b"A" * 3*block_size))
     attacker_block, attacker_block_count = Counter(blocks).most_common(1)[0]
     assert attacker_block_count >= 2
     attacker_block_pos = block_size * blocks.index(attacker_block)
     for i in range(block_size):
-        blocks = byte_chunks(oracle_fn(b"A" * (3*block_size - i - 1)))
+        blocks = chunks(oracle_fn(b"A" * (3*block_size - i - 1)))
         if blocks.count(attacker_block) < attacker_block_count:
             prefix_length = attacker_block_pos - (-i % block_size)
             break
@@ -1012,7 +1011,7 @@ def challenge17():
     for unknown_string in unknown_strings:
         recovered_plaintext = bytearray()
         prev_cipher_block = iv
-        for cipher_block in byte_chunks(encrypt(unknown_string)):
+        for cipher_block in chunks(encrypt(unknown_string)):
             recovered_block = bytes()
             for pos in reversed(range(16)):
                 assert len(recovered_block) == 15 - pos
@@ -1045,7 +1044,7 @@ def challenge18():
     nonce = 0
 
     plaintext = bytearray()
-    for counter_value, block in zip(ctr_iterator(nonce), byte_chunks(ciphertext)):
+    for counter_value, block in zip(ctr_iterator(nonce), chunks(ciphertext)):
         keystream = ecb_cipher.encrypt(counter_value)
         plaintext += xor_bytes(keystream[:len(block)], block)
     print(plaintext.decode())
@@ -1163,7 +1162,7 @@ def challenge24():
     """Create the MT19937 stream cipher and break it"""
     def encrypt_with_rng(rng, ciphertext):
         result = bytearray()
-        for chunk in byte_chunks(ciphertext, 4):
+        for chunk in chunks(ciphertext, 4):
             # Create 4-byte chunk from rng
             keystream_bytes = struct.pack(">L", rng.get_number())
             result += xor_bytes(chunk, keystream_bytes[:len(chunk)])
@@ -1199,7 +1198,7 @@ def challenge24():
     seed = random.getrandbits(16)
     my_bytes = b"A" * 14
     ciphertext = encrypt_with_random_prefix(MT19937_RNG(seed), my_bytes)
-    cipher_chunks = byte_chunks(ciphertext, 4)
+    cipher_chunks = chunks(ciphertext, 4)
     # Get bytes from last 2 chunks, excluding last chunk, which may not have
     # 4 bytes, and therefore may not allow me to determine the keystream
     # numbers.
