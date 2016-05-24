@@ -27,14 +27,15 @@ import diffie_hellman
 import english
 import rsa
 import srp
-import util
 
 from block_cipher import (crack_ecb_oracle, ctr_counter, ctr_iterator, guess_block_size,
     looks_like_ecb, random_aes_key)
 from mersenne_twister import MT19937_RNG
 from timing_server import (FancyHTTPServer, ValidatingRequestHandler, insecure_compare,
     recover_signature, server_approves_of_signature)
-from util import gcd, random
+from util import (IETF_DIFFIE_HELLMAN_PRIME, big_int_cube_root, chunks, gcd, get_hmac,
+    int_to_bytes, invmod, pkcs7_pad, pkcs7_unpad, pprint, random, sha1, xor_bytes,
+    xor_encrypt)
 
 warnings.simplefilter("default", BytesWarning)
 warnings.simplefilter("default", ResourceWarning)
@@ -47,7 +48,7 @@ EXAMPLE_PLAIN_BYTES = (b"Give a man a beer, he'll waste an hour. "
 def encrypted_query_string(cipher, user_data):
     query_string = ("comment1=cooking%20MCs;userdata=" + url_quote(user_data) +
         ";comment2=%20like%20a%20pound%20of%20bacon")
-    bytes_to_encrypt = util.pkcs7_pad(query_string.encode("utf-8"))
+    bytes_to_encrypt = pkcs7_pad(query_string.encode("utf-8"))
     return cipher.encrypt(bytes_to_encrypt)
 
 
@@ -64,7 +65,7 @@ def challenge1():
 
 def challenge2():
     """Fixed XOR"""
-    output = util.xor_bytes(
+    output = xor_bytes(
         bytes.fromhex("1c0111001f010100061a024b53535009181c"),
         bytes.fromhex("686974207468652062756c6c277320657965"))
     assert output == b"the kid don't play"
@@ -78,7 +79,7 @@ def challenge3():
     ciphertext = bytes.fromhex(cipher_hex)
     score_data = english.iter_score_data(ciphertext)
     best_data = nlargest(5, score_data, key=lambda x: x["score"])
-    util.pprint(best_data)
+    pprint(best_data)
     print(best_data[0]["message"].decode())
     assert best_data[0]["message"] == b"Cooking MC's like a pound of bacon"
 
@@ -89,7 +90,7 @@ def challenge4():
         ciphertexts = [bytes.fromhex(line.strip()) for line in f.readlines()]
     decoded_string_data = enumerate(english.best_score_data(c) for c in ciphertexts)
     best_decodings = nlargest(3, decoded_string_data, key=lambda d: d[1]["score"])
-    util.pprint(best_decodings)
+    pprint(best_decodings)
     assert best_decodings[0][1]["message"] == b"Now that the party is jumping\n"
 
 
@@ -97,7 +98,7 @@ def challenge5():
     """Implement repeating-key XOR"""
     stanza = ("Burning 'em, if you ain't quick and nimble\n"
         "I go crazy when I hear a cymbal")
-    result = util.xor_encrypt(stanza.encode("utf-8"), b"ICE").hex()
+    result = xor_encrypt(stanza.encode("utf-8"), b"ICE").hex()
     assert result == ("0b3637272a2b2e63622c2e69692a23693a2a3c6324202d623d63343"
         "c2a26226324272765272a282b2f20430a652e2c652a3124333a653e2b2027630c692b"
         "20283165286326302e27282f")
@@ -110,7 +111,7 @@ def challenge6():
         return sum(bin(b1 ^ b2).count("1") for b1, b2 in zip(bytes1, bytes2))
 
     def index_of_coincidence(data, key_size):
-        data_chunks = util.chunks(data, key_size)
+        data_chunks = chunks(data, key_size)
         result = 0
         for i in range(len(data_chunks) - 1):
             result += hamming_distance(data_chunks[i], data_chunks[i + 1])
@@ -122,7 +123,7 @@ def challenge6():
         ciphertext = base64.b64decode(f.read())
 
     best_key_size = min(range(2, 41), key=lambda x: index_of_coincidence(ciphertext, x))
-    cipher_chunks = util.chunks(ciphertext, best_key_size)
+    cipher_chunks = chunks(ciphertext, best_key_size)
     plain_chunks, key = english.crack_common_xor_key(cipher_chunks)
     plaintext = b"".join(plain_chunks).decode()
     print("key: {}".format(key.decode()))
@@ -145,13 +146,13 @@ def challenge8():
     with open("8.txt") as f:
         ciphertexts = [bytes.fromhex(line.strip()) for line in f.readlines()]
     ecb_texts = [(i, c) for i, c in enumerate(ciphertexts) if looks_like_ecb(c)]
-    util.pprint(ecb_texts)
+    pprint(ecb_texts)
     assert len(ecb_texts) == 1
 
 
 def challenge9():
     """Implement PKCS#7 padding"""
-    assert util.pkcs7_pad(b"YELLOW SUBMARINE", 20) == b"YELLOW SUBMARINE\x04\x04\x04\x04"
+    assert pkcs7_pad(b"YELLOW SUBMARINE", 20) == b"YELLOW SUBMARINE\x04\x04\x04\x04"
 
 
 def challenge10():
@@ -160,8 +161,8 @@ def challenge10():
         cipher = AES.new(key, AES.MODE_ECB, iv)
         last_cipher_block = iv
         result = bytearray()
-        for plain_block in util.chunks(plain_bytes):
-            combined_block = util.xor_bytes(last_cipher_block, plain_block)
+        for plain_block in chunks(plain_bytes):
+            combined_block = xor_bytes(last_cipher_block, plain_block)
             cipher_block = cipher.encrypt(combined_block)
             result.extend(cipher_block)
             last_cipher_block = cipher_block
@@ -172,9 +173,9 @@ def challenge10():
         cipher = AES.new(key, AES.MODE_ECB, iv)
         last_cipher_block = iv
         result = bytearray()
-        for cipher_block in util.chunks(ciphertext):
+        for cipher_block in chunks(ciphertext):
             decrypted_block = cipher.decrypt(cipher_block)
-            plain_block = util.xor_bytes(last_cipher_block, decrypted_block)
+            plain_block = xor_bytes(last_cipher_block, decrypted_block)
             result.extend(plain_block)
             last_cipher_block = cipher_block
         return bytes(result)
@@ -202,7 +203,7 @@ def challenge11():
         iv = os.urandom(16)
         prefix = os.urandom(random.randint(5, 10))
         suffix = os.urandom(random.randint(5, 10))
-        bytes_to_encrypt = util.pkcs7_pad(prefix + plain_bytes + suffix)
+        bytes_to_encrypt = pkcs7_pad(prefix + plain_bytes + suffix)
         return (AES.new(key, mode, iv).encrypt(bytes_to_encrypt), mode)
 
     # hamlet.txt from http://erdani.com/tdpl/hamlet.txt
@@ -232,7 +233,7 @@ def challenge12():
     cipher = AES.new(random_aes_key(), AES.MODE_ECB)
 
     def oracle_fn(attacker_bytes):
-        return cipher.encrypt(util.pkcs7_pad(attacker_bytes + unknown_bytes))
+        return cipher.encrypt(pkcs7_pad(attacker_bytes + unknown_bytes))
 
     block_size = guess_block_size(oracle_fn)
     assert block_size == 16
@@ -248,20 +249,20 @@ def challenge13():
 
     def encrypted_user_profile(email_address):
         profile_data = [("email", email_address), ("uid", "10"), ("role", "user")]
-        return cipher.encrypt(util.pkcs7_pad(urlencode(profile_data).encode("utf-8")))
+        return cipher.encrypt(pkcs7_pad(urlencode(profile_data).encode("utf-8")))
 
     def decrypt_profile(encrypted_profile):
-        return util.pkcs7_unpad(cipher.decrypt(encrypted_profile)).decode()
+        return pkcs7_unpad(cipher.decrypt(encrypted_profile)).decode()
 
 
     profile1 = encrypted_user_profile("peter.gregory@piedpiper.com")
-    profile1_blocks = util.chunks(profile1)
+    profile1_blocks = chunks(profile1)
 
     profile2 = encrypted_user_profile("zach.woods@piedpiper.comadmin")
-    profile2_blocks = util.chunks(profile2)
+    profile2_blocks = chunks(profile2)
 
     profile3 = encrypted_user_profile("a@a.com")
-    padding_only_block = util.chunks(profile3)[-1]
+    padding_only_block = chunks(profile3)[-1]
 
     new_profile = b"".join(profile1_blocks[:3]) + profile2_blocks[2] + padding_only_block
     decrypted_new_profile = decrypt_profile(new_profile)
@@ -278,18 +279,18 @@ def challenge14():
     target_bytes = EXAMPLE_PLAIN_BYTES
 
     def oracle_fn(attacker_bytes):
-        plaintext = util.pkcs7_pad(random_bytes + attacker_bytes + target_bytes)
+        plaintext = pkcs7_pad(random_bytes + attacker_bytes + target_bytes)
         return cipher.encrypt(plaintext)
 
     block_size = guess_block_size(oracle_fn)
     assert block_size == 16
 
-    blocks = util.chunks(oracle_fn(b"A" * 3*block_size))
+    blocks = chunks(oracle_fn(b"A" * 3*block_size))
     attacker_block, attacker_block_count = Counter(blocks).most_common(1)[0]
     assert attacker_block_count >= 2
     attacker_block_pos = block_size * blocks.index(attacker_block)
     for i in range(block_size):
-        blocks = util.chunks(oracle_fn(b"A" * (3*block_size - i - 1)))
+        blocks = chunks(oracle_fn(b"A" * (3*block_size - i - 1)))
         if blocks.count(attacker_block) < attacker_block_count:
             prefix_length = attacker_block_pos - (-i % block_size)
             break
@@ -302,17 +303,17 @@ def challenge14():
 
 def challenge15():
     """PKCS#7 padding validation"""
-    assert util.pkcs7_unpad(b"ICE ICE BABY\x04\x04\x04\x04") == b"ICE ICE BABY"
+    assert pkcs7_unpad(b"ICE ICE BABY\x04\x04\x04\x04") == b"ICE ICE BABY"
 
     try:
-        util.pkcs7_unpad(b"ICE ICE BABY\x05\x05\x05\x05")
+        pkcs7_unpad(b"ICE ICE BABY\x05\x05\x05\x05")
     except ValueError:
         pass
     else:
         assert False, "Padding should not be considered valid"
 
     try:
-        util.pkcs7_unpad(b"ICE ICE BABY\x01\x02\x03\x04")
+        pkcs7_unpad(b"ICE ICE BABY\x01\x02\x03\x04")
     except ValueError:
         pass
     else:
@@ -328,12 +329,12 @@ def challenge16():
     ciphertext = encrypted_query_string(cipher, "foo")
 
     new_ciphertext = bytearray(ciphertext)
-    new_ciphertext[32:48] = util.xor_bytes(
+    new_ciphertext[32:48] = xor_bytes(
         b"like%20a%20pound", b";admin=true;foo=", new_ciphertext[32:48])
     new_ciphertext = bytes(new_ciphertext)
 
     cipher = AES.new(key, AES.MODE_CBC, iv)
-    assert b";admin=true;" in util.pkcs7_unpad(cipher.decrypt(new_ciphertext))
+    assert b";admin=true;" in pkcs7_unpad(cipher.decrypt(new_ciphertext))
 
 
 def challenge17():
@@ -357,12 +358,12 @@ def challenge17():
     iv = os.urandom(16)
 
     def encrypt(unknown_string):
-        return AES.new(key, AES.MODE_CBC, iv).encrypt(util.pkcs7_pad(unknown_string))
+        return AES.new(key, AES.MODE_CBC, iv).encrypt(pkcs7_pad(unknown_string))
 
     def has_valid_padding(iv, ciphertext):
         plain_bytes = AES.new(key, AES.MODE_CBC, bytes(iv)).decrypt(ciphertext)
         try:
-            util.pkcs7_unpad(plain_bytes)
+            pkcs7_unpad(plain_bytes)
         except ValueError:
             return False
         else:
@@ -374,13 +375,13 @@ def challenge17():
     for unknown_string in unknown_strings:
         recovered_plaintext = bytearray()
         prev_cipher_block = iv
-        for cipher_block in util.chunks(encrypt(unknown_string)):
+        for cipher_block in chunks(encrypt(unknown_string)):
             recovered_block = bytes()
             for pos in reversed(range(16)):
                 assert len(recovered_block) == 15 - pos
                 cipher_slice = prev_cipher_block[pos + 1:]
                 padding = bytes([len(recovered_block) + 1] * len(recovered_block))
-                iv_end = util.xor_bytes(cipher_slice, padding, recovered_block)
+                iv_end = xor_bytes(cipher_slice, padding, recovered_block)
                 new_iv = bytearray(prev_cipher_block[:pos] + b"\x00" + iv_end)
                 for i in range(256):
                     new_iv[pos] = prev_cipher_block[pos] ^ i ^ (16 - pos)
@@ -393,7 +394,7 @@ def challenge17():
                         break
             recovered_plaintext += recovered_block
             prev_cipher_block = cipher_block
-        recovered_plaintext = util.pkcs7_unpad(recovered_plaintext)
+        recovered_plaintext = pkcs7_unpad(recovered_plaintext)
         assert recovered_plaintext == unknown_string
         print(recovered_plaintext.decode())
 
@@ -407,9 +408,9 @@ def challenge18():
     nonce = 0
 
     plaintext = bytearray()
-    for counter_value, block in zip(ctr_iterator(nonce), util.chunks(ciphertext)):
+    for counter_value, block in zip(ctr_iterator(nonce), chunks(ciphertext)):
         keystream = ecb_cipher.encrypt(counter_value)
-        plaintext += util.xor_bytes(keystream[:len(block)], block)
+        plaintext += xor_bytes(keystream[:len(block)], block)
     print(plaintext.decode())
 
     ctr_cipher = AES.new(key, AES.MODE_CTR, counter=ctr_counter(nonce))
@@ -525,10 +526,10 @@ def challenge24():
     """Create the MT19937 stream cipher and break it"""
     def encrypt_with_rng(rng, ciphertext):
         result = bytearray()
-        for chunk in util.chunks(ciphertext, 4):
+        for chunk in chunks(ciphertext, 4):
             # Create 4-byte chunk from rng
             keystream_bytes = struct.pack(">L", rng.get_number())
-            result += util.xor_bytes(chunk, keystream_bytes[:len(chunk)])
+            result += xor_bytes(chunk, keystream_bytes[:len(chunk)])
         return bytes(result)
 
     def encrypt_with_random_prefix(rng, plain_bytes):
@@ -562,12 +563,12 @@ def challenge24():
     seed = random.getrandbits(16)
     my_bytes = b"A" * 14
     ciphertext = encrypt_with_random_prefix(MT19937_RNG(seed), my_bytes)
-    cipher_chunks = util.chunks(ciphertext, 4)
+    cipher_chunks = chunks(ciphertext, 4)
     # Get bytes from last 2 chunks, excluding last chunk, which may not have
     # 4 bytes, and therefore may not allow me to determine the keystream
     # numbers.
     ciphertext_with_my_bytes = b"".join(cipher_chunks[-3:-1])
-    keystream = util.xor_encrypt(ciphertext_with_my_bytes, b"A")
+    keystream = xor_encrypt(ciphertext_with_my_bytes, b"A")
     keystream_numbers = struct.unpack(">LL", keystream)
     untempered_numbers = [MT19937_RNG.untemper(x) for x in keystream_numbers]
 
@@ -615,7 +616,7 @@ def challenge25():
     ciphertext = cipher.encrypt(plain_bytes)
 
     keystream = edit(ciphertext, 0, bytes([0]) * len(plain_bytes))
-    recovered_plaintext = util.xor_bytes(ciphertext, keystream)
+    recovered_plaintext = xor_bytes(ciphertext, keystream)
     assert recovered_plaintext == plain_bytes
 
 
@@ -627,12 +628,12 @@ def challenge26():
     cipher = AES.new(key, AES.MODE_CTR, counter=ctr_counter(nonce))
     ciphertext = encrypted_query_string(cipher, "A" * 16)
     new_ciphertext = bytearray(ciphertext)
-    new_ciphertext[32:48] = util.xor_bytes(
+    new_ciphertext[32:48] = xor_bytes(
         b"A" * 16, b"ha_ha;admin=true", new_ciphertext[32:48])
     new_ciphertext = bytes(new_ciphertext)
 
     cipher = AES.new(key, AES.MODE_CTR, counter=ctr_counter(nonce))
-    assert b";admin=true;" in util.pkcs7_unpad(cipher.decrypt(new_ciphertext))
+    assert b";admin=true;" in pkcs7_unpad(cipher.decrypt(new_ciphertext))
 
 
 def challenge27():
@@ -641,7 +642,7 @@ def challenge27():
     iv = key
 
     def encrypt(user_bytes):
-        return AES.new(key, AES.MODE_CBC, iv).encrypt(util.pkcs7_pad(user_bytes))
+        return AES.new(key, AES.MODE_CBC, iv).encrypt(pkcs7_pad(user_bytes))
 
     def decrypt(ciphertext):
         # If plaintext has any non-ASCII bytes, raise exception, else do nothing
@@ -654,7 +655,7 @@ def challenge27():
         decrypt(modified_ciphertext)
     except UnicodeDecodeError as e:
         plain_bytes = e.object
-        recovered_key = util.xor_bytes(plain_bytes[0:16], plain_bytes[32:48])
+        recovered_key = xor_bytes(plain_bytes[0:16], plain_bytes[32:48])
         assert recovered_key == key
     else:
         assert False
@@ -663,7 +664,7 @@ def challenge27():
 def challenge28():
     """Implement a SHA-1 keyed MAC"""
     key = os.urandom(16)
-    assert util.sha1(key + b"message1").digest() != util.sha1(key + b"message2").digest()
+    assert sha1(key + b"message1").digest() != sha1(key + b"message2").digest()
 
 
 def challenge29():
@@ -680,7 +681,7 @@ def challenge29():
     key = os.urandom(16)
     query_string = (b"comment1=cooking%20MCs;userdata=foo;"
         b"comment2=%20like%20a%20pound%20of%20bacon")
-    mac = util.sha1(key + query_string).digest()
+    mac = sha1(key + query_string).digest()
 
     glue_padding = sha1_padding(len(key + query_string))
     new_param = b";admin=true"
@@ -689,7 +690,7 @@ def challenge29():
         prefix_length=len(key + query_string + glue_padding))
     new_hash = modified_hash_fn.update(new_param).digest()
 
-    expected_hash = util.sha1(key + query_string + glue_padding + new_param).digest()
+    expected_hash = sha1(key + query_string + glue_padding + new_param).digest()
     assert new_hash == expected_hash
 
 
@@ -721,7 +722,7 @@ def challenge31():
     key = os.urandom(16)
     with open("hamlet.txt", "rb") as f:
         data = f.read()
-    hmac = util.get_hmac(key, data)
+    hmac = get_hmac(key, data)
 
     print("looking for {}".format(list(hmac)))
     print()
@@ -750,7 +751,7 @@ def challenge32():
     key = os.urandom(16)
     with open("hamlet.txt", "rb") as f:
         data = f.read()
-    hmac = util.get_hmac(key, data)
+    hmac = get_hmac(key, data)
 
     print("looking for {}".format(list(hmac)))
     print()
@@ -823,9 +824,9 @@ def challenge35():
     assert EXAMPLE_PLAIN_BYTES in bob._decrypted_messages[mallory]
 
     # Mallory tricks Alice and Bob into using g=IETF_DIFFIE_HELLMAN_PRIME
-    alice = diffie_hellman.User(g=util.IETF_DIFFIE_HELLMAN_PRIME)
-    bob = diffie_hellman.User(g=util.IETF_DIFFIE_HELLMAN_PRIME)
-    mallory = diffie_hellman.User(g=util.IETF_DIFFIE_HELLMAN_PRIME)
+    alice = diffie_hellman.User(g=IETF_DIFFIE_HELLMAN_PRIME)
+    bob = diffie_hellman.User(g=IETF_DIFFIE_HELLMAN_PRIME)
+    mallory = diffie_hellman.User(g=IETF_DIFFIE_HELLMAN_PRIME)
     assert mallory.public_key == 0
     assert alice.get_shared_key_for(mallory) == 0
     assert bob.get_shared_key_for(mallory) == 0
@@ -836,11 +837,11 @@ def challenge35():
     assert EXAMPLE_PLAIN_BYTES in bob._decrypted_messages[mallory]
 
     # Mallory tricks Alice and Bob into using g=IETF_DIFFIE_HELLMAN_PRIME - 1
-    alice = diffie_hellman.User(g=util.IETF_DIFFIE_HELLMAN_PRIME - 1)
-    bob = diffie_hellman.User(g=util.IETF_DIFFIE_HELLMAN_PRIME - 1)
+    alice = diffie_hellman.User(g=IETF_DIFFIE_HELLMAN_PRIME - 1)
+    bob = diffie_hellman.User(g=IETF_DIFFIE_HELLMAN_PRIME - 1)
     # Private key must be even.
-    mallory = diffie_hellman.User(g=util.IETF_DIFFIE_HELLMAN_PRIME - 1,
-        private_key=random.randrange(0, util.IETF_DIFFIE_HELLMAN_PRIME, 2))
+    mallory = diffie_hellman.User(g=IETF_DIFFIE_HELLMAN_PRIME - 1,
+        private_key=random.randrange(0, IETF_DIFFIE_HELLMAN_PRIME, 2))
     assert mallory.public_key == 1
     assert alice.get_shared_key_for(mallory) == 1
     assert bob.get_shared_key_for(mallory) == 1
@@ -878,8 +879,8 @@ def challenge37():
         # Attacker tricks server into computing easily derivable session key
         salt, _, _ = server._respond_to_login_request(username, i * client.N)
         # Attacker derives shared session key without password
-        shared_session_key = sha256(util.int_to_bytes(0)).digest()
-        hmac = util.get_hmac(shared_session_key, salt, sha256)
+        shared_session_key = sha256(int_to_bytes(0)).digest()
+        hmac = get_hmac(shared_session_key, salt, sha256)
         # Attacker logs in without password
         assert server._verify_hmac(hmac, username)
 
@@ -906,7 +907,7 @@ def challenge38():
 
 def challenge39():
     """Implement RSA"""
-    assert util.invmod(17, 3120) == 2753
+    assert invmod(17, 3120) == 2753
 
     public_key, private_key = rsa.generate_key_pair()
 
@@ -941,13 +942,13 @@ def challenge40():
         for y in ciphertext_data:
             if x != y:
                 m_s_ *= y["modulus"]
-        cube += x["cipher_int"] * m_s_ * util.invmod(m_s_, x["modulus"])
+        cube += x["cipher_int"] * m_s_ * invmod(m_s_, x["modulus"])
     cube %= modulus_product
     assert all(x["cipher_int"] == cube % x["modulus"] for x in ciphertext_data)
 
-    root = round(util.big_int_cube_root(cube))
+    root = round(big_int_cube_root(cube))
     assert root ** 3 == cube
-    plaintext = util.int_to_bytes(root)
+    plaintext = int_to_bytes(root)
     assert plaintext == EXAMPLE_PLAIN_BYTES
 
 
@@ -983,10 +984,10 @@ def challenge41():
     modulus = public_key.modulus
     random_number = random.randint(2, modulus - 1)
     modified_cipher_int = (cipher_int * random_number**public_key.exponent) % modulus
-    modified_ciphertext = util.int_to_bytes(modified_cipher_int)
+    modified_ciphertext = int_to_bytes(modified_cipher_int)
     oracle_int = int.from_bytes(decrypt(modified_ciphertext), byteorder="big")
-    recovered_plain_int = (oracle_int * util.invmod(random_number, modulus)) % modulus
-    recovered_plaintext = util.int_to_bytes(recovered_plain_int)
+    recovered_plain_int = (oracle_int * invmod(random_number, modulus)) % modulus
+    recovered_plaintext = int_to_bytes(recovered_plain_int)
     assert recovered_plaintext == plaintext
 
 
