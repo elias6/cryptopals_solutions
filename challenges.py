@@ -70,7 +70,7 @@ def challenge3():
     """Single-byte XOR cipher"""
     cipher_hex = "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736"
     ciphertext = bytes.fromhex(cipher_hex)
-    score_data = english.score_data(ciphertext)
+    score_data = english.iter_score_data(ciphertext)
     best_data = nlargest(5, score_data, key=lambda x: x["score"])
     util.pprint(best_data)
     print(best_data[0]["message"].decode())
