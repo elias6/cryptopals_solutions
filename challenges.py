@@ -25,6 +25,7 @@ from sha1.sha1 import Sha1Hash
 
 import diffie_hellman
 import english
+import rsa
 import srp
 import util
 
@@ -907,14 +908,14 @@ def challenge39():
     """Implement RSA"""
     assert util.invmod(17, 3120) == 2753
 
-    public_key, private_key = util.generate_rsa_key_pair()
+    public_key, private_key = rsa.generate_key_pair()
 
-    ciphertext = util.rsa_encrypt(EXAMPLE_PLAIN_BYTES, public_key)
+    ciphertext = rsa.encrypt(EXAMPLE_PLAIN_BYTES, public_key)
 
-    # rsa_encrypt left-pads its result to make it as long as the modulus.
-    # This is equivalent to padding with block type 0. rsa_unpad is needed
+    # rsa.encrypt left-pads its result to make it as long as the modulus.
+    # This is equivalent to padding with block type 0. rsa.unpad is needed
     # to properly recover the plaintext.
-    plaintext = util.rsa_unpad(util.rsa_decrypt(ciphertext, private_key))
+    plaintext = rsa.unpad(rsa.decrypt(ciphertext, private_key))
     assert plaintext == EXAMPLE_PLAIN_BYTES
 
 
@@ -923,8 +924,8 @@ def challenge40():
     ciphertext_data = []
     modulus_product = 1
     for i in range(3):
-        public_key, _ = util.generate_rsa_key_pair()
-        ciphertext = util.rsa_encrypt(EXAMPLE_PLAIN_BYTES, public_key)
+        public_key, _ = rsa.generate_key_pair()
+        ciphertext = rsa.encrypt(EXAMPLE_PLAIN_BYTES, public_key)
         ciphertext_data.append({
             "modulus": public_key.modulus,
             "cipher_int": int.from_bytes(ciphertext, byteorder="big"),
@@ -953,24 +954,24 @@ def challenge40():
 def challenge41():
     """Implement unpadded message recovery oracle"""
     seen_message_hashes = set()
-    public_key, private_key = util.generate_rsa_key_pair()
+    public_key, private_key = rsa.generate_key_pair()
 
     class AccessDeniedError(Exception):
         pass
 
     def decrypt(ciphertext):
-        plaintext = util.rsa_decrypt(ciphertext, private_key)
+        plaintext = rsa.decrypt(ciphertext, private_key)
         plaintext_hash = sha256(plaintext).digest()
         if plaintext_hash in seen_message_hashes:
             raise AccessDeniedError()
         seen_message_hashes.add(plaintext_hash)
         return plaintext
 
-    ciphertext = util.rsa_encrypt(EXAMPLE_PLAIN_BYTES, public_key)
-    # rsa_encrypt left-pads its result to make it as long as the modulus.
-    # This is equivalent to padding with block type 0. rsa_unpad is needed
+    ciphertext = rsa.encrypt(EXAMPLE_PLAIN_BYTES, public_key)
+    # rsa.encrypt left-pads its result to make it as long as the modulus.
+    # This is equivalent to padding with block type 0. rsa.unpad is needed
     # to properly recover the plaintext.
-    plaintext = util.rsa_unpad(decrypt(ciphertext))
+    plaintext = rsa.unpad(decrypt(ciphertext))
     try:
         decrypt(ciphertext)
     except AccessDeniedError:
