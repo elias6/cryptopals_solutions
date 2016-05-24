@@ -15,7 +15,7 @@ import warnings
 from collections import Counter, defaultdict, namedtuple
 from contextlib import ExitStack, redirect_stdout
 from functools import lru_cache
-from hashlib import sha256
+from hashlib import md5, sha256
 from heapq import nlargest
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from itertools import combinations, count, cycle
@@ -617,6 +617,43 @@ def rsa_encrypt(plaintext, key):
 
 def rsa_decrypt(ciphertext, key):
     return rsa_calculate(ciphertext, key)
+
+
+def rsa_sign(message, private_key):
+    """Produce PKCS v1.5 signature"""
+    # TODO: make this handle more hash functions
+    
+    digest_algorithm_asn1 = (
+        b"\x06"         # object identifier
+        b"\x08"         # length (8)
+        b"\x2a"         # iso (1), member-body (2)
+        b"\x86\x48"     # US (840)
+        b"\x86\xf7\x0d" # RSA Data Security, Inc.
+        b"\x82"         # digestAlgorithm
+        b"\x85"         # md5
+    )
+
+    digest_asn1 = (
+        b"\x04"     # octet string
+        b"\x10"     # length
+        + md5(message).digest()
+    )
+
+    data = (
+        b"\x10"     # sequence
+        b"\x18"     # length
+        + digest_algorithm_asn1
+        + digest_asn1
+    )
+
+    return rsa_encrypt(rsa_pad(data, private_key.modulus, block_type=1), private_key)
+
+
+def rsa_verify(message, public_key, signature):
+    """Verify PKCS v1.5 signature"""
+    asn1_stuff = b"\x10\x18\x06\x08\x2a\x86\x48\x86\xf7\x0d\x82\x85\x04\x10"
+    data = rsa_unpad(rsa_decrypt(signature, public_key))
+    return data == asn1_stuff + md5(message).digest()
 
 
 def rsa_pad(message, modulus, block_type=2):
