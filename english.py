@@ -9,7 +9,7 @@ from util import xor_encrypt
 # (\x0d)) were added by me after observing better results. Text should
 # be converted to lowercase before one attempts to analyze it using this
 # dictionary.
-english_byte_frequencies = defaultdict(
+byte_frequencies = defaultdict(
     # The following number will be returned for any byte not explicitly
     # represented. 4e-6 was observed to produce the best ratio of score for
     # English text to score for incorrectly decrypted text.
@@ -31,24 +31,24 @@ english_byte_frequencies = defaultdict(
 
 
 def english_like_score(text_bytes):
-    # english_byte_frequencies is defined outside of this function as a
-    # performance optimization. In my tests, the time spent in this function
-    # is less than half of what it would be if english_byte_frequencies were
-    # defined inside this function. I am also using a defaultdict instead of
-    # a Counter for the byte counts as a performance optimization.
+    # byte_frequencies is defined outside of this function as a performance
+    # optimization. In my tests, the time spent in this function is less
+    # than half of what it would be if byte_frequencies were defined inside
+    # this function. I am also using a defaultdict instead of a Counter for
+    # the byte counts as a performance optimization.
     byte_counts = defaultdict(int)
     for byte in text_bytes.lower():
         byte_counts[byte] += 1
     text_length = len(text_bytes)
     chi_squared = 0
     for byte, byte_count in byte_counts.items():
-        expected = text_length * english_byte_frequencies[byte]
+        expected = text_length * byte_frequencies[byte]
         difference = byte_count - expected
         chi_squared += difference * difference / expected
     return 1e6 / chi_squared / text_length
 
 
-def english_like_score_data(ciphertext):
+def score_data(ciphertext):
     result = []
     for i in range(256):
         message = xor_encrypt(ciphertext, bytes([i]))
@@ -57,14 +57,14 @@ def english_like_score_data(ciphertext):
     return result
 
 
-def best_english_like_score_data(ciphertext):
-    return max(english_like_score_data(ciphertext), key=lambda x: x["score"])
+def best_score_data(ciphertext):
+    return max(score_data(ciphertext), key=lambda x: x["score"])
 
 
 def crack_common_xor_key(ciphertexts):
     key = bytearray()
     for i in range(max(len(c) for c in ciphertexts)):
         transposed_block = bytes(c[i] for c in ciphertexts if i < len(c))
-        key.append(best_english_like_score_data(transposed_block)["key"])
+        key.append(best_score_data(transposed_block)["key"])
     plaintexts = [xor_encrypt(c, key) for c in ciphertexts]
     return (plaintexts, key)
