@@ -619,8 +619,8 @@ def rsa_decrypt(ciphertext, key):
     return rsa_calculate(ciphertext, key)
 
 
-def rsa_sign(message, private_key):
-    """Produce PKCS v1.5 signature"""
+def rsa_create_signature(message):
+    """Produce unpadded, unencrypted PKCS v1.5 signature"""
     # TODO: make this handle more hash functions
     
     digest_algorithm_asn1 = (
@@ -639,13 +639,16 @@ def rsa_sign(message, private_key):
         + md5(message).digest()
     )
 
-    data = (
+    return (
         b"\x10"     # sequence
         b"\x18"     # length
         + digest_algorithm_asn1
         + digest_asn1
     )
 
+
+def rsa_sign(message, private_key):
+    data = rsa_create_signature(message)
     return rsa_encrypt(rsa_pad(data, private_key.modulus, block_type=1), private_key)
 
 
