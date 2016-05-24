@@ -28,6 +28,7 @@ import util
 
 from block_cipher import (crack_ecb_oracle, ctr_counter, ctr_iterator, guess_block_size,
     looks_like_ecb, random_aes_key)
+from mersenne_twister import MT19937_RNG
 from util import gcd, random
 
 warnings.simplefilter("default", BytesWarning)
@@ -483,7 +484,7 @@ def challenge20():
 
 def challenge21():
     """Implement the MT19937 Mersenne Twister RNG"""
-    rng = util.MT19937_RNG(seed=0)
+    rng = MT19937_RNG(seed=0)
     numbers = [rng.get_number() for _ in range(10)]
     assert numbers == [2357136044, 2546248239, 3071714933, 3626093760, 2588848963,
         3684848379, 2340255427, 3638918503, 1819583497, 2678185683]
@@ -492,10 +493,10 @@ def challenge21():
 def challenge22():
     """Crack an MT19937 seed"""
     seed = int(time()) + random.randint(40, 1000)
-    output = util.MT19937_RNG(seed).get_number()
+    output = MT19937_RNG(seed).get_number()
     future = seed + random.randint(40, 1000)
     for seed_guess in reversed(range(future - 1000, future)):
-        if util.MT19937_RNG(seed_guess).get_number() == output:
+        if MT19937_RNG(seed_guess).get_number() == output:
             assert seed_guess == seed
             return
     assert False, "seed not found"
@@ -503,13 +504,13 @@ def challenge22():
 
 def challenge23():
     """Clone an MT19937 RNG from its output"""
-    rng = util.MT19937_RNG(seed=random.getrandbits(32))
+    rng = MT19937_RNG(seed=random.getrandbits(32))
     numbers = [rng.get_number() for _ in range(624)]
 
     # The seed passed in the next line has no effect since the buffer is
     # being overwritten.
-    rng2 = util.MT19937_RNG(seed=0)
-    rng2.buffer = [util.MT19937_RNG.untemper(x) for x in numbers]
+    rng2 = MT19937_RNG(seed=0)
+    rng2.buffer = [MT19937_RNG.untemper(x) for x in numbers]
     rng2.index = 0
     numbers2 = [rng2.get_number() for _ in range(624)]
     assert numbers == numbers2
@@ -530,11 +531,11 @@ def challenge24():
         return encrypt_with_rng(rng, prefix + plain_bytes)
 
     def create_token(timestamp):
-        rng = util.MT19937_RNG(seed=timestamp)
+        rng = MT19937_RNG(seed=timestamp)
         return struct.pack(">4L", *[rng.get_number() for _ in range(4)])
 
     def token_came_from_timestamp(token, timestamp):
-        rng = util.MT19937_RNG(seed=timestamp)
+        rng = MT19937_RNG(seed=timestamp)
         return token == struct.pack(">4L", *[rng.get_number() for _ in range(4)])
 
     def partially_twist(buffer, n):
@@ -549,13 +550,13 @@ def challenge24():
                 buffer[i] ^= 0x9908b0df
 
     seed = random.getrandbits(16)
-    test_ciphertext = encrypt_with_rng(util.MT19937_RNG(seed), EXAMPLE_PLAIN_BYTES)
-    test_plaintext = encrypt_with_rng(util.MT19937_RNG(seed), test_ciphertext)
+    test_ciphertext = encrypt_with_rng(MT19937_RNG(seed), EXAMPLE_PLAIN_BYTES)
+    test_plaintext = encrypt_with_rng(MT19937_RNG(seed), test_ciphertext)
     assert test_plaintext == EXAMPLE_PLAIN_BYTES
 
     seed = random.getrandbits(16)
     my_bytes = b"A" * 14
-    ciphertext = encrypt_with_random_prefix(util.MT19937_RNG(seed), my_bytes)
+    ciphertext = encrypt_with_random_prefix(MT19937_RNG(seed), my_bytes)
     cipher_chunks = util.chunks(ciphertext, 4)
     # Get bytes from last 2 chunks, excluding last chunk, which may not have
     # 4 bytes, and therefore may not allow me to determine the keystream
@@ -563,12 +564,12 @@ def challenge24():
     ciphertext_with_my_bytes = b"".join(cipher_chunks[-3:-1])
     keystream = util.xor_encrypt(ciphertext_with_my_bytes, b"A")
     keystream_numbers = struct.unpack(">LL", keystream)
-    untempered_numbers = [util.MT19937_RNG.untemper(x) for x in keystream_numbers]
+    untempered_numbers = [MT19937_RNG.untemper(x) for x in keystream_numbers]
 
     for seed_guess in range(2**16):
         if seed_guess % 5000 == 0:
             print("tried {} seeds".format(seed_guess))
-        test_rng = util.MT19937_RNG(seed_guess)
+        test_rng = MT19937_RNG(seed_guess)
         # The obvious way to test whether seed_guess is right is to generate
         # (len(cipher_chunks) - 1) numbers from test_rng and see whether the
         # last 2 match keystream_numbers. However, that is agonizingly slow, so
