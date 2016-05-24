@@ -690,6 +690,21 @@ def rsa_unpad(message):
     return message
 
 
+def big_int_cube_root(x):
+    """Return the cube root of the given number.
+
+    This works with integers that would cause OverflowErrors when trying to
+    calculate the cube root the more straightforward way (x ** (1/3)). It
+    seems to reliably return the result with enough precision that cubing it
+    and rounding the cube produces the original number, although I don't yet
+    have any rigorous proof of this.
+    """
+    with decimal.localcontext() as context:
+        # Guesstimate as to how much precision is needed to get the right result
+        context.prec = len(str(x)) // 3 + 4
+        return decimal.Decimal(x) ** (decimal.Decimal(1) / decimal.Decimal(3))
+
+
 def challenge1():
     """Convert hex to base64"""
     encoded_text = ("49276d206b696c6c696e6720796f757220627261696e206c" +
@@ -1559,12 +1574,9 @@ def challenge40():
     cube %= modulus_product
     assert all(x["cipher_int"] == cube % x["modulus"] for x in ciphertext_data)
 
-    with decimal.localcontext() as context:
-        # Guesstimate as to how much precision is needed to get the right result
-        context.prec = len(str(cube)) // 3 + 4
-        root = round(decimal.Decimal(cube) ** (decimal.Decimal(1) / decimal.Decimal(3)))
-        assert root ** 3 == cube
-    plaintext = int_to_bytes(int(root))
+    root = round(big_int_cube_root(cube))
+    assert root ** 3 == cube
+    plaintext = int_to_bytes(root)
     assert plaintext == EXAMPLE_PLAIN_BYTES
 
 
