@@ -20,7 +20,7 @@ from time import time
 from urllib.parse import parse_qs, quote as url_quote, urlencode
 
 from Crypto.Cipher import AES
-from md4.md4 import MD4
+from md4 import MD4
 from sha1.sha1 import Sha1Hash
 
 import util
