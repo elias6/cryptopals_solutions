@@ -25,6 +25,7 @@ from sha1.sha1 import Sha1Hash
 
 import diffie_hellman
 import english
+import srp
 import util
 
 from block_cipher import (crack_ecb_oracle, ctr_counter, ctr_iterator, guess_block_size,
@@ -855,8 +856,8 @@ def challenge36():
     password = "letmein"
     wrong_password = "qwerty"
 
-    server = util.SRPServer()
-    client = util.SRPClient()
+    server = srp.Server()
+    client = srp.Client()
     client.sign_up(server, username, password)
 
     assert client.log_in(server, username, password)
@@ -868,8 +869,8 @@ def challenge37():
     username = "peter.gregory@piedpiper.com"
     password = "letmein"
 
-    server = util.SRPServer()
-    client = util.SRPClient()
+    server = srp.Server()
+    client = srp.Client()
     client.sign_up(server, username, password)
 
     for i in range(10):
@@ -888,14 +889,14 @@ def challenge38():
     password = "letmein"
     wrong_password = "qwerty"
 
-    server = util.SRPServer()
-    client = util.SRPClient()
+    server = srp.Server()
+    client = srp.Client()
     client.sign_up(server, username, password)
     assert client.log_in(server, username, password, k=0)
     assert not client.log_in(server, username, wrong_password, k=0)
 
-    server = util.SRPServer()
-    mallory_server = util.MitmSRPServer(server)
+    server = srp.Server()
+    mallory_server = srp.MitmServer(server)
     client.sign_up(server, username, password)
     login_is_valid = client.log_in(mallory_server, username, password, k=0)
     assert login_is_valid
