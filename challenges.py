@@ -33,9 +33,8 @@ from block_cipher import (crack_ecb_oracle, ctr_counter, ctr_iterator, guess_blo
 from mersenne_twister import MT19937_RNG
 from timing_server import (FancyHTTPServer, ValidatingRequestHandler, insecure_compare,
     recover_signature, server_approves_of_signature)
-from util import (IETF_DIFFIE_HELLMAN_PRIME, big_int_cube_root, chunks, gcd, get_hmac,
-    int_to_bytes, invmod, pkcs7_pad, pkcs7_unpad, pprint, random, sha1, xor_bytes,
-    xor_encrypt)
+from util import (IETF_PRIME, big_int_cube_root, chunks, gcd, get_hmac, int_to_bytes,
+    invmod, pkcs7_pad, pkcs7_unpad, pprint, random, sha1, xor_bytes, xor_encrypt)
 
 warnings.simplefilter("default", BytesWarning)
 warnings.simplefilter("default", ResourceWarning)
@@ -823,10 +822,10 @@ def challenge35():
     mallory.send_echo_request(bob, EXAMPLE_PLAIN_BYTES)
     assert EXAMPLE_PLAIN_BYTES in bob._decrypted_messages[mallory]
 
-    # Mallory tricks Alice and Bob into using g=IETF_DIFFIE_HELLMAN_PRIME
-    alice = diffie_hellman.User(g=IETF_DIFFIE_HELLMAN_PRIME)
-    bob = diffie_hellman.User(g=IETF_DIFFIE_HELLMAN_PRIME)
-    mallory = diffie_hellman.User(g=IETF_DIFFIE_HELLMAN_PRIME)
+    # Mallory tricks Alice and Bob into using g=IETF_PRIME
+    alice = diffie_hellman.User(g=IETF_PRIME)
+    bob = diffie_hellman.User(g=IETF_PRIME)
+    mallory = diffie_hellman.User(g=IETF_PRIME)
     assert mallory.public_key == 0
     assert alice.get_shared_key_for(mallory) == 0
     assert bob.get_shared_key_for(mallory) == 0
@@ -836,12 +835,12 @@ def challenge35():
     mallory.send_echo_request(bob, EXAMPLE_PLAIN_BYTES)
     assert EXAMPLE_PLAIN_BYTES in bob._decrypted_messages[mallory]
 
-    # Mallory tricks Alice and Bob into using g=IETF_DIFFIE_HELLMAN_PRIME - 1
-    alice = diffie_hellman.User(g=IETF_DIFFIE_HELLMAN_PRIME - 1)
-    bob = diffie_hellman.User(g=IETF_DIFFIE_HELLMAN_PRIME - 1)
+    # Mallory tricks Alice and Bob into using g=IETF_PRIME - 1
+    alice = diffie_hellman.User(g=IETF_PRIME - 1)
+    bob = diffie_hellman.User(g=IETF_PRIME - 1)
     # Private key must be even.
-    mallory = diffie_hellman.User(g=IETF_DIFFIE_HELLMAN_PRIME - 1,
-        private_key=random.randrange(0, IETF_DIFFIE_HELLMAN_PRIME, 2))
+    mallory = diffie_hellman.User(g=IETF_PRIME - 1,
+        private_key=random.randrange(0, IETF_PRIME, 2))
     assert mallory.public_key == 1
     assert alice.get_shared_key_for(mallory) == 1
     assert bob.get_shared_key_for(mallory) == 1
