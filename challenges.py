@@ -69,7 +69,7 @@ def challenge3():
     ciphertext = bytes.fromhex(cipher_hex)
     score_data = util.english_like_score_data(ciphertext)
     best_data = nlargest(5, score_data, key=lambda x: x["score"])
-    util.pp(best_data)
+    util.pprint(best_data)
     print(best_data[0]["message"].decode())
     assert best_data[0]["message"] == b"Cooking MC's like a pound of bacon"
 
@@ -81,7 +81,7 @@ def challenge4():
     decoded_string_data = enumerate(
         util.best_english_like_score_data(c) for c in ciphertexts)
     best_decodings = nlargest(3, decoded_string_data, key=lambda d: d[1]["score"])
-    util.pp(best_decodings)
+    util.pprint(best_decodings)
     assert best_decodings[0][1]["message"] == b"Now that the party is jumping\n"
 
 
@@ -137,7 +137,7 @@ def challenge8():
     with open("8.txt") as f:
         ciphertexts = [bytes.fromhex(line.strip()) for line in f.readlines()]
     ecb_texts = [(i, c) for i, c in enumerate(ciphertexts) if util.looks_like_ecb(c)]
-    util.pp(ecb_texts)
+    util.pprint(ecb_texts)
     assert len(ecb_texts) == 1
 
 

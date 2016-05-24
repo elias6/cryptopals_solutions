@@ -1,6 +1,6 @@
 import decimal
 import os
-import pprint
+import pprint as pprint_module
 import re
 import struct
 
@@ -42,8 +42,8 @@ IETF_DIFFIE_HELLMAN_PRIME = int("ffffffffffffffffc90fdaa22168c234c4c6628b80dc1c"
     "4e4abc9804f1746c08ca237327ffffffffffffffff", 16)
 
 
-def pp(*args, width=120, **kwargs):
-    pprint.pprint(*args, width=width, **kwargs)
+def pprint(*args, width=120, **kwargs):
+    pprint_module.pprint(*args, width=width, **kwargs)
 
 
 def xor_bytes(*bytes_objects):
