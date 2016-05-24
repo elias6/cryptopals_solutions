@@ -1,5 +1,3 @@
-import struct
-
 from itertools import zip_longest
 
 # This code was copied from http://acooke.org/cute/PurePython0.html, but
@@ -25,10 +23,10 @@ def little_endian_words(b, n):
     for g in grouped(b, n):
         yield from big_endian_words(reversed(g), n)
 
-def grouped(iterable, n, fillvalue=None):
+def grouped(iterable, n):
     '''group in to chunks - http://stackoverflow.com/a/434411/181772'''
     args = [iter(iterable)] * n
-    return zip_longest(*args, fillvalue=fillvalue)
+    return zip_longest(*args)
 
 def left_rotate(n, b):
     return ((n << b) | ((n & 0xffffffff) >> (32 - b))) & 0xffffffff
