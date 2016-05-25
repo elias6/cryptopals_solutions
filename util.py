@@ -86,6 +86,10 @@ get_hmac = lru_cache()(calculate_hmac)
 
 
 def extended_gcd(a, b):
+    """Extended Euclidean algorithm.
+
+    Return a tuple of numbers (g, x, y) such that ax + by == g == gcd(a, b).
+    """
     if a == 0:
         return (b, 0, 1)
     else:
@@ -93,8 +97,9 @@ def extended_gcd(a, b):
         return (g, x - (b // a) * y, y)
 
 
-def invmod(a, m):
-    g, x, y = extended_gcd(a, m)
+def mod_inv(a, m):
+    """Return the integer x such that (a * x) % m == 1."""
+    g, x, _ = extended_gcd(a, m)
     if g != 1:
         raise ValueError("modular inverse does not exist")
     else:

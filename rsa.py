@@ -5,7 +5,7 @@ from hashlib import md5
 
 from Crypto.Util.number import getStrongPrime
 
-from util import gcd, invmod, int_to_bytes, random
+from util import gcd, mod_inv, int_to_bytes, random
 
 KeyPair = namedtuple("KeyPair", ["public_key", "private_key"])
 Key = namedtuple("Key", ["modulus", "exponent"])
@@ -19,7 +19,7 @@ def generate_key_pair():
     totient = (p - 1) * (q - 1)
     assert totient > public_exponent
     assert gcd(public_exponent, totient) == 1
-    private_exponent = invmod(public_exponent, totient)
+    private_exponent = mod_inv(public_exponent, totient)
     assert (public_exponent * private_exponent) % totient == 1
     public_key = Key(modulus, public_exponent)
     private_key = Key(modulus, private_exponent)

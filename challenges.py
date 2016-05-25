@@ -40,7 +40,7 @@ from mersenne_twister import MT19937_RNG
 from timing_server import (FancyHTTPServer, ValidatingRequestHandler, insecure_compare,
     recover_signature, server_approves_of_signature)
 from util import (IETF_PRIME, big_int_cube_root, chunks, gcd, get_hmac, int_to_bytes,
-    invmod, pkcs7_pad, pkcs7_unpad, random, sha1, sliding_pairs, xor_bytes, xor_encrypt)
+    mod_inv, pkcs7_pad, pkcs7_unpad, random, sha1, sliding_pairs, xor_bytes, xor_encrypt)
 
 
 warnings.simplefilter("default", BytesWarning)
@@ -919,7 +919,7 @@ def challenge38():
 
 def challenge39():
     """Implement RSA"""
-    assert invmod(17, 3120) == 2753
+    assert mod_inv(17, 3120) == 2753
 
     public_key, private_key = rsa.generate_key_pair()
 
@@ -954,7 +954,7 @@ def challenge40():
         for y in ciphertext_data:
             if x != y:
                 m_s_ *= y["modulus"]
-        cube += x["cipher_int"] * m_s_ * invmod(m_s_, x["modulus"])
+        cube += x["cipher_int"] * m_s_ * mod_inv(m_s_, x["modulus"])
     cube %= modulus_product
     assert all(x["cipher_int"] == cube % x["modulus"] for x in ciphertext_data)
 
@@ -998,7 +998,7 @@ def challenge41():
     modified_cipher_int = (cipher_int * random_number**public_key.exponent) % modulus
     modified_ciphertext = int_to_bytes(modified_cipher_int)
     oracle_int = int.from_bytes(decrypt(modified_ciphertext), byteorder="big")
-    recovered_plain_int = (oracle_int * invmod(random_number, modulus)) % modulus
+    recovered_plain_int = (oracle_int * mod_inv(random_number, modulus)) % modulus
     recovered_plaintext = int_to_bytes(recovered_plain_int)
     assert recovered_plaintext == plaintext
 
