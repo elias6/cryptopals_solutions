@@ -178,7 +178,6 @@ def challenge10():
             last_cipher_block = cipher_block
         return bytes(result)
 
-
     def cbc_decrypt(key, iv, ciphertext):
         cipher = AES.new(key, AES.MODE_ECB, iv)
         last_cipher_block = iv
@@ -264,7 +263,6 @@ def challenge13():
 
     def decrypt_profile(encrypted_profile):
         return pkcs7_unpad(cipher.decrypt(encrypted_profile)).decode()
-
 
     profile1 = encrypted_user_profile("peter.gregory@piedpiper.com")
     profile1_blocks = chunks(profile1)

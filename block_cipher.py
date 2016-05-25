@@ -2,9 +2,10 @@ import struct
 
 from collections import Counter
 from itertools import count
-
 from os import urandom
+
 from util import chunks, gcd, pkcs7_unpad
+
 
 def looks_like_ecb(ciphertext, block_size=16):
     # TODO: use birthday paradox to calculate an estimate for the expected

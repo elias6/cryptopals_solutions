@@ -5,6 +5,7 @@ from Crypto.Cipher import AES
 
 from util import IETF_PRIME, int_to_bytes, pkcs7_pad, pkcs7_unpad, random, sha1
 
+
 class User:
     def __init__(self, p=IETF_PRIME, g=2, private_key=None):
         self.p = p

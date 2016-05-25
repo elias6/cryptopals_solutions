@@ -6,11 +6,9 @@ from random import SystemRandom
 from sha1.sha1 import Sha1Hash
 
 try:
-    # Python 3.5
-    from math import gcd
+    from math import gcd    # Python 3.5
 except ImportError:
-    # older Python versions
-    from fractions import gcd
+    from fractions import gcd    # older Python versions
 
 random = SystemRandom()
 
