@@ -387,7 +387,7 @@ def challenge17():
             padding = bytes([len(result) + 1] * len(result))
             iv_end = xor_bytes(cipher_slice, padding, result)
             new_iv = bytearray(prev_cipher_block[:pos] + b"\x00" + iv_end)
-            for guess in range(256):
+            for guess in english.all_bytes_by_frequency:
                 new_iv[pos] = prev_cipher_block[pos] ^ guess ^ (16 - pos)
                 if has_valid_padding(new_iv, cipher_block):
                     if pos == 15:
