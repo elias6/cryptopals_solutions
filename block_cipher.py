@@ -4,6 +4,7 @@ from collections import Counter
 from itertools import count
 from os import urandom
 
+from english import all_bytes_by_frequency
 from util import chunks, gcd, pkcs7_unpad
 
 
@@ -40,7 +41,7 @@ def crack_ecb_oracle(oracle_fn, block_size=16, prefix_length=0):
         short_block_output = oracle_fn(short_input_block)
         block_index = (len(result) + prefix_length) // block_size
         block_to_look_for = chunks(short_block_output)[block_index]
-        for guess in range(256):
+        for guess in all_bytes_by_frequency:
             test_input = short_input_block + result + bytes([guess])
             output = oracle_fn(test_input)
             telltale_block = chunks(output)[block_index]
