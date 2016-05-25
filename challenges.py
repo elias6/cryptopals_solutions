@@ -37,8 +37,8 @@ import srp
 from block_cipher import (crack_ecb_oracle, ctr_counter, ctr_iterator, guess_block_size,
     looks_like_ecb, random_aes_key)
 from mersenne_twister import MT19937_RNG
-from timing_server import (FancyHTTPServer, ValidatingRequestHandler, insecure_compare,
-    recover_signature, server_approves_of_signature)
+from timing_server import (TimingServer, make_insecure_compare_fn, recover_signature,
+    server_approves_of_signature)
 from util import (IETF_PRIME, big_int_cube_root, chunks, gcd, get_hmac, int_to_bytes,
     mod_inv, pkcs7_pad, pkcs7_unpad, random, sha1, sliding_pairs, xor_bytes, xor_encrypt)
 
@@ -731,16 +731,15 @@ def challenge30():
 
 def challenge31():
     """Implement and break HMAC-SHA1 with an artificial timing leak"""
-    key = os.urandom(16)
+    hmac_key = os.urandom(16)
     with open("hamlet.txt", "rb") as f:
         data = f.read()
-    hmac = get_hmac(key, data)
+    hmac = get_hmac(hmac_key, data)
 
     print("looking for {}".format(list(hmac)))
     print()
-    server = FancyHTTPServer(("localhost", 31415), ValidatingRequestHandler)
-    server.hmac_key = key
-    server.validate_signature = lambda hmac, sig: insecure_compare(hmac, sig, 0.05)
+    server = TimingServer(
+        ("localhost", 31415), hmac_key, make_insecure_compare_fn(0.05))
     try:
         Thread(target=server.serve_forever).start()
         print("Server is running on {}".format(server.server_address))
@@ -750,7 +749,6 @@ def challenge31():
             thread_count=15,
             threshold=0.01,
             attempt_limit=20)
-        print("recovered signature: {}".format(list(signature)))
     finally:
         server.shutdown()
         server.server_close()
@@ -760,16 +758,15 @@ def challenge31():
 
 def challenge32():
     """Break HMAC-SHA1 with a slightly less artificial timing leak"""
-    key = os.urandom(16)
+    hmac_key = os.urandom(16)
     with open("hamlet.txt", "rb") as f:
         data = f.read()
-    hmac = get_hmac(key, data)
+    hmac = get_hmac(hmac_key, data)
 
     print("looking for {}".format(list(hmac)))
     print()
-    server = FancyHTTPServer(("localhost", 31415), ValidatingRequestHandler)
-    server.hmac_key = key
-    server.validate_signature = lambda hmac, sig: insecure_compare(hmac, sig, 0.025)
+    server = TimingServer(
+        ("localhost", 31415), hmac_key, make_insecure_compare_fn(0.025))
     try:
         Thread(target=server.serve_forever).start()
         print("Server is running on {}".format(server.server_address))
@@ -779,7 +776,6 @@ def challenge32():
             thread_count=15,
             threshold=0.006,
             attempt_limit=20)
-        print("recovered signature: {}".format(list(signature)))
     finally:
         server.shutdown()
         server.server_close()

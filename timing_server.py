@@ -22,8 +22,8 @@ def insecure_compare(data1, data2, delay):
     return True
 
 
-class FancyHTTPServer(ThreadingMixIn, HTTPServer):
-    request_queue_size = 128
+def make_insecure_compare_fn(delay):
+    return lambda data1, data2: insecure_compare(data1, data2, delay)
 
 
 class ValidatingRequestHandler(BaseHTTPRequestHandler):
@@ -51,6 +51,17 @@ class ValidatingRequestHandler(BaseHTTPRequestHandler):
 
     def log_message(self, format, *args):
         pass
+
+
+class TimingServer(ThreadingMixIn, HTTPServer):
+    # Increase request_queue_size so server can handle many simultaneous
+    # connections without crashing.
+    request_queue_size = 128
+
+    def __init__(self, server_address, hmac_key, validate_signature, *args, **kwargs):
+        self.hmac_key = hmac_key
+        self.validate_signature = validate_signature
+        super().__init__(server_address, ValidatingRequestHandler, *args, **kwargs)
 
 
 def server_approves_of_signature(signature):
@@ -87,7 +98,7 @@ def recover_signature(validate_signature, thread_count, threshold, attempt_limit
                     signature = sig_data["signature"]
                     if sig_data["is_valid"]:
                         print("signature recovered: {}, "
-                            "{} attempt(s) for last byte".format(list(result), i + 1))
+                            "{} attempt(s) for last byte".format(list(signature), i + 1))
                         return signature
                     sig_durations[signature].append(sig_data["duration"])
                 slowest_sig, second_slowest_sig = nlargest(
