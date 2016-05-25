@@ -249,7 +249,7 @@ def challenge12():
     assert block_size == 16
     assert looks_like_ecb(oracle_fn(b"A" * 5 * block_size), block_size)
 
-    plaintext = crack_ecb_oracle(oracle_fn, block_size, prefix_length=0)
+    plaintext = crack_ecb_oracle(oracle_fn, block_size)
     print(plaintext.decode())
     assert plaintext == unknown_bytes
 
