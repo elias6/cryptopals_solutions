@@ -889,7 +889,7 @@ def challenge37():
 
     for i in range(10):
         # Attacker tricks server into computing easily derivable session key
-        salt, _, _ = server._respond_to_login_request(username, i * client.N)
+        salt, _, _ = server._respond_to_login_request(username, i * IETF_PRIME)
         # Attacker derives shared session key without password
         shared_session_key = sha256(int_to_bytes(0)).digest()
         hmac = get_hmac(shared_session_key, salt, sha256)
