@@ -9,7 +9,7 @@ from util import xor_encrypt
 # (\x0d)) were added by me after observing better results. Text should
 # be converted to lowercase before one attempts to analyze it using this
 # dictionary.
-byte_frequencies = defaultdict(
+lower_case_byte_frequencies = defaultdict(
     # The following number will be returned for any byte not explicitly
     # represented. 4e-6 was observed to produce the best ratio of score for
     # English text to score for incorrectly decrypted text.
@@ -31,18 +31,19 @@ byte_frequencies = defaultdict(
 
 
 def english_like_score(text_bytes):
-    # byte_frequencies is defined outside of this function as a performance
-    # optimization. In my tests, the time spent in this function is less
-    # than half of what it would be if byte_frequencies were defined inside
-    # this function. I am also using a defaultdict instead of a Counter for
-    # the byte counts as a performance optimization.
+    # lower_case_byte_frequencies is defined outside of this function as a
+    # performance optimization. In my tests, the time spent in this function
+    # is less than half of what it would be if lower_case_byte_frequencies
+    # were defined inside this function. I am also using a defaultdict
+    # instead of a Counter for the byte counts as a performance
+    # optimization.
     byte_counts = defaultdict(int)
     for byte in text_bytes.lower():
         byte_counts[byte] += 1
     text_length = len(text_bytes)
     chi_squared = 0
     for byte, byte_count in byte_counts.items():
-        expected = text_length * byte_frequencies[byte]
+        expected = text_length * lower_case_byte_frequencies[byte]
         difference = byte_count - expected
         chi_squared += difference * difference / expected
     return 1e6 / chi_squared / text_length
