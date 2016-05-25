@@ -39,12 +39,12 @@ def crack_ecb_oracle(oracle_fn, block_size=16, prefix_length=0):
         short_block_output = oracle_fn(short_input_block)
         block_index = (len(result) + prefix_length) // block_size
         block_to_look_for = chunks(short_block_output)[block_index]
-        for i in range(256):
-            test_input = short_input_block + result + bytes([i])
+        for guess in range(256):
+            test_input = short_input_block + result + bytes([guess])
             output = oracle_fn(test_input)
             telltale_block = chunks(output)[block_index]
             if telltale_block == block_to_look_for:
-                result.append(i)
+                result.append(guess)
                 break
         else:  # if no byte matches
             return pkcs7_unpad(result)
