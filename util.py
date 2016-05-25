@@ -62,13 +62,13 @@ def pkcs7_pad(input_bytes, block_size=16):
     return input_bytes + bytes([padding_length] * padding_length)
 
 
-def pkcs7_unpad(ciphertext, block_size=16):
-    padding_length = ciphertext[-1]
+def pkcs7_unpad(input_bytes, block_size=16):
+    padding_length = input_bytes[-1]
     expected_padding = bytes([padding_length]) * padding_length
-    padding = ciphertext[-padding_length:]
+    padding = input_bytes[-padding_length:]
     if padding_length > block_size or padding != expected_padding:
         raise ValueError("Invalid padding")
-    return ciphertext[:-padding_length]
+    return input_bytes[:-padding_length]
 
 
 def sha1(message):
