@@ -1,29 +1,34 @@
 #!/usr/bin/env python3
 
-import argparse
+# standard library modules
 import base64
 import cProfile
 import os
 import pprint as pprint_module
 import re
 import struct
-import sys
 import traceback
 import warnings
 
+from argparse import ArgumentParser
 from collections import Counter
 from contextlib import ExitStack, redirect_stdout
 from hashlib import sha256
 from heapq import nlargest
 from itertools import combinations
+from sys import stdout
 from threading import Thread
 from time import time
 from urllib.parse import parse_qs, quote as url_quote, urlencode
 
+
+# third-party modules
 from Crypto.Cipher import AES
 from md4 import MD4
 from sha1.sha1 import Sha1Hash
 
+
+# modules in this project
 import diffie_hellman
 import english
 import rsa
@@ -36,6 +41,7 @@ from timing_server import (FancyHTTPServer, ValidatingRequestHandler, insecure_c
     recover_signature, server_approves_of_signature)
 from util import (IETF_PRIME, big_int_cube_root, chunks, gcd, get_hmac, int_to_bytes,
     invmod, pkcs7_pad, pkcs7_unpad, random, sha1, sliding_pairs, xor_bytes, xor_encrypt)
+
 
 warnings.simplefilter("default", BytesWarning)
 warnings.simplefilter("default", ResourceWarning)
@@ -997,7 +1003,7 @@ def challenge41():
     assert recovered_plaintext == plaintext
 
 
-def test_all_challenges(output_stream=sys.stdout):
+def test_all_challenges(output_stream=stdout):
     challenges = {}
     for name, var in globals().items():
         try:
@@ -1019,7 +1025,7 @@ def test_all_challenges(output_stream=sys.stdout):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Solve the Matasano crypto challenges.")
+    parser = ArgumentParser(description="Solve the Matasano crypto challenges.")
     parser.add_argument(
         "challenge", nargs="?",
         help="The challenge to run. If this is not specified, all challenges will be "
@@ -1035,7 +1041,7 @@ if __name__ == "__main__":
         if not func:
             parser.error("Challenge {} not found".format(args.challenge))
     else:
-        real_stdout = sys.stdout
+        real_stdout = stdout
         func = lambda: test_all_challenges(real_stdout)
     with ExitStack() as stack:
         if args.profile:
