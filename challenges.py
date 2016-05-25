@@ -247,6 +247,7 @@ def challenge12():
 
     block_size = guess_block_size(oracle_fn)
     assert block_size == 16
+    assert looks_like_ecb(oracle_fn(b"A" * 5 * block_size), block_size)
 
     plaintext = crack_ecb_oracle(oracle_fn, block_size, prefix_length=0)
     print(plaintext.decode())
@@ -294,6 +295,7 @@ def challenge14():
 
     block_size = guess_block_size(oracle_fn)
     assert block_size == 16
+    assert looks_like_ecb(oracle_fn(b"A" * 5 * block_size), block_size)
 
     blocks = chunks(oracle_fn(b"A" * 3*block_size))
     attacker_block, attacker_block_count = Counter(blocks).most_common(1)[0]

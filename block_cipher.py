@@ -13,10 +13,6 @@ def looks_like_ecb(ciphertext, block_size=16):
     return block_counter.most_common(1)[0][1] > 1
 
 
-def appears_to_produce_ecb(oracle_fn, block_size=16):
-    return any(looks_like_ecb(oracle_fn(b"A" * i), block_size) for i in range(1000))
-
-
 def random_aes_key():
     return urandom(16)
 
@@ -36,8 +32,6 @@ def guess_block_size(oracle_fn):
 
 
 def crack_ecb_oracle(oracle_fn, block_size=16, prefix_length=0):
-    assert appears_to_produce_ecb(oracle_fn, block_size)
-
     result = bytearray()
     while True:
         short_block_length = (block_size - len(result) - 1 - prefix_length) % block_size
