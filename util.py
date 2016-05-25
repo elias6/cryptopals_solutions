@@ -2,7 +2,7 @@ import decimal
 import os
 
 from functools import lru_cache
-from itertools import cycle
+from itertools import cycle, tee
 from random import SystemRandom
 from sha1.sha1 import Sha1Hash
 
@@ -43,6 +43,13 @@ def xor_encrypt(input_bytes, key):
 
 def chunks(x, chunk_size=16):
     return [x[i : i + chunk_size] for i in range(0, len(x), chunk_size)]
+
+
+def sliding_pairs(iterable):
+    # pairwise recipe from https://docs.python.org/3/library/itertools.html
+    a, b = tee(iterable)
+    next(b, None)
+    return zip(a, b)
 
 
 def int_to_bytes(x):

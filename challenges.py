@@ -35,7 +35,7 @@ from mersenne_twister import MT19937_RNG
 from timing_server import (FancyHTTPServer, ValidatingRequestHandler, insecure_compare,
     recover_signature, server_approves_of_signature)
 from util import (IETF_PRIME, big_int_cube_root, chunks, gcd, get_hmac, int_to_bytes,
-    invmod, pkcs7_pad, pkcs7_unpad, random, sha1, xor_bytes, xor_encrypt)
+    invmod, pkcs7_pad, pkcs7_unpad, random, sha1, sliding_pairs, xor_bytes, xor_encrypt)
 
 warnings.simplefilter("default", BytesWarning)
 warnings.simplefilter("default", ResourceWarning)
@@ -373,31 +373,33 @@ def challenge17():
         else:
             return True
 
+    def recover_block(prev_cipher_block, cipher_block):
+        result = bytes()
+        for pos in reversed(range(16)):
+            assert len(result) == 15 - pos
+            cipher_slice = prev_cipher_block[pos + 1:]
+            padding = bytes([len(result) + 1] * len(result))
+            iv_end = xor_bytes(cipher_slice, padding, result)
+            new_iv = bytearray(prev_cipher_block[:pos] + b"\x00" + iv_end)
+            for guess in range(256):
+                new_iv[pos] = prev_cipher_block[pos] ^ guess ^ (16 - pos)
+                if has_valid_padding(new_iv, cipher_block):
+                    if pos == 15:
+                        new_iv[14] ^= 2
+                        if not has_valid_padding(new_iv, cipher_block):
+                            continue
+                    result = bytes([guess]) + result
+                    break
+        return result
+
     # The following code does a padding oracle attack. Details of how it
     # works can be found at
     # https://blog.skullsecurity.org/2013/padding-oracle-attacks-in-depth
     for unknown_string in unknown_strings:
         recovered_plaintext = bytearray()
-        prev_cipher_block = iv
-        for cipher_block in chunks(encrypt(unknown_string)):
-            recovered_block = bytes()
-            for pos in reversed(range(16)):
-                assert len(recovered_block) == 15 - pos
-                cipher_slice = prev_cipher_block[pos + 1:]
-                padding = bytes([len(recovered_block) + 1] * len(recovered_block))
-                iv_end = xor_bytes(cipher_slice, padding, recovered_block)
-                new_iv = bytearray(prev_cipher_block[:pos] + b"\x00" + iv_end)
-                for i in range(256):
-                    new_iv[pos] = prev_cipher_block[pos] ^ i ^ (16 - pos)
-                    if has_valid_padding(new_iv, cipher_block):
-                        if pos == 15:
-                            new_iv[14] ^= 2
-                            if not has_valid_padding(new_iv, cipher_block):
-                                continue
-                        recovered_block = bytes([i]) + recovered_block
-                        break
-            recovered_plaintext += recovered_block
-            prev_cipher_block = cipher_block
+        cipher_blocks = chunks(iv + encrypt(unknown_string))
+        for prev_cipher_block, cipher_block in sliding_pairs(cipher_blocks):
+            recovered_plaintext += recover_block(prev_cipher_block, cipher_block)
         recovered_plaintext = pkcs7_unpad(recovered_plaintext)
         assert recovered_plaintext == unknown_string
         print(recovered_plaintext.decode())
