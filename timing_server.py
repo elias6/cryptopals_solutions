@@ -9,7 +9,7 @@ from urllib.error import HTTPError
 from urllib.parse import parse_qs, urlencode, urlparse
 from urllib.request import urlopen
 
-from util import get_hmac, xor_encrypt
+from util import get_hmac
 
 
 def insecure_compare(data1, data2, delay):
