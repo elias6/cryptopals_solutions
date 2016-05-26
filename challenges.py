@@ -393,6 +393,7 @@ def challenge17():
                     if pos == 15:
                         new_iv[14] ^= 2
                         if not has_valid_padding(new_iv, cipher_block):
+                            new_iv[14] ^= 2
                             continue
                     result = bytes([guess]) + result
                     break
