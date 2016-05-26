@@ -349,6 +349,10 @@ def challenge16():
 
 def challenge17():
     """The CBC padding oracle"""
+    # The code in this challenge does a padding oracle attack. Details of
+    # how it works can be found at
+    # https://blog.skullsecurity.org/2013/padding-oracle-attacks-in-depth
+
     unknown_strings = [base64.b64decode(x) for x in [
         "MDAwMDAwTm93IHRoYXQgdGhlIHBhcnR5IGlzIGp1bXBpbmc=",
         "MDAwMDAxV2l0aCB0aGUgYmFzcyBraWNrZWQgaW4gYW5kIHRoZSBWZWdhJ3MgYXJlIHB1bXBpbic=",
@@ -380,28 +384,26 @@ def challenge17():
             return True
 
     def recover_block(prev_cipher_block, cipher_block):
-        result = bytes()
-        for pos in reversed(range(16)):
-            assert len(result) == 15 - pos
-            cipher_slice = prev_cipher_block[pos + 1:]
-            padding = bytes([len(result) + 1] * len(result))
-            iv_end = xor_bytes(cipher_slice, padding, result)
-            new_iv = bytearray(prev_cipher_block[:pos] + b"\x00" + iv_end)
+        if len(prev_cipher_block) != len(cipher_block):
+            raise ValueError("ciphertext blocks must be the same length")
+        block_size = len(cipher_block)
+        result = bytearray(b"\x00" * block_size)
+        for pos in reversed(range(block_size)):
+            padding = bytes([block_size - pos]) * (block_size - pos)
+            test_iv = bytearray(xor_bytes(
+                prev_cipher_block, padding.rjust(block_size, b"\x00"), result))
             for guess in english.all_bytes_by_frequency:
-                new_iv[pos] = prev_cipher_block[pos] ^ guess ^ (16 - pos)
-                if has_valid_padding(new_iv, cipher_block):
-                    if pos == 15:
-                        new_iv[14] ^= 2
-                        if not has_valid_padding(new_iv, cipher_block):
-                            new_iv[14] ^= 2
+                test_iv[pos] = prev_cipher_block[pos] ^ guess ^ (block_size - pos)
+                if has_valid_padding(test_iv, cipher_block):
+                    if pos == block_size - 1:
+                        test_iv[block_size - 2] ^= 2
+                        if not has_valid_padding(test_iv, cipher_block):
+                            test_iv[block_size - 2] ^= 2
                             continue
-                    result = bytes([guess]) + result
+                    result[pos] = guess
                     break
         return result
 
-    # The following code does a padding oracle attack. Details of how it
-    # works can be found at
-    # https://blog.skullsecurity.org/2013/padding-oracle-attacks-in-depth
     for unknown_string in unknown_strings:
         recovered_plaintext = bytearray()
         cipher_blocks = chunks(iv + encrypt(unknown_string))
