@@ -38,14 +38,11 @@ def crack_ecb_oracle(oracle_fn, block_size=16, prefix_length=0):
     while True:
         short_block_length = (block_size - len(result) - 1 - prefix_length) % block_size
         short_input_block = b"A" * short_block_length
-        short_block_output = oracle_fn(short_input_block)
         block_index = (len(result) + prefix_length) // block_size
-        block_to_look_for = chunks(short_block_output)[block_index]
+        block_to_look_for = chunks(oracle_fn(short_input_block))[block_index]
         for guess in all_bytes_by_frequency:
             test_input = short_input_block + result + bytes([guess])
-            output = oracle_fn(test_input)
-            telltale_block = chunks(output)[block_index]
-            if telltale_block == block_to_look_for:
+            if chunks(oracle_fn(test_input))[block_index] == block_to_look_for:
                 result.append(guess)
                 break
         else:  # if no byte matches
