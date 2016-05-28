@@ -118,17 +118,15 @@ def challenge5():
 
 def challenge6():
     """Break repeating-key XOR"""
-    def hamming_distance(bytes1, bytes2):
+    def bit_hamming_distance(bytes1, bytes2):
         return sum(bin(b1 ^ b2).count("1") for b1, b2 in zip(bytes1, bytes2))
 
     def index_of_coincidence(data, key_size):
-        data_chunks = chunks(data, key_size)
-        result = 0
-        for i in range(len(data_chunks) - 1):
-            result += hamming_distance(data_chunks[i], data_chunks[i + 1])
-        return result / key_size / len(data_chunks)
+        # This function is equivalent to the normalized edit distance approach
+        # mentioned in the challenge, but simpler.
+        return bit_hamming_distance(data[:-key_size], data[key_size:])
 
-    assert hamming_distance(b"this is a test", b"wokka wokka!!!") == 37
+    assert bit_hamming_distance(b"this is a test", b"wokka wokka!!!") == 37
 
     with open("6.txt") as f:
         ciphertext = base64.b64decode(f.read())
