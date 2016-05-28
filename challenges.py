@@ -16,6 +16,7 @@ from contextlib import ExitStack, redirect_stdout
 from hashlib import sha256
 from heapq import nlargest
 from itertools import combinations
+from math import ceil
 from sys import stdout
 from threading import Thread
 from time import time
@@ -1000,6 +1001,37 @@ def challenge41():
     recovered_plain_int = (oracle_int * mod_inv(random_number, modulus)) % modulus
     recovered_plaintext = int_to_bytes(recovered_plain_int)
     assert recovered_plaintext == plaintext
+
+
+def challenge42():
+    """Bleichenbacher's e=3 RSA Attack"""
+    # aka BERserk
+    # Details about how this works can be found at the following URLs:
+    # https://www.ietf.org/mail-archive/web/openpgp/current/msg00999.html
+    # http://www.withouthat.org/~sid/me/wp-content/uploads/2008/09/document.pdf
+    public_key, private_key = rsa.generate_key_pair()
+    message = b"hi mom"
+
+    ciphertext = rsa.encrypt(rsa.pad(message, public_key.modulus), public_key)
+    assert rsa.unpad(rsa.decrypt(ciphertext, private_key)) == message
+
+    sig = rsa.sign(message, private_key)
+    assert rsa.verify(message, public_key, sig)
+
+    block_length = ceil(public_key.modulus.bit_length() / 8)
+    assert block_length == 128
+
+    padded_sig = b"\x00\x01" + (8*b"\xff") + b"\x00" + rsa.create_signature(message)
+    sig_block = padded_sig.ljust(block_length, b"\x00")
+    sig_block_int = int.from_bytes(sig_block, byteorder="big")
+    forged_sig_int = ceil(big_int_cube_root(sig_block_int))
+
+    decrypted_sig = (forged_sig_int ** 3).to_bytes(length=block_length, byteorder="big")
+    assert decrypted_sig.startswith(padded_sig)
+
+    forged_sig = forged_sig_int.to_bytes(length=block_length, byteorder="big")
+    assert not rsa.verify(message, public_key, forged_sig)
+    assert rsa.verify(message, public_key, forged_sig, secure=False)
 
 
 def test_all_challenges(output_stream=stdout):
