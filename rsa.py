@@ -72,8 +72,8 @@ def create_signature(message):
 
 
 def sign(message, private_key):
-    data = create_signature(message)
-    return encrypt(pad(data, private_key.modulus, block_type=1), private_key)
+    sig_asn1 = create_signature(message)
+    return encrypt(pad(sig_asn1, private_key.modulus, block_type=1), private_key)
 
 
 def verify(message, public_key, signature, secure=True):
