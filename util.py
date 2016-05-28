@@ -44,6 +44,7 @@ def chunks(x, chunk_size=16):
 
 def sliding_pairs(iterable):
     # pairwise recipe from https://docs.python.org/3/library/itertools.html
+    """s -> (s[0], s[1]), (s[1], s[2]), (s[2], s[3]), ..."""
     a, b = tee(iterable)
     next(b, None)
     return zip(a, b)
