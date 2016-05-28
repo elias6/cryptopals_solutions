@@ -88,7 +88,7 @@ def challenge3():
     """Single-byte XOR cipher"""
     cipher_hex = "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736"
     ciphertext = bytes.fromhex(cipher_hex)
-    score_data = english.iter_score_data(ciphertext)
+    score_data = english.iter_xor_score_data(ciphertext)
     best_data = nlargest(5, score_data, key=lambda x: x["score"])
     pprint(best_data)
     print(best_data[0]["message"].decode())
@@ -132,9 +132,8 @@ def challenge6():
         ciphertext = base64.b64decode(f.read())
 
     best_key_size = min(range(2, 41), key=lambda x: index_of_coincidence(ciphertext, x))
-    cipher_chunks = chunks(ciphertext, best_key_size)
-    plain_chunks, key = english.crack_common_xor_key(cipher_chunks)
-    plaintext = b"".join(plain_chunks).decode()
+    key = english.crack_common_xor_key(chunks(ciphertext, best_key_size))
+    plaintext = xor_encrypt(ciphertext, key).decode()
     print("key: {}".format(key.decode()))
     print()
     print(plaintext)
@@ -483,8 +482,8 @@ def challenge19():
 
     ciphertexts = [encrypt(x) for x in plaintexts]
 
-    recovered_plaintexts, recovered_key = english.crack_common_xor_key(ciphertexts)
-    print("\n".join(p.decode() for p in recovered_plaintexts))
+    recovered_key = english.crack_common_xor_key(ciphertexts)
+    print("\n".join(xor_encrypt(c, recovered_key).decode() for c in ciphertexts))
 
 
 def challenge20():
@@ -498,8 +497,8 @@ def challenge20():
     with open("20.txt") as f:
         plaintexts = [base64.b64decode(x) for x in f.readlines()]
     ciphertexts = [encrypt(x) for x in plaintexts]
-    recovered_plaintexts, recovered_key = english.crack_common_xor_key(ciphertexts)
-    print("\n".join(p.decode() for p in recovered_plaintexts))
+    recovered_key = english.crack_common_xor_key(ciphertexts)
+    print("\n".join(xor_encrypt(c, recovered_key).decode() for c in ciphertexts))
 
 
 def challenge21():
