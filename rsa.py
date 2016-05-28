@@ -103,16 +103,11 @@ def pad(message, modulus, block_type=2):
     return b"\x00" + bytes([block_type]) + padding + b"\x00" + message
 
 
-def unpad(message, secure=True):
-    # Setting secure to False emulates RSA implementations that don't
-    # properly check the length of the padding, allowing Bleichenbacher's
-    # signature forgery.
-    matches = re.fullmatch(b"\x00([\x00-\x02])(.*)\x00(.*)", message, re.DOTALL)
+def unpad(message):
+    matches = re.fullmatch(b"\x00([\x00-\x02])(.{8,}?)\x00(.*)", message, re.DOTALL)
     if not matches:
         raise ValueError("invalid message")
     block_type_byte, padding, message = matches.groups()
-    if secure and len(padding) < 8:
-        raise ValueError("invalid padding")
     if block_type_byte == [0] and any(x != 0 for x in padding):
         raise ValueError("invalid padding")
     elif block_type_byte == [1] and any(x != 0xff for x in padding):
