@@ -2,6 +2,7 @@ import re
 
 from collections import namedtuple
 from hashlib import md5
+from math import ceil
 
 from Crypto.Util.number import getStrongPrime
 
@@ -88,7 +89,7 @@ def pad(message, modulus, block_type=2):
     # is not recommended.
     if block_type not in [0, 1, 2]:
         raise ValueError("block_type must be 0, 1, or 2")
-    modulus_length = len(int_to_bytes(modulus))
+    modulus_length = ceil(modulus.bit_length() / 8)
     if modulus_length < 12:
         raise ValueError("modulus must be at least 12 bytes")
     if len(message) > modulus_length - 11:
