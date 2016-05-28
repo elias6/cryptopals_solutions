@@ -76,11 +76,17 @@ def sign(message, private_key):
     return encrypt(pad(data, private_key.modulus, block_type=1), private_key)
 
 
-def verify(message, public_key, signature):
+def verify(message, public_key, signature, secure=True):
     """Verify PKCS v1.5 signature"""
+    # Setting secure to False emulates RSA implementations that don't
+    # properly check that the signature is right-aligned, allowing
+    # Bleichenbacher's signature forgery (BERserk).
     asn1_stuff = b"\x10\x18\x06\x08\x2a\x86\x48\x86\xf7\x0d\x82\x85\x04\x10"
-    data = unpad(decrypt(signature, public_key))
-    return data == asn1_stuff + md5(message).digest()
+    sig_data = unpad(decrypt(signature, public_key))
+    if secure:
+        return sig_data == asn1_stuff + md5(message).digest()
+    else:
+        return sig_data.startswith(asn1_stuff + md5(message).digest())
 
 
 def pad(message, modulus, block_type=2):
