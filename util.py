@@ -83,25 +83,24 @@ def calculate_hmac(key, message, hash_fn=sha1):
 get_hmac = lru_cache()(calculate_hmac)
 
 
-def extended_gcd(a, b):
-    """Extended Euclidean algorithm.
-
-    Return a tuple of numbers (g, x, y) such that ax + by == g == gcd(a, b).
-    """
-    if a == 0:
-        return (b, 0, 1)
-    else:
-        g, y, x = extended_gcd(b % a, a)
-        return (g, x - (b // a) * y, y)
-
-
 def mod_inv(a, m):
     """Return the integer x such that (a * x) % m == 1."""
-    g, x, _ = extended_gcd(a, m)
-    if g != 1:
+    # This function uses the extended Euclidean algorithm.
+    x0, x1, y0, y1 = 1, 0, 0, 1
+    a1, m1 = a, m
+    while m1:
+        q = a1 // m1
+        a1, m1 = m1, a1 % m1
+        x0, x1 = x1, x0 - q * x1
+        y0, y1 = y1, y0 - q * y1
+
+    assert a1 == gcd(a, m)
+    assert a*x0 + m*y0 == a1
+
+    if a1 != 1:
         raise ValueError("modular inverse does not exist")
     else:
-        return x % m
+        return x0 % m
 
 
 def big_int_cube_root(x):
