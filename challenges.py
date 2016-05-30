@@ -31,6 +31,7 @@ from sha1.sha1 import Sha1Hash
 
 # modules in this project
 import diffie_hellman
+import dsa
 import english
 import rsa
 import srp
@@ -1029,6 +1030,40 @@ def challenge42():
     forged_sig = forged_sig_int.to_bytes(length=block_length, byteorder="big")
     assert not rsa.verify(message, public_key, forged_sig)
     assert rsa.verify(message, public_key, forged_sig, secure=False)
+
+
+def challenge43():
+    """DSA key recovery from nonce"""
+    message = EXAMPLE_PLAIN_BYTES
+    public_key, private_key = dsa.generate_key_pair()
+    sig = dsa.sign(message, private_key)
+    assert dsa.verify(message, public_key, sig)
+
+    sig, k = dsa.sign(message, private_key, leak=True)
+    digest = int.from_bytes(sha1(message).digest(), byteorder="big")
+    assert dsa.recover_private_key(k, digest, sig) == private_key
+
+    public_key = int("84ad4719d044495496a3201c8ff484feb45b962e7302e56a392aee4ab"
+        "ab3e4bdebf2955b4736012f21a08084056b19bcd7fee56048e004e44984e2f411788ef"
+        "dc837a0d2e5abb7b555039fd243ac01f0fb2ed1dec568280ce678e931868d23eb095fd"
+        "e9d3779191b8c0299d6e07bbb283e6633451e535c45513b2d33c99ea17", 16)
+    message = (b"For those that envy a MC it can be hazardous to your health\n"
+        b"So be friendly, a matter of life and death, just like a etch-a-sketch\n")
+    assert sha1(message).hexdigest() == "d2d0714f014a9784047eaeccf956520045c45265"
+    digest = int.from_bytes(sha1(message).digest(), byteorder="big")
+    r = 548099063082341131477253921760299949438196259240
+    s = 857042759984254168557880549501802188789837994940
+    sig = dsa.Signature(r, s)
+    assert dsa.verify(message, public_key, sig)
+    for k_guess in range(2**16):
+        private_key_guess = dsa.recover_private_key(k_guess, digest, sig)
+        private_key_hash = sha1("{:x}".format(private_key_guess).encode()).hexdigest()
+        if private_key_hash == "0954edd5e0afe5542a4adf012611a91912a3ec16":
+            assert pow(dsa.g, private_key_guess, dsa.p) == public_key
+            print("private key found: {}".format(private_key_guess))
+            print("k: {}".format(k_guess))
+            return
+    assert False, "private key not found"
 
 
 def test_all_challenges(output_stream=stdout):
