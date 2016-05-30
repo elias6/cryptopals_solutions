@@ -1088,6 +1088,12 @@ def challenge44():
             guess1 = dsa.recover_private_key(k, message1["hash"], message1["sig"])
             guess2 = dsa.recover_private_key(k, message2["hash"], message2["sig"])
             assert guess1 == guess2
+            public_key = int("2d026f4bf30195ede3a088da85e398ef869611d0f68f0713d"
+                "51c9c1a3a26c95105d915e2d8cdf26d056b86b8a7b85519b1c23cc3ecdc606"
+                "2650462e3063bd179c2a6581519f674a61f1d89a1fff27171ebc1b93d4dc57"
+                "bceb7ae2430f98a6a4d83d8279ee65d71c1203d2c96d65ebbf7cce9d32971c"
+                "3de5084cce04a2e147821", 16)
+            assert pow(dsa.g, guess1, dsa.p) == public_key
             private_key_hash = sha1("{:x}".format(guess1).encode()).hexdigest()
             assert private_key_hash == "ca8f6f7c66fa362d40760d135b763eb8527d3d52"
 
