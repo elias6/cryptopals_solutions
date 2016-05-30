@@ -3,14 +3,8 @@
 # This file was obtained from https://github.com/ajalt/python-sha1, but
 # it has been substantially modified.
 
-from __future__ import print_function
 import struct
 import io
-
-try:
-    range = xrange
-except NameError:
-    pass
 
 def _left_rotate(n, b):
     """Left rotate a 32-bit integer n by b bits."""
