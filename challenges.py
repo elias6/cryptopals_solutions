@@ -1132,7 +1132,21 @@ def challenge45():
         assert dsa.verify(b"Goodbye, world", public_key, magic_sig, g=bad_g, secure=False)
 
 
-def test_all_challenges(output_stream=stdout):
+class ChallengeNotFoundError(ValueError):
+    pass
+
+
+def get_challenges(challenge_nums):
+    result = []
+    for num in challenge_nums:
+        fn = globals().get("challenge" + str(num))
+        if not callable(fn):
+            raise ChallengeNotFoundError("challenge {} not found".format(num))
+        result.append(fn)
+    return result
+
+
+def get_all_challenges():
     challenges = {}
     for name, var in globals().items():
         try:
@@ -1142,11 +1156,16 @@ def test_all_challenges(output_stream=stdout):
         else:
             if callable(var):
                 challenges[num] = var
-    for num in sorted(challenges):
-        print("Running challenge {}: {}".format(num, challenges[num].__doc__),
+    return [challenges[num] for num in sorted(challenges)]
+
+
+def run_challenges(challenges, output_stream=stdout):
+    for challenge in challenges:
+        num = re.findall("^challenge(\d+)$", challenge.__name__)[0]
+        print("Running challenge {}: {}".format(num, challenge.__doc__),
             file=output_stream)
         try:
-            challenges[num]()
+            challenge()
         except Exception as e:
             traceback.print_exc(file=output_stream)
         else:
@@ -1156,22 +1175,18 @@ def test_all_challenges(output_stream=stdout):
 if __name__ == "__main__":
     parser = ArgumentParser(description="Solve the Matasano crypto challenges.")
     parser.add_argument(
-        "challenge", nargs="?",
-        help="The challenge to run. If this is not specified, all challenges will be "
-             "run.")
+        "challenge", nargs="*",
+        help="Challenge(s) to run. If not specified, all challenges will be run.")
     parser.add_argument(
         "-p", "--profile", help="Profile challenges.", action="store_true")
     parser.add_argument(
         "-q", "--quiet", help="Don't show challenge output.", action="store_true")
     args = parser.parse_args()
 
-    if args.challenge:
-        func = globals().get("challenge" + args.challenge)
-        if not func:
-            parser.error("Challenge {} not found".format(args.challenge))
-    else:
-        real_stdout = stdout
-        func = lambda: test_all_challenges(real_stdout)
+    try:
+        challenges = get_challenges(args.challenge) or get_all_challenges()
+    except ChallengeNotFoundError as e:
+        parser.error(e)
     with ExitStack() as stack:
         if args.profile:
             profile = cProfile.Profile()
@@ -1181,6 +1196,6 @@ if __name__ == "__main__":
             stack.enter_context(null_stream)
             stack.enter_context(redirect_stdout(null_stream))
         if args.profile:
-            profile.runcall(func)
+            profile.runcall(run_challenges, challenges)
         else:
-            func()
+            run_challenges(challenges)
