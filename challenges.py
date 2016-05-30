@@ -273,8 +273,6 @@ def challenge13():
     decrypted_new_profile = decrypt_profile(new_profile)
     assert parse_qs(decrypted_new_profile)["role"] == ["admin"]
     print(decrypted_new_profile)
-    # TODO: try to make a profile without duplicate uid params and "rol"
-    # string at end
 
 
 def challenge14():
