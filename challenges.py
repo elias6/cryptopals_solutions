@@ -1066,6 +1066,45 @@ def challenge43():
     assert False, "private key not found"
 
 
+def challenge44():
+    """DSA nonce recovery from repeated nonce"""
+    messages = []
+    with open("44.txt") as f:
+        message_data = {}
+        for line in f.readlines():
+            key, value = re.match("^(.+): (.+)$", line).groups()
+            message_data[key] = value
+            if {"msg", "s", "r", "m"}.issubset(message_data):
+                digest = sha1(message_data["msg"].encode()).hexdigest()
+                assert digest == message_data["m"].rjust(40, "0")
+                messages.append({
+                    "msg": message_data["msg"],
+                    "sig": dsa.Signature(int(message_data["r"]), int(message_data["s"])),
+                    "hash": int(message_data["m"], 16),
+                })
+                message_data = {}
+    for message1, message2 in combinations(messages, 2):
+        if message1["sig"].r == message2["sig"].r:
+            s_diff = message1["sig"].s - message2["sig"].s
+            try:
+                s_diff_inverse = mod_inv(s_diff, dsa.q)
+            except ValueError:
+                continue
+            k_guess = ((message1["hash"] - message2["hash"]) * s_diff_inverse) % dsa.q
+            guess1 = dsa.recover_private_key(k_guess, message1["hash"], message1["sig"])
+            guess2 = dsa.recover_private_key(k_guess, message2["hash"], message2["sig"])
+            assert guess1 == guess2
+            private_key_hash = sha1("{:x}".format(guess1).encode()).hexdigest()
+            assert private_key_hash == "ca8f6f7c66fa362d40760d135b763eb8527d3d52"
+
+            print("private key found: {}".format(guess1))
+            print("messages with repeated k:")
+            pprint(message1)
+            pprint(message2)
+            return
+    assert False, "private key not found"
+
+
 def test_all_challenges(output_stream=stdout):
     challenges = {}
     for name, var in globals().items():
