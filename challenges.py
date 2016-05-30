@@ -924,9 +924,8 @@ def challenge39():
     ciphertext = rsa.encrypt(EXAMPLE_PLAIN_BYTES, public_key)
 
     # rsa.encrypt left-pads its result to make it as long as the modulus.
-    # This is equivalent to padding with block type 0. rsa.unpad is needed
-    # to properly recover the plaintext.
-    plaintext = rsa.unpad(rsa.decrypt(ciphertext, private_key))
+    # The call to lstrip is needed to undo this.
+    plaintext = rsa.decrypt(ciphertext, private_key).lstrip(b"\x00")
     assert plaintext == EXAMPLE_PLAIN_BYTES
 
 
@@ -971,7 +970,9 @@ def challenge41():
         pass
 
     def decrypt(ciphertext):
-        plaintext = rsa.decrypt(ciphertext, private_key)
+        # rsa.encrypt left-pads its result to make it as long as the modulus.
+        # The call to lstrip is needed to undo this.
+        plaintext = rsa.decrypt(ciphertext, private_key).lstrip(b"\x00")
         plaintext_hash = sha256(plaintext).digest()
         if plaintext_hash in seen_message_hashes:
             raise AccessDeniedError()
@@ -979,10 +980,7 @@ def challenge41():
         return plaintext
 
     ciphertext = rsa.encrypt(EXAMPLE_PLAIN_BYTES, public_key)
-    # rsa.encrypt left-pads its result to make it as long as the modulus.
-    # This is equivalent to padding with block type 0. rsa.unpad is needed
-    # to properly recover the plaintext.
-    plaintext = rsa.unpad(decrypt(ciphertext))
+    plaintext = decrypt(ciphertext)
     try:
         decrypt(ciphertext)
     except AccessDeniedError:
