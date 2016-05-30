@@ -1083,14 +1083,10 @@ def challenge44():
                 message_data = {}
     for message1, message2 in combinations(messages, 2):
         if message1["sig"].r == message2["sig"].r:
-            s_diff = message1["sig"].s - message2["sig"].s
-            try:
-                s_diff_inverse = mod_inv(s_diff, dsa.q)
-            except ValueError:
-                continue
-            k_guess = ((message1["hash"] - message2["hash"]) * s_diff_inverse) % dsa.q
-            guess1 = dsa.recover_private_key(k_guess, message1["hash"], message1["sig"])
-            guess2 = dsa.recover_private_key(k_guess, message2["hash"], message2["sig"])
+            s_diff_inverse = mod_inv(message1["sig"].s - message2["sig"].s, dsa.q)
+            k = ((message1["hash"] - message2["hash"]) * s_diff_inverse) % dsa.q
+            guess1 = dsa.recover_private_key(k, message1["hash"], message1["sig"])
+            guess2 = dsa.recover_private_key(k, message2["hash"], message2["sig"])
             assert guess1 == guess2
             private_key_hash = sha1("{:x}".format(guess1).encode()).hexdigest()
             assert private_key_hash == "ca8f6f7c66fa362d40760d135b763eb8527d3d52"
