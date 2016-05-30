@@ -1105,6 +1105,33 @@ def challenge44():
     assert False, "private key not found"
 
 
+def challenge45():
+    """DSA parameter tampering"""
+    message = EXAMPLE_PLAIN_BYTES
+    public_key, private_key = dsa.generate_key_pair()
+
+    sig = dsa.sign(message, private_key, g=0, secure=False)
+    assert dsa.verify(message, public_key, sig, g=0, secure=False)
+
+    bad_message = b"The quick brown fox jumps over the lazy dog."
+    bad_sig = dsa.sign(bad_message, private_key, g=0, secure=False)
+    assert dsa.verify(bad_message, public_key, bad_sig, g=0, secure=False)
+
+    for _ in range(10):
+        random_message = os.urandom(random.randint(1, 1000))
+        random_sig = dsa.Signature(r=0, s=random.randint(1, dsa.q - 1))
+        assert dsa.verify(random_message, public_key, random_sig, g=0, secure=False)
+
+    for i in range(10):
+        bad_g = i*dsa.p + 1
+        z = random.randint(1, dsa.q - 1)
+        r = pow(public_key, z, dsa.p) % dsa.q
+        s = (r * mod_inv(z, dsa.q)) % dsa.q
+        magic_sig = dsa.Signature(r, s)
+        assert dsa.verify(b"Hello world", public_key, magic_sig, g=bad_g, secure=False)
+        assert dsa.verify(b"Goodbye, world", public_key, magic_sig, g=bad_g, secure=False)
+
+
 def test_all_challenges(output_stream=stdout):
     challenges = {}
     for name, var in globals().items():
