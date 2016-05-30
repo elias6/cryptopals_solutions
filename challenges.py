@@ -1128,8 +1128,8 @@ def challenge45():
         r = pow(public_key, z, dsa.p) % dsa.q
         s = (r * mod_inv(z, dsa.q)) % dsa.q
         magic_sig = dsa.Signature(r, s)
-        assert dsa.verify(b"Hello world", public_key, magic_sig, g=bad_g, secure=False)
-        assert dsa.verify(b"Goodbye, world", public_key, magic_sig, g=bad_g, secure=False)
+        assert dsa.verify(b"Hello world", public_key, magic_sig, g=bad_g)
+        assert dsa.verify(b"Goodbye, world", public_key, magic_sig, g=bad_g)
 
 
 class ChallengeNotFoundError(ValueError):
