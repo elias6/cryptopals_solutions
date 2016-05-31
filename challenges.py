@@ -33,6 +33,7 @@ from sha1.sha1 import Sha1Hash
 import diffie_hellman
 import dsa
 import english
+import mersenne_twister
 import rsa
 import srp
 
@@ -525,7 +526,7 @@ def challenge23():
     # The seed passed in the next line has no effect since the buffer is
     # being overwritten.
     rng2 = MT19937_RNG(seed=0)
-    rng2.buffer = [MT19937_RNG.untemper(x) for x in numbers]
+    rng2.buffer = [mersenne_twister.untemper(x) for x in numbers]
     rng2.index = 0
     numbers2 = [rng2.get_number() for _ in range(624)]
     assert numbers == numbers2
@@ -579,7 +580,7 @@ def challenge24():
     ciphertext_with_my_bytes = b"".join(cipher_chunks[-3:-1])
     keystream = xor_encrypt(ciphertext_with_my_bytes, b"A")
     keystream_numbers = struct.unpack(">LL", keystream)
-    untempered_numbers = [MT19937_RNG.untemper(x) for x in keystream_numbers]
+    untempered_numbers = [mersenne_twister.untemper(x) for x in keystream_numbers]
 
     for seed_guess in range(2**16):
         if seed_guess % 5000 == 0:

@@ -11,7 +11,7 @@ class MT19937_RNG:
     def get_number(self):
         if self.index >= 624:
             self.twist()
-        result = self.temper(self.buffer[self.index])
+        result = temper(self.buffer[self.index])
         self.index += 1
         return result
 
@@ -26,24 +26,24 @@ class MT19937_RNG:
                 buffer[i] ^= 0x9908b0df
         self.index = 0
 
-    @staticmethod
-    def temper(x):
-        x ^= (x >> 11)
-        x ^= (x << 7) & 0x9d2c5680
-        x ^= (x << 15) & 0xefc60000
-        x ^= (x >> 18)
-        return x
 
-    @staticmethod
-    def untemper(x):
-        x ^= (x >> 18)
+def temper(x):
+    x ^= (x >> 11)
+    x ^= (x << 7) & 0x9d2c5680
+    x ^= (x << 15) & 0xefc60000
+    x ^= (x >> 18)
+    return x
 
-        x ^= (x << 15) & 0xefc60000
 
-        x ^= (x << 7) & 0x9d2c5680
-        x ^= (x << 14) & 0x94284000
-        x ^= (x << 28) & 0x10000000
+def untemper(x):
+    x ^= (x >> 18)
 
-        x ^= (x >> 11)
-        x ^= (x >> 22)
-        return x
+    x ^= (x << 15) & 0xefc60000
+
+    x ^= (x << 7) & 0x9d2c5680
+    x ^= (x << 14) & 0x94284000
+    x ^= (x << 28) & 0x10000000
+
+    x ^= (x >> 11)
+    x ^= (x >> 22)
+    return x
