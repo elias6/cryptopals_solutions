@@ -6,7 +6,7 @@ from math import ceil
 
 from Crypto.Util.number import getStrongPrime
 
-from util import gcd, mod_inv, int_to_bytes, random
+from util import gcd, mod_inv, random
 
 KeyPair = namedtuple("KeyPair", ["public_key", "private_key"])
 Key = namedtuple("Key", ["modulus", "exponent"])
@@ -32,7 +32,8 @@ def calculate(message, key):
     if message_int >= key.modulus:
         raise ValueError("message is too big for modulus")
     cipher_int = pow(message_int, key.exponent, key.modulus)
-    return cipher_int.to_bytes(length=len(int_to_bytes(key.modulus)), byteorder="big")
+    modulus_length = ceil(key.modulus.bit_length() / 8) + 1
+    return cipher_int.to_bytes(length=modulus_length, byteorder="big")
 
 
 def encrypt(plaintext, key):
