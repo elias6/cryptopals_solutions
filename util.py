@@ -1,9 +1,9 @@
 import decimal
 
 from functools import lru_cache
+from hashlib import sha1
 from itertools import cycle, tee
 from random import SystemRandom
-from sha1.sha1 import Sha1Hash
 
 try:
     from math import gcd    # Python 3.5
@@ -68,10 +68,6 @@ def pkcs7_unpad(input_bytes, block_size=16):
     if padding_length > block_size or padding != expected_padding:
         raise ValueError("Invalid padding")
     return input_bytes[:-padding_length]
-
-
-def sha1(message):
-    return Sha1Hash().update(message)
 
 
 def calculate_hmac(key, message, hash_fn=sha1):

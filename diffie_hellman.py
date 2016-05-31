@@ -1,9 +1,10 @@
 from collections import defaultdict
+from hashlib import sha1
 from os import urandom
 
 from Crypto.Cipher import AES
 
-from util import IETF_PRIME, int_to_bytes, pkcs7_pad, pkcs7_unpad, random, sha1
+from util import IETF_PRIME, int_to_bytes, pkcs7_pad, pkcs7_unpad, random
 
 
 class User:

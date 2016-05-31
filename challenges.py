@@ -13,7 +13,7 @@ import warnings
 from argparse import ArgumentParser
 from collections import Counter
 from contextlib import ExitStack, redirect_stdout
-from hashlib import sha256
+from hashlib import sha1, sha256
 from heapq import nlargest
 from itertools import combinations
 from math import ceil
@@ -26,7 +26,7 @@ from urllib.parse import parse_qs, quote as url_quote, urlencode
 # third-party modules
 from Crypto.Cipher import AES
 from md4 import MD4
-from sha1.sha1 import Sha1Hash
+from sha1.sha1 import Sha1Hash as PurePythonSha1
 
 
 # modules in this project
@@ -43,7 +43,7 @@ from mersenne_twister import MT19937_RNG
 from timing_server import (TimingServer, make_insecure_compare_fn, recover_signature,
     server_approves_of_signature)
 from util import (IETF_PRIME, big_int_cube_root, chunks, gcd, get_hmac, int_to_bytes,
-    mod_inv, pkcs7_pad, pkcs7_unpad, random, sha1, sliding_pairs, xor_bytes, xor_encrypt)
+    mod_inv, pkcs7_pad, pkcs7_unpad, random, sliding_pairs, xor_bytes, xor_encrypt)
 
 
 warnings.simplefilter("default", BytesWarning)
@@ -685,7 +685,7 @@ def challenge29():
             struct.pack(">Q", message_length * 8))
 
     my_padding = sha1_padding(len(EXAMPLE_PLAIN_BYTES))
-    their_padding = Sha1Hash().update(EXAMPLE_PLAIN_BYTES)._produce_padding()
+    their_padding = PurePythonSha1().update(EXAMPLE_PLAIN_BYTES)._produce_padding()
     assert their_padding == my_padding
 
     key = os.urandom(16)
@@ -695,7 +695,7 @@ def challenge29():
 
     glue_padding = sha1_padding(len(key + query_string))
     new_param = b";admin=true"
-    modified_hash_fn = Sha1Hash(
+    modified_hash_fn = PurePythonSha1(
         prefix_hash=mac,
         prefix_length=len(key + query_string + glue_padding))
     new_hash = modified_hash_fn.update(new_param).digest()

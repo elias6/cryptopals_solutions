@@ -1,6 +1,7 @@
 from collections import namedtuple
+from hashlib import sha1
 
-from util import mod_inv, random, sha1
+from util import mod_inv, random
 
 p = int("800000000000000089e1855218a0e7dac38136ffafa72eda7859f2171e25e65eac698c"
     "1702578b07dc2a1076da241c76c62d374d8389ea5aeffd3226a0530cc565f3bf6b50929139"
