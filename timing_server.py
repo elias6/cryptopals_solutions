@@ -9,7 +9,7 @@ from urllib.error import HTTPError
 from urllib.parse import parse_qs, urlencode, urlparse
 from urllib.request import urlopen
 
-from util import get_hmac
+from util import calculate_hmac
 
 
 def insecure_compare(data1, data2, delay):
@@ -39,7 +39,7 @@ class ValidatingRequestHandler(BaseHTTPRequestHandler):
             except (KeyError, ValueError, FileNotFoundError):
                 self.send_error(400)
             else:
-                hmac = get_hmac(self.server.hmac_key, data)
+                hmac = calculate_hmac(self.server.hmac_key, data)
                 if self.server.validate_signature(hmac, signature):
                     self.send_response(200)
                     self.end_headers()

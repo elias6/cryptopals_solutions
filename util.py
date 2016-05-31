@@ -1,6 +1,5 @@
 import decimal
 
-from functools import lru_cache
 from hashlib import sha1
 from itertools import cycle, tee
 from random import SystemRandom
@@ -75,8 +74,6 @@ def calculate_hmac(key, message, hash_fn=sha1):
     o_key_pad = xor_encrypt(key_hash, b"\x5c")
     i_key_pad = xor_encrypt(key_hash, b"\x36")
     return hash_fn(o_key_pad + hash_fn(i_key_pad + message).digest()).digest()
-
-get_hmac = lru_cache()(calculate_hmac)
 
 
 def mod_inv(a, m):

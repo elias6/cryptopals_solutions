@@ -42,8 +42,9 @@ from block_cipher import (crack_ecb_oracle, ctr_counter, ctr_iterator, guess_blo
 from mersenne_twister import MT19937_RNG
 from timing_server import (TimingServer, make_insecure_compare_fn, recover_signature,
     server_approves_of_signature)
-from util import (IETF_PRIME, big_int_cube_root, chunks, gcd, get_hmac, int_to_bytes,
-    mod_inv, pkcs7_pad, pkcs7_unpad, random, sliding_pairs, xor_bytes, xor_encrypt)
+from util import (IETF_PRIME, big_int_cube_root, calculate_hmac, chunks, gcd,
+    int_to_bytes, mod_inv, pkcs7_pad, pkcs7_unpad, random, sliding_pairs, xor_bytes,
+    xor_encrypt)
 
 
 warnings.simplefilter("default", BytesWarning)
@@ -732,7 +733,7 @@ def challenge31():
     hmac_key = os.urandom(16)
     with open("hamlet.txt", "rb") as f:
         data = f.read()
-    hmac = get_hmac(hmac_key, data)
+    hmac = calculate_hmac(hmac_key, data)
 
     print("looking for {}".format(list(hmac)))
     print()
@@ -759,7 +760,7 @@ def challenge32():
     hmac_key = os.urandom(16)
     with open("hamlet.txt", "rb") as f:
         data = f.read()
-    hmac = get_hmac(hmac_key, data)
+    hmac = calculate_hmac(hmac_key, data)
 
     print("looking for {}".format(list(hmac)))
     print()
@@ -886,7 +887,7 @@ def challenge37():
         salt, _, _ = server._respond_to_login_request(username, i * IETF_PRIME)
         # Attacker derives shared session key without password
         shared_session_key = sha256(int_to_bytes(0)).digest()
-        hmac = get_hmac(shared_session_key, salt, sha256)
+        hmac = calculate_hmac(shared_session_key, salt, sha256)
         # Attacker logs in without password
         assert server._verify_hmac(hmac, username)
 

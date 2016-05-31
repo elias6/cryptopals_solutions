@@ -1,7 +1,7 @@
 from hashlib import sha256
 from os import urandom
 
-from util import IETF_PRIME, get_hmac, int_to_bytes, random
+from util import IETF_PRIME, calculate_hmac, int_to_bytes, random
 
 class Server:
     g = 2
@@ -27,7 +27,7 @@ class Server:
 
     def _verify_hmac(self, hmac, username):
         user = self.users[username]
-        return hmac == get_hmac(user["shared_session_key"], user["salt"], sha256)
+        return hmac == calculate_hmac(user["shared_session_key"], user["salt"], sha256)
 
 
 class MitmServer(Server):
@@ -57,7 +57,7 @@ class MitmServer(Server):
             test_verifier = pow(self.g, test_x, IETF_PRIME)
             test_S = pow(user["A"] * pow(test_verifier, u, IETF_PRIME), user["b"], IETF_PRIME)
             test_session_key = sha256(int_to_bytes(test_S)).digest()
-            if get_hmac(test_session_key, user["salt"], sha256) == hmac:
+            if calculate_hmac(test_session_key, user["salt"], sha256) == hmac:
                 user["password"] = test_password
                 return True
         return False
@@ -84,7 +84,7 @@ class Client:
         x = generate_private_key(username, password, salt)
         S = pow(B - k * pow(self.g, x, IETF_PRIME), a + u*x, IETF_PRIME)
         shared_session_key = sha256(int_to_bytes(S)).digest()  # called "K" in challenge
-        hmac = get_hmac(shared_session_key, salt, sha256)
+        hmac = calculate_hmac(shared_session_key, salt, sha256)
         return server._verify_hmac(hmac, username)
 
 
