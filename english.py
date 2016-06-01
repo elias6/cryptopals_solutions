@@ -1,4 +1,4 @@
-from collections import defaultdict
+from collections import Counter, defaultdict
 from itertools import chain
 
 from util import xor_encrypt
@@ -80,15 +80,10 @@ def english_like_score(text_bytes):
     # lower_case_byte_frequencies is defined outside of this function as a
     # performance optimization. In my tests, the time spent in this function
     # is less than half of what it would be if lower_case_byte_frequencies
-    # were defined inside this function. I am also using a defaultdict
-    # instead of a Counter for the byte counts as a performance
-    # optimization.
-    byte_counts = defaultdict(int)
-    for byte in text_bytes.lower():
-        byte_counts[byte] += 1
+    # were defined inside this function.
     text_length = len(text_bytes)
     chi_squared = 0
-    for byte, byte_count in byte_counts.items():
+    for byte, byte_count in Counter(text_bytes.lower()).items():
         expected = text_length * lower_case_byte_frequencies[byte]
         difference = byte_count - expected
         chi_squared += difference * difference / expected
