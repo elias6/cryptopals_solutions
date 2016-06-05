@@ -27,8 +27,8 @@ def generate_key_pair():
 
 def sign(message, private_key, leak=False, g=g, secure=True):
     # Setting secure to False will prevent this function from retrying the
-    # signature if r == 0, which may happen on rare occasions, and will
-    # happen reliably if g is maliciously chosen.
+    # signature if r == 0, which may happen on rare occasions, or if g is
+    # maliciously chosen.
     digest = int.from_bytes(sha1(message).digest(), byteorder="big")
     while True:
         # k == random, per-message number that must be secret
@@ -53,11 +53,11 @@ def verify(message, public_key, signature, g=g, secure=True):
     r, s = signature
 
     if secure and not 0 < r < q:
-       raise ValueError("invalid signature")
+        raise ValueError("invalid signature")
     if not 0 < s < q:
         raise ValueError("invalid signature")
-    w = mod_inv(s, q)
     digest = int.from_bytes(sha1(message).digest(), byteorder="big")
+    w = mod_inv(s, q)
     u1 = (digest * w) % q
     u2 = (r * w) % q
     v = ((pow(g, u1, p) * pow(public_key, u2, p)) % p) % q
