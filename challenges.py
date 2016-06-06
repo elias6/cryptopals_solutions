@@ -1068,8 +1068,7 @@ def challenge44():
         message_data = {}
         for line in f.readlines():
             key, value = re.match("^(.+): (.+)$", line).groups()
-            message_data[key] = value
-            if {"msg", "s", "r", "m"}.issubset(message_data):
+            if key in message_data:
                 digest = sha1(message_data["msg"].encode()).hexdigest()
                 assert digest == message_data["m"].rjust(40, "0")
                 messages.append({
@@ -1078,6 +1077,7 @@ def challenge44():
                     "hash": int(message_data["m"], 16),
                 })
                 message_data = {}
+            message_data[key] = value
     for message1, message2 in combinations(messages, 2):
         if message1["sig"].r == message2["sig"].r:
             s_diff_inverse = mod_inv(message1["sig"].s - message2["sig"].s, dsa.q)
