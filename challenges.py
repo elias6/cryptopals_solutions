@@ -63,7 +63,7 @@ def pprint(*args, width=120, **kwargs):
 def encrypted_query_string(cipher, user_data):
     query_string = ("comment1=cooking%20MCs;userdata=" + url_quote(user_data) +
         ";comment2=%20like%20a%20pound%20of%20bacon")
-    bytes_to_encrypt = pkcs7_pad(query_string.encode("utf-8"))
+    bytes_to_encrypt = pkcs7_pad(query_string.encode())
     return cipher.encrypt(bytes_to_encrypt)
 
 
@@ -113,7 +113,7 @@ def challenge5():
     """Implement repeating-key XOR"""
     stanza = ("Burning 'em, if you ain't quick and nimble\n"
         "I go crazy when I hear a cymbal")
-    result = xor_encrypt(stanza.encode("utf-8"), b"ICE").hex()
+    result = xor_encrypt(stanza.encode(), b"ICE").hex()
     assert result == ("0b3637272a2b2e63622c2e69692a23693a2a3c6324202d623d63343"
         "c2a26226324272765272a282b2f20430a652e2c652a3124333a653e2b2027630c692b"
         "20283165286326302e27282f")
@@ -258,7 +258,7 @@ def challenge13():
 
     def encrypted_user_profile(email_address):
         profile_data = [("email", email_address), ("uid", "10"), ("role", "user")]
-        return cipher.encrypt(pkcs7_pad(urlencode(profile_data).encode("utf-8")))
+        return cipher.encrypt(pkcs7_pad(urlencode(profile_data).encode()))
 
     def decrypt_profile(encrypted_profile):
         return pkcs7_unpad(cipher.decrypt(encrypted_profile)).decode()
