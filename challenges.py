@@ -1154,12 +1154,13 @@ def challenge46():
         else:
             upper_bound = (lower_bound + upper_bound) / 2
         plain_int = round(upper_bound)
-        padded_plaintext = int.to_bytes(plain_int, length=modulus_length, byteorder="big")
+        padded_plaintext = plain_int.to_bytes(length=modulus_length, byteorder="big")
         try:
-            print(rsa.unpad(padded_plaintext))
+            recovered_plaintext = rsa.unpad(padded_plaintext)
         except ValueError:
-            pass
-    recovered_plaintext = rsa.unpad(padded_plaintext)
+            recovered_plaintext = None
+        else:
+            print(rsa.unpad(padded_plaintext))
     print(recovered_plaintext.decode())
     assert recovered_plaintext == message
 
