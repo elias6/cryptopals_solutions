@@ -4,7 +4,7 @@ from collections import namedtuple
 from hashlib import md5
 from math import ceil
 
-from Crypto.Util.number import getStrongPrime
+from Crypto.Util.number import getPrime, getStrongPrime
 
 from util import gcd, mod_inv, random
 
@@ -12,10 +12,12 @@ KeyPair = namedtuple("KeyPair", ["public_key", "private_key"])
 Key = namedtuple("Key", ["modulus", "exponent"])
 
 
-def generate_key_pair():
+def generate_key_pair(bit_length=1024):
+    if bit_length % 2 != 0:
+        raise ValueError("bit_length must be even")
     public_exponent = 3
-    p = getStrongPrime(512, e=public_exponent)
-    q = getStrongPrime(512, e=public_exponent)
+    p = generate_prime(bit_length // 2, e=public_exponent)
+    q = generate_prime(bit_length // 2, e=public_exponent)
     modulus = p * q
     totient = (p - 1) * (q - 1)
     assert totient > public_exponent
@@ -25,6 +27,16 @@ def generate_key_pair():
     public_key = Key(modulus, public_exponent)
     private_key = Key(modulus, private_exponent)
     return KeyPair(public_key, private_key)
+
+
+def generate_prime(bit_length, e=None):
+    if bit_length >= 512 and bit_length % 128 == 0:
+        return getStrongPrime(bit_length, e)
+    else:
+        while True:
+            prime = getPrime(bit_length)
+            if gcd(prime - 1, e) == 1 or not e:
+                return prime
 
 
 def calculate(message, key):
