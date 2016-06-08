@@ -2,12 +2,8 @@ import decimal
 
 from hashlib import sha1
 from itertools import cycle, tee
+from math import gcd
 from random import SystemRandom
-
-try:
-    from math import gcd    # Python 3.5
-except ImportError:
-    from fractions import gcd    # older Python versions
 
 random = SystemRandom()
 
