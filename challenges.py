@@ -1134,32 +1134,33 @@ def challenge46():
     """RSA parity oracle"""
     public_key, private_key = rsa.generate_key_pair()
 
-    def plaintext_parity(ciphertext):
-        return rsa.decrypt(ciphertext, private_key)[-1] & 1
+    def plaintext_is_odd(ciphertext):
+        return rsa.decrypt(ciphertext, private_key)[-1] & 1 == 1
 
     message = base64.b64decode(b"VGhhdCdzIHdoeSBJIGZvdW5kIHlvdSBkb24ndCBwbGF5IG"
         b"Fyb3VuZCB3aXRoIHRoZSBGdW5reSBDb2xkIE1lZGluYQ==")
 
-    ciphertext = rsa.encrypt(rsa.pad(message, public_key.modulus), public_key)
+    modulus = public_key.modulus
+    ciphertext = rsa.encrypt(rsa.pad(message, modulus), public_key)
 
-    modulus_length = ceil(public_key.modulus.bit_length() / 8)
     lower_bound = Fraction(0)
-    upper_bound = Fraction(public_key.modulus)
-    test_ciphertext = ciphertext
+    upper_bound = Fraction(modulus)
+    test_cipher_int = int.from_bytes(ciphertext, byteorder="big")
+    modulus_length = ceil(modulus.bit_length() / 8)
     while round(lower_bound) != round(upper_bound):
-        cipher_int = int.from_bytes(test_ciphertext, byteorder="big")
-        test_cipher_int = (cipher_int * 2**public_key.exponent) % public_key.modulus
-        test_ciphertext = int_to_bytes(test_cipher_int)
-        if plaintext_parity(test_ciphertext):
+        test_cipher_int = (test_cipher_int * 2**public_key.exponent) % modulus
+        if plaintext_is_odd(int_to_bytes(test_cipher_int)):
             lower_bound = (lower_bound + upper_bound) / 2
         else:
             upper_bound = (lower_bound + upper_bound) / 2
-        print(int_to_bytes(round(upper_bound)))
-    plain_int = round(upper_bound)
-    padded_plaintext = int.to_bytes(plain_int, length=modulus_length, byteorder="big")
+        plain_int = round(upper_bound)
+        padded_plaintext = int.to_bytes(plain_int, length=modulus_length, byteorder="big")
+        try:
+            print(rsa.unpad(padded_plaintext))
+        except ValueError:
+            pass
     recovered_plaintext = rsa.unpad(padded_plaintext)
     print(recovered_plaintext.decode())
-    assert rsa.encrypt(padded_plaintext, public_key) == ciphertext
     assert recovered_plaintext == message
 
 
