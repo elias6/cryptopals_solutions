@@ -13,6 +13,7 @@ import warnings
 from argparse import ArgumentParser
 from collections import Counter
 from contextlib import ExitStack, redirect_stdout
+from fractions import Fraction
 from hashlib import sha1, sha256
 from heapq import nlargest
 from itertools import combinations
@@ -1127,6 +1128,39 @@ def challenge45():
         magic_sig = dsa.Signature(r, s)
         assert dsa.verify(b"Hello world", public_key, magic_sig, g=bad_g)
         assert dsa.verify(b"Goodbye, world", public_key, magic_sig, g=bad_g)
+
+
+def challenge46():
+    """RSA parity oracle"""
+    public_key, private_key = rsa.generate_key_pair()
+
+    def plaintext_parity(ciphertext):
+        return rsa.decrypt(ciphertext, private_key)[-1] & 1
+
+    message = base64.b64decode(b"VGhhdCdzIHdoeSBJIGZvdW5kIHlvdSBkb24ndCBwbGF5IG"
+        b"Fyb3VuZCB3aXRoIHRoZSBGdW5reSBDb2xkIE1lZGluYQ==")
+
+    ciphertext = rsa.encrypt(rsa.pad(message, public_key.modulus), public_key)
+
+    modulus_length = ceil(public_key.modulus.bit_length() / 8)
+    lower_bound = Fraction(0)
+    upper_bound = Fraction(public_key.modulus)
+    test_ciphertext = ciphertext
+    while round(lower_bound) != round(upper_bound):
+        cipher_int = int.from_bytes(test_ciphertext, byteorder="big")
+        test_cipher_int = (cipher_int * 2**public_key.exponent) % public_key.modulus
+        test_ciphertext = int_to_bytes(test_cipher_int)
+        if plaintext_parity(test_ciphertext):
+            lower_bound = (lower_bound + upper_bound) / 2
+        else:
+            upper_bound = (lower_bound + upper_bound) / 2
+        print(int_to_bytes(round(upper_bound)))
+    plain_int = round(upper_bound)
+    padded_plaintext = int.to_bytes(plain_int, length=modulus_length, byteorder="big")
+    recovered_plaintext = rsa.unpad(padded_plaintext)
+    print(recovered_plaintext.decode())
+    assert rsa.encrypt(padded_plaintext, public_key) == ciphertext
+    assert recovered_plaintext == message
 
 
 class ChallengeNotFoundError(ValueError):
