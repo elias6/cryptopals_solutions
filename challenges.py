@@ -17,7 +17,7 @@ from fractions import Fraction
 from hashlib import sha1, sha256
 from heapq import nlargest
 from itertools import combinations
-from math import ceil
+from math import ceil, gcd
 from sys import stdout
 from threading import Thread
 from time import time
@@ -43,9 +43,8 @@ from block_cipher import (crack_ecb_oracle, ctr_counter, ctr_iterator, guess_blo
 from mersenne_twister import MT19937_RNG
 from timing_server import (TimingServer, make_insecure_compare_fn, recover_signature,
     server_approves_of_signature)
-from util import (IETF_PRIME, big_int_cube_root, calculate_hmac, chunks, gcd,
-    int_to_bytes, mod_inv, pkcs7_pad, pkcs7_unpad, random, sliding_pairs, xor_bytes,
-    xor_encrypt)
+from util import (IETF_PRIME, big_int_cube_root, calculate_hmac, chunks, int_to_bytes,
+    mod_inv, pkcs7_pad, pkcs7_unpad, random, sliding_pairs, xor_bytes, xor_encrypt)
 
 
 warnings.simplefilter("default", BytesWarning)

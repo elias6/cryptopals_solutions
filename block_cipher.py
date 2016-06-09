@@ -2,10 +2,11 @@ import struct
 
 from collections import Counter
 from itertools import count
+from math import gcd
 from os import urandom
 
 from english import all_bytes_by_frequency
-from util import chunks, gcd, pkcs7_unpad
+from util import chunks, pkcs7_unpad
 
 
 def looks_like_ecb(ciphertext, block_size=16):

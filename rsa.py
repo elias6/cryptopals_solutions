@@ -2,11 +2,11 @@ import re
 
 from collections import namedtuple
 from hashlib import md5
-from math import ceil
+from math import ceil, gcd
 
 from Crypto.Util.number import getPrime, getStrongPrime
 
-from util import gcd, mod_inv, random
+from util import mod_inv, random
 
 KeyPair = namedtuple("KeyPair", ["public_key", "private_key"])
 Key = namedtuple("Key", ["modulus", "exponent"])
