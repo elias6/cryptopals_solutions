@@ -44,7 +44,7 @@ def calculate(message, key):
     if message_int >= key.modulus:
         raise ValueError("message is too big for modulus")
     cipher_int = pow(message_int, key.exponent, key.modulus)
-    modulus_length = ceil(key.modulus.bit_length() / 8) + 1
+    modulus_length = ceil(key.modulus.bit_length() / 8)
     return cipher_int.to_bytes(length=modulus_length, byteorder="big")
 
 
