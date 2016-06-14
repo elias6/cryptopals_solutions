@@ -1,8 +1,10 @@
 import re
 
 from collections import namedtuple
+from fractions import Fraction
 from hashlib import md5
-from math import ceil, gcd
+from itertools import count
+from math import ceil, floor, gcd
 
 from Crypto.Util.number import getPrime, getStrongPrime
 
@@ -134,3 +136,52 @@ def unpad(message):
     elif block_type_byte == [2] and any(x == 0 for x in padding):
         raise ValueError("invalid padding")
     return message
+
+
+def crack_padding_oracle(ciphertext, public_key, padding_looks_ok):
+    modulus = public_key.modulus    # called "n" in paper
+    modulus_length = ceil(modulus.bit_length() / 8)    # called "k" in paper
+    B = 2 ** (8*(modulus_length - 2))
+
+    def find_s(s_iter):
+        cipher_int = int.from_bytes(ciphertext, byteorder="big")
+        for s in s_iter:
+            test_int = (cipher_int * s**public_key.exponent) % modulus
+            test_ciphertext = test_int.to_bytes(byteorder="big", length=modulus_length)
+            if padding_looks_ok(test_ciphertext):
+                return s
+        return None
+
+    # step 1
+    intervals = {(2*B, 3*B - 1)}    # called "M" in paper
+    for i in count(start=1):
+        if i == 1:
+            s = find_s(count(start=ceil(Fraction(modulus, 3*B))))    # step 2a
+        else:
+            if len(intervals) >= 2:
+                s = find_s(count(start=s + 1))    # step 2b
+            else:
+                # step 2c
+                a, b = list(intervals)[0]
+                for r in count(start=ceil(Fraction(2 * (b*s - 2*B), modulus))):
+                    s_start = ceil(Fraction(2*B + r*modulus, b))
+                    s_stop = floor(Fraction(3*B + r*modulus, a)) + 1
+                    s = find_s(range(s_start, s_stop))
+                    if s is not None:
+                        break
+        # step 3
+        new_intervals = set()
+        for a, b in intervals:
+            start = ceil(Fraction(a*s - 3*B + 1, modulus))
+            stop = floor(Fraction(b*s - 2*B, modulus)) + 1
+            for r in range(start, stop):
+                new_a = max(a, ceil(Fraction(2*B + r*modulus, s)))
+                new_b = min(b, floor(Fraction(3*B - 1 + r*modulus, s)))
+                new_intervals.add((new_a, new_b))
+        intervals = new_intervals
+        assert len(intervals) >= 1
+        # step 4
+        single_message_intervals = {x for x in intervals if x[0] == x[1]}
+        if len(single_message_intervals) == 1:
+            a, b = list(single_message_intervals)[0]
+            return unpad(a.to_bytes(length=modulus_length, byteorder="big"))
