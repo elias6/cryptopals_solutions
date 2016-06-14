@@ -16,8 +16,8 @@ from contextlib import ExitStack, redirect_stdout
 from fractions import Fraction
 from hashlib import sha1, sha256
 from heapq import nlargest
-from itertools import combinations
-from math import ceil, gcd
+from itertools import combinations, count
+from math import ceil, floor, gcd
 from sys import stdout
 from threading import Thread
 from time import time
@@ -1162,6 +1162,74 @@ def challenge46():
             print(rsa.unpad(padded_plaintext))
     print(recovered_plaintext.decode())
     assert recovered_plaintext == message
+
+
+def challenge47():
+    """Bleichenbacher's PKCS 1.5 Padding Oracle (Simple Case)"""
+    # Details of how this attack works can be found at
+    # http://archiv.infsec.ethz.ch/education/fs08/secsem/Bleichenbacher98.pdf
+
+    public_key, private_key = rsa.generate_key_pair(bit_length=256)
+    modulus = public_key.modulus    # called "n" in paper
+    modulus_length = ceil(modulus.bit_length() / 8)    # called "k" in paper
+    B = 2 ** (8*(modulus_length - 2))
+
+    def padding_looks_ok(ciphertext):
+        return rsa.decrypt(ciphertext, private_key)[:2] == b"\x00\x02"
+
+    message = b"kick it, CC"
+    ciphertext = rsa.encrypt(rsa.pad(message, modulus), public_key)
+    assert padding_looks_ok(ciphertext)
+
+    def find_s(s_iter, public_key, ciphertext):
+        cipher_int = int.from_bytes(ciphertext, byteorder="big")
+        modulus_length = ceil(public_key.modulus.bit_length() / 8)
+        for s in s_iter:
+            test_int = (cipher_int * s**public_key.exponent) % public_key.modulus
+            test_ciphertext = test_int.to_bytes(byteorder="big", length=modulus_length)
+            if padding_looks_ok(test_ciphertext):
+                return s
+        return None
+
+    # step 1
+    intervals = {(2*B, 3*B - 1)}    # called "M" in paper
+    for i in count(start=1):
+        if i == 1:
+            # step 2a
+            s = find_s(count(start=ceil(Fraction(modulus, 3*B))), public_key, ciphertext)
+        else:
+            if len(intervals) >= 2:
+                # step 2b
+                s = find_s(count(start=s + 1), public_key, ciphertext)
+            else:
+                # step 2c
+                a, b = list(intervals)[0]
+                for r in count(start=ceil(Fraction(2 * (b*s - 2*B), modulus))):
+                    s_start = ceil(Fraction(2*B + r*modulus, b))
+                    s_stop = floor(Fraction(3*B + r*modulus, a)) + 1
+                    s = find_s(range(s_start, s_stop), public_key, ciphertext)
+                    if s is not None:
+                        break
+        # step 3
+        new_intervals = set()
+        for a, b in intervals:
+            start = ceil(Fraction(a*s - 3*B + 1, modulus))
+            stop = floor(Fraction(b*s - 2*B, modulus)) + 1
+            for r in range(start, stop):
+                new_a = max(a, ceil(Fraction(2*B + r*modulus, s)))
+                new_b = min(b, floor(Fraction(3*B - 1 + r*modulus, s)))
+                new_intervals.add((new_a, new_b))
+        intervals = new_intervals
+        assert len(intervals) >= 1
+        # step 4
+        single_message_intervals = {x for x in intervals if x[0] == x[1]}
+        if len(single_message_intervals) == 1:
+            a, b = list(single_message_intervals)[0]
+            plain_int = a % modulus
+            padded_plaintext = plain_int.to_bytes(length=modulus_length, byteorder="big")
+            recovered_plaintext = rsa.unpad(padded_plaintext)
+            assert recovered_plaintext == message
+            break
 
 
 class ChallengeNotFoundError(ValueError):
