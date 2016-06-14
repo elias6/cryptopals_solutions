@@ -1165,6 +1165,24 @@ def challenge47():
     assert recovered_plaintext == message
 
 
+def challenge48():
+    """Bleichenbacher's PKCS 1.5 Padding Oracle (Complete Case)"""
+    # Details of how this attack works can be found at
+    # http://archiv.infsec.ethz.ch/education/fs08/secsem/Bleichenbacher98.pdf
+    public_key, private_key = rsa.generate_key_pair(bit_length=768)
+
+    def padding_looks_ok(ciphertext):
+        return rsa.decrypt(ciphertext, private_key)[:2] == b"\x00\x02"
+
+    message = b"kick it, CC"
+    ciphertext = rsa.encrypt(rsa.pad(message, public_key.modulus), public_key)
+    assert padding_looks_ok(ciphertext)
+
+    recovered_plaintext = rsa.crack_padding_oracle(
+        ciphertext, public_key, padding_looks_ok)
+    assert recovered_plaintext == message
+
+
 class ChallengeNotFoundError(ValueError):
     pass
 
