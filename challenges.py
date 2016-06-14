@@ -13,7 +13,6 @@ import warnings
 from argparse import ArgumentParser
 from collections import Counter
 from contextlib import ExitStack, redirect_stdout
-from fractions import Fraction
 from hashlib import sha1, sha256
 from heapq import nlargest
 from itertools import combinations
@@ -1142,24 +1141,8 @@ def challenge46():
     modulus = public_key.modulus
     ciphertext = rsa.encrypt(rsa.pad(message, modulus), public_key)
 
-    lower_bound = Fraction(0)
-    upper_bound = Fraction(modulus)
-    test_cipher_int = int.from_bytes(ciphertext, byteorder="big")
-    modulus_length = ceil(modulus.bit_length() / 8)
-    while round(lower_bound) != round(upper_bound):
-        test_cipher_int = (test_cipher_int * 2**public_key.exponent) % modulus
-        if plaintext_is_odd(int_to_bytes(test_cipher_int)):
-            lower_bound = (lower_bound + upper_bound) / 2
-        else:
-            upper_bound = (lower_bound + upper_bound) / 2
-        plain_int = round(upper_bound)
-        padded_plaintext = plain_int.to_bytes(length=modulus_length, byteorder="big")
-        try:
-            recovered_plaintext = rsa.unpad(padded_plaintext)
-        except ValueError:
-            recovered_plaintext = None
-        else:
-            print(rsa.unpad(padded_plaintext))
+    recovered_plaintext = rsa.crack_parity_oracle(
+        ciphertext, public_key, plaintext_is_odd, verbose=True)
     print(recovered_plaintext.decode())
     assert recovered_plaintext == message
 

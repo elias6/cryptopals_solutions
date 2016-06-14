@@ -8,7 +8,7 @@ from math import ceil, floor, gcd
 
 from Crypto.Util.number import getPrime, getStrongPrime
 
-from util import mod_inv, random
+from util import int_to_bytes, mod_inv, random
 
 KeyPair = namedtuple("KeyPair", ["public_key", "private_key"])
 Key = namedtuple("Key", ["modulus", "exponent"])
@@ -136,6 +136,29 @@ def unpad(message):
     elif block_type_byte == [2] and any(x == 0 for x in padding):
         raise ValueError("invalid padding")
     return message
+
+
+def crack_parity_oracle(ciphertext, public_key, plaintext_is_odd, verbose=False):
+    lower_bound = Fraction(0)
+    upper_bound = Fraction(public_key.modulus)
+    test_cipher_int = int.from_bytes(ciphertext, byteorder="big")
+    modulus_length = ceil(public_key.modulus.bit_length() / 8)
+    while round(lower_bound) != round(upper_bound):
+        test_cipher_int = (test_cipher_int * 2**public_key.exponent) % public_key.modulus
+        if plaintext_is_odd(int_to_bytes(test_cipher_int)):
+            lower_bound = (lower_bound + upper_bound) / 2
+        else:
+            upper_bound = (lower_bound + upper_bound) / 2
+        plain_int = round(upper_bound)
+        padded_plaintext = plain_int.to_bytes(length=modulus_length, byteorder="big")
+        try:
+            recovered_plaintext = unpad(padded_plaintext)
+        except ValueError:
+            recovered_plaintext = None
+        else:
+            if verbose:
+                print(recovered_plaintext)
+    return recovered_plaintext
 
 
 def crack_padding_oracle(ciphertext, public_key, padding_looks_ok):
