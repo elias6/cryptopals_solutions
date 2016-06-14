@@ -1142,7 +1142,7 @@ def challenge46():
     ciphertext = rsa.encrypt(rsa.pad(message, modulus), public_key)
 
     recovered_plaintext = rsa.crack_parity_oracle(
-        ciphertext, public_key, plaintext_is_odd, verbose=True)
+        ciphertext, public_key, plaintext_is_odd, verbose=False)
     print(recovered_plaintext.decode())
     assert recovered_plaintext == message
 
