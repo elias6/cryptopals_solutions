@@ -37,7 +37,7 @@ import mersenne_twister
 import rsa
 import srp
 
-from block_cipher import (crack_ecb_oracle, ctr_counter, ctr_iterator, guess_block_size,
+from block_tools import (crack_ecb_oracle, ctr_counter, ctr_iterator, guess_block_size,
     looks_like_ecb, random_aes_key)
 from mersenne_twister import MT19937_RNG
 from timing_server import (TimingServer, make_insecure_compare_fn, recover_signature,
