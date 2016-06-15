@@ -146,12 +146,13 @@ def multiply(message, number, modulus, length=None):
 
 
 def crack_parity_oracle(ciphertext, public_key, plaintext_is_odd, verbose=False):
+    modulus = public_key.modulus
     lower_bound = Fraction(0)
-    upper_bound = Fraction(public_key.modulus)
+    upper_bound = Fraction(modulus)
     test_ciphertext = ciphertext
-    modulus_length = ceil(public_key.modulus.bit_length() / 8)
+    modulus_length = ceil(modulus.bit_length() / 8)
     while round(lower_bound) != round(upper_bound):
-        test_ciphertext = multiply(test_ciphertext, 2**public_key.exponent, public_key.modulus)
+        test_ciphertext = multiply(test_ciphertext, 2**public_key.exponent, modulus)
         if plaintext_is_odd(test_ciphertext):
             lower_bound = (lower_bound + upper_bound) / 2
         else:
