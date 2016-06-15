@@ -58,6 +58,11 @@ def decrypt(ciphertext, key):
     return calculate(ciphertext, key)
 
 
+def pad_and_encrypt(plaintext, key, block_type=2):
+    padded_message = pad(plaintext, ceil(key.modulus.bit_length() / 8), block_type)
+    return encrypt(padded_message, key)
+
+
 def create_digest_asn1(message):
     """Produce unpadded, unencrypted PKCS v1.5 signature"""
     # TODO: make this handle more hash functions
@@ -88,8 +93,7 @@ def create_digest_asn1(message):
 
 def sign(message, private_key):
     sig_asn1 = create_digest_asn1(message)
-    modulus_length = ceil(private_key.modulus.bit_length() / 8)
-    return encrypt(pad(sig_asn1, modulus_length, block_type=1), private_key)
+    return pad_and_encrypt(sig_asn1, private_key, block_type=1)
 
 
 def verify(message, public_key, signature, secure=True):

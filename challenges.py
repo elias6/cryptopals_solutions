@@ -1001,7 +1001,7 @@ def challenge42():
 
     message = b"hi mom"
 
-    ciphertext = rsa.encrypt(rsa.pad(message, modulus_length), public_key)
+    ciphertext = rsa.pad_and_encrypt(message, public_key)
     assert rsa.unpad(rsa.decrypt(ciphertext, private_key)) == message
 
     sig = rsa.sign(message, private_key)
@@ -1131,8 +1131,7 @@ def challenge46():
     message = base64.b64decode(b"VGhhdCdzIHdoeSBJIGZvdW5kIHlvdSBkb24ndCBwbGF5IG"
         b"Fyb3VuZCB3aXRoIHRoZSBGdW5reSBDb2xkIE1lZGluYQ==")
 
-    modulus_length = ceil(public_key.modulus.bit_length() / 8)
-    ciphertext = rsa.encrypt(rsa.pad(message, modulus_length), public_key)
+    ciphertext = rsa.pad_and_encrypt(message, public_key)
 
     recovered_padded_plaintext = rsa.crack_parity_oracle(
         ciphertext, public_key, plaintext_is_odd, verbose=False)
@@ -1150,8 +1149,7 @@ def challenge47():
         return rsa.decrypt(ciphertext, private_key)[:2] == b"\x00\x02"
 
     message = b"kick it, CC"
-    modulus_length = ceil(public_key.modulus.bit_length() / 8)
-    ciphertext = rsa.encrypt(rsa.pad(message, modulus_length), public_key)
+    ciphertext = rsa.pad_and_encrypt(message, public_key)
     assert padding_looks_ok(ciphertext)
 
     recovered_padded_plaintext = rsa.crack_padding_oracle(
@@ -1170,8 +1168,7 @@ def challenge48():
         return rsa.decrypt(ciphertext, private_key)[:2] == b"\x00\x02"
 
     message = b"kick it, CC"
-    modulus_length = ceil(public_key.modulus.bit_length() / 8)
-    ciphertext = rsa.encrypt(rsa.pad(message, modulus_length), public_key)
+    ciphertext = rsa.pad_and_encrypt(message, public_key)
     assert padding_looks_ok(ciphertext)
 
     recovered_padded_plaintext = rsa.crack_padding_oracle(
