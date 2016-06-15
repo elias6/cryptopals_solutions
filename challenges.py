@@ -1012,11 +1012,9 @@ def challenge42():
     sig_block = padded_sig.ljust(block_length, b"\x00")
     sig_block_int = int.from_bytes(sig_block, byteorder="big")
     forged_sig_int = ceil(big_int_cube_root(sig_block_int))
-
-    decrypted_sig = (forged_sig_int ** 3).to_bytes(length=block_length, byteorder="big")
-    assert decrypted_sig.startswith(padded_sig)
-
     forged_sig = forged_sig_int.to_bytes(length=block_length, byteorder="big")
+
+    assert rsa.decrypt(forged_sig, public_key).startswith(padded_sig)
     assert not rsa.verify(message, public_key, forged_sig)
     assert rsa.verify(message, public_key, forged_sig, secure=False)
 
