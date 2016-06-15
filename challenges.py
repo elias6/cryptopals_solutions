@@ -996,23 +996,23 @@ def challenge42():
     # Details about how this works can be found at the following URLs:
     # https://www.ietf.org/mail-archive/web/openpgp/current/msg00999.html
     # http://www.withouthat.org/~sid/me/wp-content/uploads/2008/09/document.pdf
-    public_key, private_key = rsa.generate_key_pair()
-    block_length = ceil(public_key.modulus.bit_length() / 8)
-    assert block_length == 128
+    modulus_length = 128
+    public_key, private_key = rsa.generate_key_pair(bit_length=modulus_length * 8)
 
     message = b"hi mom"
 
-    ciphertext = rsa.encrypt(rsa.pad(message, block_length), public_key)
+    ciphertext = rsa.encrypt(rsa.pad(message, modulus_length), public_key)
     assert rsa.unpad(rsa.decrypt(ciphertext, private_key)) == message
 
     sig = rsa.sign(message, private_key)
     assert rsa.verify(message, public_key, sig)
 
-    padded_sig = b"\x00\x01" + (8*b"\xff") + b"\x00" + rsa.create_digest_asn1(message)
-    sig_block = padded_sig.ljust(block_length, b"\x00")
+    digest_info = rsa.create_digest_asn1(message)
+    padded_sig = rsa.pad(digest_info, len(digest_info) + 11, block_type=1)
+    sig_block = padded_sig.ljust(modulus_length, b"\x00")
     sig_block_int = int.from_bytes(sig_block, byteorder="big")
     forged_sig_int = ceil(big_int_cube_root(sig_block_int))
-    forged_sig = forged_sig_int.to_bytes(length=block_length, byteorder="big")
+    forged_sig = forged_sig_int.to_bytes(length=modulus_length, byteorder="big")
 
     assert rsa.decrypt(forged_sig, public_key).startswith(padded_sig)
     assert not rsa.verify(message, public_key, forged_sig)
