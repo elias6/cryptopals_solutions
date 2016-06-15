@@ -2,7 +2,7 @@ import decimal
 
 from hashlib import sha1
 from itertools import cycle, tee
-from math import gcd
+from math import ceil, gcd
 from random import SystemRandom
 
 random = SystemRandom()
@@ -46,7 +46,7 @@ def sliding_pairs(iterable):
 
 
 def int_to_bytes(x):
-    return x.to_bytes(length=(x.bit_length() // 8) + 1, byteorder="big")
+    return x.to_bytes(length=ceil(x.bit_length() / 8), byteorder="big")
 
 
 def pkcs7_pad(input_bytes, block_size=16):
