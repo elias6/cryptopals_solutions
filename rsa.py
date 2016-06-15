@@ -58,7 +58,7 @@ def decrypt(ciphertext, key):
     return calculate(ciphertext, key)
 
 
-def create_signature(message):
+def create_digest_asn1(message):
     """Produce unpadded, unencrypted PKCS v1.5 signature"""
     # TODO: make this handle more hash functions
     
@@ -87,7 +87,7 @@ def create_signature(message):
 
 
 def sign(message, private_key):
-    sig_asn1 = create_signature(message)
+    sig_asn1 = create_digest_asn1(message)
     modulus_length = ceil(private_key.modulus.bit_length() / 8)
     return encrypt(pad(sig_asn1, modulus_length, block_type=1), private_key)
 

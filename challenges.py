@@ -1008,7 +1008,7 @@ def challenge42():
     sig = rsa.sign(message, private_key)
     assert rsa.verify(message, public_key, sig)
 
-    padded_sig = b"\x00\x01" + (8*b"\xff") + b"\x00" + rsa.create_signature(message)
+    padded_sig = b"\x00\x01" + (8*b"\xff") + b"\x00" + rsa.create_digest_asn1(message)
     sig_block = padded_sig.ljust(block_length, b"\x00")
     sig_block_int = int.from_bytes(sig_block, byteorder="big")
     forged_sig_int = ceil(big_int_cube_root(sig_block_int))
