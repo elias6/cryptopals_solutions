@@ -983,14 +983,10 @@ def challenge41():
         assert False
 
     modulus = public_key.modulus
-    cipher_int = int.from_bytes(ciphertext, byteorder="big")
     S = random.randint(2, modulus - 1)
-    modified_cipher_int = (cipher_int * S**public_key.exponent) % modulus
-    modified_ciphertext = int_to_bytes(modified_cipher_int)
-    oracle_int = int.from_bytes(decrypt(modified_ciphertext), byteorder="big")
-    recovered_plain_int = (oracle_int * mod_inv(S, modulus)) % modulus
-    recovered_plaintext = recovered_plain_int.to_bytes(
-        length=ceil(modulus.bit_length() / 8), byteorder="big")
+    oracle_ciphertext = rsa.multiply(ciphertext, S**public_key.exponent, modulus)
+    oracle_plaintext = decrypt(oracle_ciphertext)
+    recovered_plaintext = rsa.multiply(oracle_plaintext, mod_inv(S, modulus), modulus)
     assert recovered_plaintext == plaintext
 
 

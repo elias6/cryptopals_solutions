@@ -138,14 +138,21 @@ def unpad(message):
     return message
 
 
+def multiply(message, number, modulus, length=None):
+    new_message_int = (int.from_bytes(message, byteorder="big") * number) % modulus
+    if length is None:
+        length = ceil(modulus.bit_length() / 8)
+    return new_message_int.to_bytes(byteorder="big", length=length)
+
+
 def crack_parity_oracle(ciphertext, public_key, plaintext_is_odd, verbose=False):
     lower_bound = Fraction(0)
     upper_bound = Fraction(public_key.modulus)
-    test_cipher_int = int.from_bytes(ciphertext, byteorder="big")
+    test_ciphertext = ciphertext
     modulus_length = ceil(public_key.modulus.bit_length() / 8)
     while round(lower_bound) != round(upper_bound):
-        test_cipher_int = (test_cipher_int * 2**public_key.exponent) % public_key.modulus
-        if plaintext_is_odd(int_to_bytes(test_cipher_int)):
+        test_ciphertext = multiply(test_ciphertext, 2**public_key.exponent, public_key.modulus)
+        if plaintext_is_odd(test_ciphertext):
             lower_bound = (lower_bound + upper_bound) / 2
         else:
             upper_bound = (lower_bound + upper_bound) / 2
@@ -167,10 +174,8 @@ def crack_padding_oracle(ciphertext, public_key, padding_looks_ok):
     B = 2 ** (8*(modulus_length - 2))
 
     def find_s(s_iter):
-        cipher_int = int.from_bytes(ciphertext, byteorder="big")
         for s in s_iter:
-            test_int = (cipher_int * s**public_key.exponent) % modulus
-            test_ciphertext = test_int.to_bytes(byteorder="big", length=modulus_length)
+            test_ciphertext = multiply(ciphertext, s**public_key.exponent, modulus)
             if padding_looks_ok(test_ciphertext):
                 return s
         return None
