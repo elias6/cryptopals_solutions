@@ -158,14 +158,12 @@ def crack_parity_oracle(ciphertext, public_key, plaintext_is_odd, verbose=False)
         else:
             upper_bound = (lower_bound + upper_bound) / 2
         plain_int = round(upper_bound)
-        padded_plaintext = plain_int.to_bytes(length=modulus_length, byteorder="big")
-        try:
-            recovered_plaintext = unpad(padded_plaintext)
-        except ValueError:
-            recovered_plaintext = None
-        else:
-            if verbose:
-                print(recovered_plaintext)
+        recovered_plaintext = plain_int.to_bytes(length=modulus_length, byteorder="big")
+        if verbose:
+            try:
+                print(unpad(recovered_plaintext))
+            except ValueError:
+                pass
     return recovered_plaintext
 
 

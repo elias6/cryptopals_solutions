@@ -1131,12 +1131,11 @@ def challenge46():
     message = base64.b64decode(b"VGhhdCdzIHdoeSBJIGZvdW5kIHlvdSBkb24ndCBwbGF5IG"
         b"Fyb3VuZCB3aXRoIHRoZSBGdW5reSBDb2xkIE1lZGluYQ==")
 
-    modulus = public_key.modulus
-    ciphertext = rsa.encrypt(rsa.pad(message, modulus), public_key)
+    ciphertext = rsa.encrypt(rsa.pad(message, public_key.modulus), public_key)
 
-    recovered_plaintext = rsa.crack_parity_oracle(
+    recovered_padded_plaintext = rsa.crack_parity_oracle(
         ciphertext, public_key, plaintext_is_odd, verbose=False)
-    print(recovered_plaintext.decode())
+    recovered_plaintext = rsa.unpad(recovered_padded_plaintext)
     assert recovered_plaintext == message
 
 
