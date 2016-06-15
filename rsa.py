@@ -88,7 +88,8 @@ def create_signature(message):
 
 def sign(message, private_key):
     sig_asn1 = create_signature(message)
-    return encrypt(pad(sig_asn1, private_key.modulus, block_type=1), private_key)
+    modulus_length = ceil(private_key.modulus.bit_length() / 8)
+    return encrypt(pad(sig_asn1, modulus_length, block_type=1), private_key)
 
 
 def verify(message, public_key, signature, secure=True):
@@ -104,18 +105,17 @@ def verify(message, public_key, signature, secure=True):
         return sig_data.startswith(asn1_stuff + md5(message).digest())
 
 
-def pad(message, modulus, block_type=2):
+def pad(message, length, block_type=2):
     # block types 0 and 1 are for private keys, 2 is for public keys.
     # Block type 0 is ambiguous with messages beginning with null bytes and
     # is not recommended.
     if block_type not in [0, 1, 2]:
         raise ValueError("block_type must be 0, 1, or 2")
-    modulus_length = ceil(modulus.bit_length() / 8)
-    if modulus_length < 12:
-        raise ValueError("modulus must be at least 12 bytes")
-    if len(message) > modulus_length - 11:
-        raise ValueError("message is too big for modulus")
-    padding_length = modulus_length - 3 - len(message)
+    if length < 12:
+        raise ValueError("length must be at least 12 bytes")
+    if len(message) > length - 11:
+        raise ValueError("message is too big for length")
+    padding_length = length - 3 - len(message)
     padding = {
         0: b"\x00" * padding_length,
         1: b"\xff" * padding_length,

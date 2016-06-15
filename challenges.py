@@ -997,16 +997,16 @@ def challenge42():
     # https://www.ietf.org/mail-archive/web/openpgp/current/msg00999.html
     # http://www.withouthat.org/~sid/me/wp-content/uploads/2008/09/document.pdf
     public_key, private_key = rsa.generate_key_pair()
+    block_length = ceil(public_key.modulus.bit_length() / 8)
+    assert block_length == 128
+
     message = b"hi mom"
 
-    ciphertext = rsa.encrypt(rsa.pad(message, public_key.modulus), public_key)
+    ciphertext = rsa.encrypt(rsa.pad(message, block_length), public_key)
     assert rsa.unpad(rsa.decrypt(ciphertext, private_key)) == message
 
     sig = rsa.sign(message, private_key)
     assert rsa.verify(message, public_key, sig)
-
-    block_length = ceil(public_key.modulus.bit_length() / 8)
-    assert block_length == 128
 
     padded_sig = b"\x00\x01" + (8*b"\xff") + b"\x00" + rsa.create_signature(message)
     sig_block = padded_sig.ljust(block_length, b"\x00")
@@ -1131,7 +1131,8 @@ def challenge46():
     message = base64.b64decode(b"VGhhdCdzIHdoeSBJIGZvdW5kIHlvdSBkb24ndCBwbGF5IG"
         b"Fyb3VuZCB3aXRoIHRoZSBGdW5reSBDb2xkIE1lZGluYQ==")
 
-    ciphertext = rsa.encrypt(rsa.pad(message, public_key.modulus), public_key)
+    modulus_length = ceil(public_key.modulus.bit_length() / 8)
+    ciphertext = rsa.encrypt(rsa.pad(message, modulus_length), public_key)
 
     recovered_padded_plaintext = rsa.crack_parity_oracle(
         ciphertext, public_key, plaintext_is_odd, verbose=False)
@@ -1149,7 +1150,8 @@ def challenge47():
         return rsa.decrypt(ciphertext, private_key)[:2] == b"\x00\x02"
 
     message = b"kick it, CC"
-    ciphertext = rsa.encrypt(rsa.pad(message, public_key.modulus), public_key)
+    modulus_length = ceil(public_key.modulus.bit_length() / 8)
+    ciphertext = rsa.encrypt(rsa.pad(message, modulus_length), public_key)
     assert padding_looks_ok(ciphertext)
 
     recovered_padded_plaintext = rsa.crack_padding_oracle(
@@ -1168,7 +1170,8 @@ def challenge48():
         return rsa.decrypt(ciphertext, private_key)[:2] == b"\x00\x02"
 
     message = b"kick it, CC"
-    ciphertext = rsa.encrypt(rsa.pad(message, public_key.modulus), public_key)
+    modulus_length = ceil(public_key.modulus.bit_length() / 8)
+    ciphertext = rsa.encrypt(rsa.pad(message, modulus_length), public_key)
     assert padding_looks_ok(ciphertext)
 
     recovered_padded_plaintext = rsa.crack_padding_oracle(
