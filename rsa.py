@@ -211,4 +211,4 @@ def crack_padding_oracle(ciphertext, public_key, padding_looks_ok):
         single_message_intervals = {x for x in intervals if x[0] == x[1]}
         if len(single_message_intervals) == 1:
             a, b = list(single_message_intervals)[0]
-            return unpad(a.to_bytes(length=modulus_length, byteorder="big"))
+            return a.to_bytes(length=modulus_length, byteorder="big")

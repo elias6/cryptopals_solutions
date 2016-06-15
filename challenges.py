@@ -1152,8 +1152,9 @@ def challenge47():
     ciphertext = rsa.encrypt(rsa.pad(message, public_key.modulus), public_key)
     assert padding_looks_ok(ciphertext)
 
-    recovered_plaintext = rsa.crack_padding_oracle(
+    recovered_padded_plaintext = rsa.crack_padding_oracle(
         ciphertext, public_key, padding_looks_ok)
+    recovered_plaintext = rsa.unpad(recovered_padded_plaintext)
     assert recovered_plaintext == message
 
 
@@ -1170,8 +1171,9 @@ def challenge48():
     ciphertext = rsa.encrypt(rsa.pad(message, public_key.modulus), public_key)
     assert padding_looks_ok(ciphertext)
 
-    recovered_plaintext = rsa.crack_padding_oracle(
+    recovered_padded_plaintext = rsa.crack_padding_oracle(
         ciphertext, public_key, padding_looks_ok)
+    recovered_plaintext = rsa.unpad(recovered_padded_plaintext)
     assert recovered_plaintext == message
 
 
