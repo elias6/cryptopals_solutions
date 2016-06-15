@@ -966,9 +966,7 @@ def challenge41():
         pass
 
     def decrypt(ciphertext):
-        # rsa.encrypt left-pads its result to make it as long as the modulus.
-        # The call to lstrip is needed to undo this.
-        plaintext = rsa.decrypt(ciphertext, private_key).lstrip(b"\x00")
+        plaintext = rsa.decrypt(ciphertext, private_key)
         plaintext_hash = sha256(plaintext).digest()
         if plaintext_hash in seen_message_hashes:
             raise AccessDeniedError()
@@ -984,14 +982,15 @@ def challenge41():
     else:
         assert False
 
-    cipher_int = int.from_bytes(ciphertext, byteorder="big")
     modulus = public_key.modulus
-    random_number = random.randint(2, modulus - 1)
-    modified_cipher_int = (cipher_int * random_number**public_key.exponent) % modulus
+    cipher_int = int.from_bytes(ciphertext, byteorder="big")
+    S = random.randint(2, modulus - 1)
+    modified_cipher_int = (cipher_int * S**public_key.exponent) % modulus
     modified_ciphertext = int_to_bytes(modified_cipher_int)
     oracle_int = int.from_bytes(decrypt(modified_ciphertext), byteorder="big")
-    recovered_plain_int = (oracle_int * mod_inv(random_number, modulus)) % modulus
-    recovered_plaintext = int_to_bytes(recovered_plain_int)
+    recovered_plain_int = (oracle_int * mod_inv(S, modulus)) % modulus
+    recovered_plaintext = recovered_plain_int.to_bytes(
+        length=ceil(modulus.bit_length() / 8), byteorder="big")
     assert recovered_plaintext == plaintext
 
 
