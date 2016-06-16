@@ -1202,7 +1202,7 @@ def get_all_challenges():
 
 def run_challenges(challenges, output_stream=stdout):
     for challenge in challenges:
-        num = re.findall("^challenge(\d+)$", challenge.__name__)[0]
+        num = re.findall("^challenge(.+)$", challenge.__name__)[0]
         print("Running challenge {}: {}".format(num, challenge.__doc__),
             file=output_stream)
         try:
