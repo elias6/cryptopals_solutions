@@ -142,10 +142,9 @@ def unpad(message):
     return message
 
 
-def multiply(message, number, modulus, length=None):
+def multiply(message, number, modulus):
     new_message_int = (int.from_bytes(message, byteorder="big") * number) % modulus
-    if length is None:
-        length = ceil(modulus.bit_length() / 8)
+    length = ceil(modulus.bit_length() / 8)
     return new_message_int.to_bytes(byteorder="big", length=length)
 
 
