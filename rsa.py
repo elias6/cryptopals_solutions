@@ -172,6 +172,9 @@ def crack_parity_oracle(ciphertext, public_key, plaintext_is_odd, verbose=False)
 
 
 def crack_padding_oracle(ciphertext, public_key, padding_looks_ok):
+    # Details of how this function works can be found at
+    # http://archiv.infsec.ethz.ch/education/fs08/secsem/Bleichenbacher98.pdf
+
     modulus = public_key.modulus    # called "n" in paper
     modulus_length = ceil(modulus.bit_length() / 8)    # called "k" in paper
     B = 2 ** (8*(modulus_length - 2))

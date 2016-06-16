@@ -1141,8 +1141,6 @@ def challenge46():
 
 def challenge47():
     """Bleichenbacher's PKCS 1.5 Padding Oracle (Simple Case)"""
-    # Details of how this attack works can be found at
-    # http://archiv.infsec.ethz.ch/education/fs08/secsem/Bleichenbacher98.pdf
     public_key, private_key = rsa.generate_key_pair(bit_length=256)
 
     def padding_looks_ok(ciphertext):
@@ -1160,8 +1158,6 @@ def challenge47():
 
 def challenge48():
     """Bleichenbacher's PKCS 1.5 Padding Oracle (Complete Case)"""
-    # Details of how this attack works can be found at
-    # http://archiv.infsec.ethz.ch/education/fs08/secsem/Bleichenbacher98.pdf
     public_key, private_key = rsa.generate_key_pair(bit_length=768)
 
     def padding_looks_ok(ciphertext):
