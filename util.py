@@ -1,7 +1,7 @@
 import decimal
 
 from hashlib import sha1
-from itertools import cycle, tee
+from itertools import cycle
 from math import ceil, gcd
 from random import SystemRandom
 
@@ -35,14 +35,6 @@ def xor_encrypt(input_bytes, key):
 
 def chunks(x, chunk_size=16):
     return [x[i : i + chunk_size] for i in range(0, len(x), chunk_size)]
-
-
-def sliding_pairs(iterable):
-    # pairwise recipe from https://docs.python.org/3/library/itertools.html
-    """s -> (s[0], s[1]), (s[1], s[2]), (s[2], s[3]), ..."""
-    a, b = tee(iterable)
-    next(b, None)
-    return zip(a, b)
 
 
 def int_to_bytes(x):

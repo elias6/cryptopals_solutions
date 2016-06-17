@@ -43,7 +43,7 @@ from mersenne_twister import MT19937_RNG
 from timing_server import (TimingServer, make_insecure_compare_fn, recover_signature,
     server_approves_of_signature)
 from util import (IETF_PRIME, big_int_cube_root, calculate_hmac, chunks, int_to_bytes,
-    mod_inv, pkcs7_pad, pkcs7_unpad, random, sliding_pairs, xor_bytes, xor_encrypt)
+    mod_inv, pkcs7_pad, pkcs7_unpad, random, xor_bytes, xor_encrypt)
 
 
 warnings.simplefilter("default", BytesWarning)
@@ -401,9 +401,10 @@ def challenge17():
 
     for unknown_string in unknown_strings:
         recovered_plaintext = bytearray()
-        cipher_blocks = chunks(iv + encrypt(unknown_string))
-        for prev_cipher_block, cipher_block in sliding_pairs(cipher_blocks):
+        prev_cipher_block = iv
+        for cipher_block in chunks(encrypt(unknown_string)):
             recovered_plaintext += recover_block(prev_cipher_block, cipher_block)
+            prev_cipher_block = cipher_block
         recovered_plaintext = pkcs7_unpad(recovered_plaintext)
         assert recovered_plaintext == unknown_string
         print(recovered_plaintext.decode())
