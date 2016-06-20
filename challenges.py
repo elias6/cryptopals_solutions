@@ -1174,6 +1174,57 @@ def challenge48():
     assert recovered_plaintext == message
 
 
+def challenge49():
+    """CBC-MAC Message Forgery"""
+    key = random_aes_key()
+    block_size = 16
+
+    def transaction_message(from_id, to_id, amount):
+        return urlencode([("from", from_id), ("to", to_id), ("amount", amount)]).encode()
+
+    def transaction_list_message(from_id, transactions):
+        tx_list = ";".join("{to}:{amount}".format(**tx) for tx in transactions)
+        return urlencode([("from", from_id), ("tx_list", tx_list)], safe=":;").encode()
+
+    def message_mac(message, iv=b"\x00"*block_size):
+        return AES.new(key, AES.MODE_CBC, iv).encrypt(pkcs7_pad(message))[-block_size:]
+
+    def request_is_valid(message, expected_mac, iv=b"\x00"*block_size):
+        return expected_mac == message_mac(message, iv)
+
+    iv = os.urandom(block_size)
+    message1 = transaction_message(
+        from_id="DarkHelmet", to_id="Pizza_The_Hutt", amount=1000000)
+    assert message1 == b"from=DarkHelmet&to=Pizza_The_Hutt&amount=1000000"
+    mac1 = message_mac(message1, iv)
+    assert request_is_valid(message1, mac1, iv)
+
+    wrong_mac = os.urandom(block_size)
+    assert not request_is_valid(message1, wrong_mac, iv)
+
+    assert message1[:block_size] == b"from=DarkHelmet&"
+    new_block = b"from=Lone_Starr&"
+    forged_message1 = new_block + message1[block_size:]
+    assert forged_message1 == b"from=Lone_Starr&to=Pizza_The_Hutt&amount=1000000"
+    attacker_iv = xor_bytes(iv, message1[:block_size], new_block)
+    assert request_is_valid(forged_message1, mac1, attacker_iv)
+
+    message2 = transaction_list_message(
+        from_id="Roland",
+        transactions=[
+            {"to": "Lone_Starr", "amount": 248},
+            {"to": "Prince_Murray", "amount": 50000}])
+    assert message2 == b"from=Roland&tx_list=Lone_Starr:248;Prince_Murray:50000"
+    mac2 = message_mac(message2)
+
+    extension = b";Pizza_The_Hutt:1000000"
+    modified_extension = xor_bytes(mac2, extension[:block_size]) + extension[block_size:]
+    forged_message2 = pkcs7_pad(message2) + extension
+    # TODO: try to forge a message without padding in the middle. Also
+    # calculate MAC without calculating MAC of modified_extension.
+    assert request_is_valid(forged_message2, message_mac(modified_extension))
+
+
 class ChallengeNotFoundError(ValueError):
     pass
 
