@@ -348,7 +348,7 @@ def challenge17():
     # how it works can be found at
     # https://blog.skullsecurity.org/2013/padding-oracle-attacks-in-depth
 
-    unknown_strings = [base64.b64decode(x) for x in [
+    plaintexts = [base64.b64decode(x) for x in [
         "MDAwMDAwTm93IHRoYXQgdGhlIHBhcnR5IGlzIGp1bXBpbmc=",
         "MDAwMDAxV2l0aCB0aGUgYmFzcyBraWNrZWQgaW4gYW5kIHRoZSBWZWdhJ3MgYXJlIHB1bXBpbic=",
         "MDAwMDAyUXVpY2sgdG8gdGhlIHBvaW50LCB0byB0aGUgcG9pbnQsIG5vIGZha2luZw==",
@@ -361,13 +361,13 @@ def challenge17():
         "MDAwMDA5aXRoIG15IHJhZy10b3AgZG93biBzbyBteSBoYWlyIGNhbiBibG93",
     ]]
 
-    random.shuffle(unknown_strings)
+    random.shuffle(plaintexts)
 
     key = random_aes_key()
     iv = os.urandom(16)
 
-    def encrypt(unknown_string):
-        return AES.new(key, AES.MODE_CBC, iv).encrypt(pkcs7_pad(unknown_string))
+    def encrypt(plaintext):
+        return AES.new(key, AES.MODE_CBC, iv).encrypt(pkcs7_pad(plaintext))
 
     def has_valid_padding(iv, ciphertext):
         plain_bytes = AES.new(key, AES.MODE_CBC, bytes(iv)).decrypt(ciphertext)
@@ -378,35 +378,43 @@ def challenge17():
         else:
             return True
 
-    def recover_block(prev_cipher_block, cipher_block):
-        if len(prev_cipher_block) != len(cipher_block):
-            raise ValueError("ciphertext blocks must be the same length")
+    def recover_plain_byte(prev_cipher_block, cipher_block, recovered_so_far):
         block_size = len(cipher_block)
-        result = bytearray(b"\x00" * block_size)
-        for pos in reversed(range(block_size)):
-            padding = bytes([block_size - pos]) * (block_size - pos)
-            test_iv = bytearray(xor_bytes(
-                prev_cipher_block, padding.rjust(block_size, b"\x00"), result))
-            for guess in english.all_bytes_by_frequency:
-                test_iv[pos] = prev_cipher_block[pos] ^ guess ^ (block_size - pos)
-                if has_valid_padding(test_iv, cipher_block):
-                    if pos == block_size - 1:
-                        test_iv[block_size - 2] ^= 2
-                        if not has_valid_padding(test_iv, cipher_block):
-                            test_iv[block_size - 2] ^= 2
-                            continue
-                    result[pos] = guess
-                    break
+        pos = block_size - len(recovered_so_far) - 1
+        padding = bytes([len(recovered_so_far) + 1]) * (len(recovered_so_far) + 1)
+        test_iv = bytearray(xor_bytes(
+            prev_cipher_block,
+            padding.rjust(block_size, b"\x00"),
+            recovered_so_far.rjust(block_size, b"\x00")))
+        for guess in english.all_bytes_by_frequency:
+            test_iv[pos] = prev_cipher_block[pos] ^ guess ^ (len(recovered_so_far) + 1)
+            if has_valid_padding(test_iv, cipher_block):
+                if pos == block_size - 1:
+                    test_iv[block_size - 2] = prev_cipher_block[block_size - 2] ^ 2
+                    if not has_valid_padding(test_iv, cipher_block):
+                        test_iv[block_size - 2] = prev_cipher_block[block_size - 2]
+                        continue
+                return bytes([guess])
+        raise ValueError("can't recover byte")
+
+    def recover_plain_block(prev_cipher_block, cipher_block):
+        result = bytes()
+        for _ in range(len(cipher_block)):
+            result = recover_plain_byte(prev_cipher_block, cipher_block, result) + result
         return result
 
-    for unknown_string in unknown_strings:
-        recovered_plaintext = bytearray()
+    def crack_padding_oracle(iv, ciphertext):
+        result = bytearray()
         prev_cipher_block = iv
-        for cipher_block in chunks(encrypt(unknown_string)):
-            recovered_plaintext += recover_block(prev_cipher_block, cipher_block)
+        for cipher_block in chunks(ciphertext):
+            result += recover_plain_block(prev_cipher_block, cipher_block)
             prev_cipher_block = cipher_block
-        recovered_plaintext = pkcs7_unpad(recovered_plaintext)
-        assert recovered_plaintext == unknown_string
+        return pkcs7_unpad(result)
+
+    for plaintext in plaintexts:
+        ciphertext = encrypt(plaintext)
+        recovered_plaintext = crack_padding_oracle(iv, ciphertext)
+        assert recovered_plaintext == plaintext
         print(recovered_plaintext.decode())
 
 
