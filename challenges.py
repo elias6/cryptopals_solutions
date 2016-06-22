@@ -38,7 +38,7 @@ import rsa
 import srp
 
 from block_tools import (crack_ecb_oracle, ctr_counter, ctr_iterator, guess_block_size,
-    looks_like_ecb, pkcs7_pad, pkcs7_unpad, random_aes_key)
+    looks_like_ecb, pkcs7_pad, pkcs7_padding_is_valid, pkcs7_unpad, random_aes_key)
 from mersenne_twister import MT19937_RNG
 from timing_server import (TimingServer, make_insecure_compare_fn, recover_signature,
     server_approves_of_signature)
@@ -371,12 +371,7 @@ def challenge17():
 
     def has_valid_padding(iv, ciphertext):
         plain_bytes = AES.new(key, AES.MODE_CBC, bytes(iv)).decrypt(ciphertext)
-        try:
-            pkcs7_unpad(plain_bytes)
-        except ValueError:
-            return False
-        else:
-            return True
+        return pkcs7_padding_is_valid(plain_bytes)
 
     def recover_plain_byte(prev_cipher_block, cipher_block, recovered_so_far):
         block_size = len(cipher_block)

@@ -82,3 +82,12 @@ def pkcs7_unpad(input_bytes, block_size=16):
     if padding_length > block_size or padding != expected_padding:
         raise ValueError("Invalid padding")
     return input_bytes[:-padding_length]
+
+
+def pkcs7_padding_is_valid(input_bytes):
+    try:
+        pkcs7_unpad(input_bytes)
+    except ValueError:
+        return False
+    else:
+        return True
