@@ -364,10 +364,10 @@ def challenge17():
     random.shuffle(plaintexts)
 
     key = random_aes_key()
-    iv = os.urandom(16)
 
     def encrypt(plaintext):
-        return AES.new(key, AES.MODE_CBC, iv).encrypt(pkcs7_pad(plaintext))
+        iv = os.urandom(16)
+        return (iv, AES.new(key, AES.MODE_CBC, iv).encrypt(pkcs7_pad(plaintext)))
 
     def has_valid_padding(iv, ciphertext):
         plain_bytes = AES.new(key, AES.MODE_CBC, bytes(iv)).decrypt(ciphertext)
@@ -412,7 +412,7 @@ def challenge17():
         return pkcs7_unpad(result)
 
     for plaintext in plaintexts:
-        ciphertext = encrypt(plaintext)
+        iv, ciphertext = encrypt(plaintext)
         recovered_plaintext = crack_padding_oracle(iv, ciphertext)
         assert recovered_plaintext == plaintext
         print(recovered_plaintext.decode())
