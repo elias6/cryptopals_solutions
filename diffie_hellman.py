@@ -4,7 +4,8 @@ from os import urandom
 
 from Crypto.Cipher import AES
 
-from util import IETF_PRIME, int_to_bytes, pkcs7_pad, pkcs7_unpad, random
+from block_tools import pkcs7_pad, pkcs7_unpad
+from util import IETF_PRIME, int_to_bytes, random
 
 
 class User:

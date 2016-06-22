@@ -41,22 +41,6 @@ def int_to_bytes(x):
     return x.to_bytes(length=ceil(x.bit_length() / 8), byteorder="big")
 
 
-def pkcs7_pad(input_bytes, block_size=16):
-    padding_length = -len(input_bytes) % block_size
-    if padding_length == 0:
-        padding_length = block_size
-    return input_bytes + bytes([padding_length] * padding_length)
-
-
-def pkcs7_unpad(input_bytes, block_size=16):
-    padding_length = input_bytes[-1]
-    expected_padding = bytes([padding_length]) * padding_length
-    padding = input_bytes[-padding_length:]
-    if padding_length > block_size or padding != expected_padding:
-        raise ValueError("Invalid padding")
-    return input_bytes[:-padding_length]
-
-
 def calculate_hmac(key, message, hash_fn=sha1):
     key_hash = hash_fn(key).digest()
     o_key_pad = xor_encrypt(key_hash, b"\x5c")

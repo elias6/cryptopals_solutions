@@ -6,7 +6,7 @@ from math import gcd
 from os import urandom
 
 from english import all_bytes_by_frequency
-from util import chunks, pkcs7_unpad
+from util import chunks
 
 
 def looks_like_ecb(ciphertext, block_size=16):
@@ -66,3 +66,19 @@ def ctr_counter(nonce, block_index=0):
     # PyCrypto's CTR implementation requires a function that returns a new
     # value each time it is called.
     return ctr_iterator(nonce, block_index).__next__
+
+
+def pkcs7_pad(input_bytes, block_size=16):
+    padding_length = -len(input_bytes) % block_size
+    if padding_length == 0:
+        padding_length = block_size
+    return input_bytes + bytes([padding_length] * padding_length)
+
+
+def pkcs7_unpad(input_bytes, block_size=16):
+    padding_length = input_bytes[-1]
+    expected_padding = bytes([padding_length]) * padding_length
+    padding = input_bytes[-padding_length:]
+    if padding_length > block_size or padding != expected_padding:
+        raise ValueError("Invalid padding")
+    return input_bytes[:-padding_length]

@@ -38,12 +38,12 @@ import rsa
 import srp
 
 from block_tools import (crack_ecb_oracle, ctr_counter, ctr_iterator, guess_block_size,
-    looks_like_ecb, random_aes_key)
+    looks_like_ecb, pkcs7_pad, pkcs7_unpad, random_aes_key)
 from mersenne_twister import MT19937_RNG
 from timing_server import (TimingServer, make_insecure_compare_fn, recover_signature,
     server_approves_of_signature)
 from util import (IETF_PRIME, big_int_cube_root, calculate_hmac, chunks, int_to_bytes,
-    mod_inv, pkcs7_pad, pkcs7_unpad, random, xor_bytes, xor_encrypt)
+    mod_inv, random, xor_bytes, xor_encrypt)
 
 
 warnings.simplefilter("default", BytesWarning)
