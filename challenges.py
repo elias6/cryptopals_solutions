@@ -1228,6 +1228,35 @@ def challenge49():
     assert request_is_valid(forged_message2, message_mac(modified_extension))
 
 
+def challenge50():
+    """Hashing with CBC-MAC"""
+    key = b"YELLOW SUBMARINE"
+
+    def encrypt(message):
+        return AES.new(key, AES.MODE_CBC, IV=b"\x00"*16).encrypt(message)
+
+    def decrypt(message):
+        return AES.new(key, AES.MODE_CBC, IV=b"\x00"*16).decrypt(message)
+
+    def mac_hash(message):
+        return encrypt(pkcs7_pad(message))[-16:]
+
+    snippet = b"alert('MZA who was that?');\n"
+    mac = mac_hash(snippet)
+    assert mac.hex() == "296b8d7cb78a243dda4d0a61d33bbdd1"
+    print("snippet:\n{}".format(snippet.decode()))
+
+    forged_snippet_begin = b"alert('Ayo, the Wu is back!');\n/****************"
+    forged_snippet_end = b"**************/"
+    nonsense = xor_bytes(
+        decrypt(xor_bytes(pkcs7_pad(forged_snippet_end), decrypt(mac))),
+        encrypt(forged_snippet_begin)[-16:]
+    )
+    forged_snippet = forged_snippet_begin + nonsense + forged_snippet_end
+    print("forged snippet:\n{}".format(forged_snippet.decode(errors="replace")))
+    assert mac_hash(forged_snippet) == mac
+
+
 class ChallengeNotFoundError(ValueError):
     pass
 
