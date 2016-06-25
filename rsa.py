@@ -152,22 +152,22 @@ def crack_parity_oracle(ciphertext, public_key, plaintext_is_odd, verbose=False)
     modulus = public_key.modulus
     lower_bound = Fraction(0)
     upper_bound = Fraction(modulus)
-    test_ciphertext = ciphertext
     modulus_length = ceil(modulus.bit_length() / 8)
-    while round(lower_bound) != round(upper_bound):
-        test_ciphertext = multiply(test_ciphertext, 2**public_key.exponent, modulus)
+    for i in count(start=1):
+        test_ciphertext = multiply(ciphertext, 2 ** (i*public_key.exponent), modulus)
         if plaintext_is_odd(test_ciphertext):
             lower_bound = (lower_bound + upper_bound) / 2
         else:
             upper_bound = (lower_bound + upper_bound) / 2
-        plain_int = round(upper_bound)
+        plain_int = floor(upper_bound)
         recovered_plaintext = plain_int.to_bytes(length=modulus_length, byteorder="big")
         if verbose:
             try:
                 print(unpad(recovered_plaintext))
             except ValueError:
                 pass
-    return recovered_plaintext
+        if ceil(lower_bound) == plain_int:
+            return recovered_plaintext
 
 
 def crack_padding_oracle(ciphertext, public_key, padding_looks_ok):
