@@ -3,6 +3,7 @@
 # standard library modules
 import base64
 import cProfile
+import gzip
 import os
 import pprint as pprint_module
 import re
@@ -15,8 +16,9 @@ from collections import Counter
 from contextlib import ExitStack, redirect_stdout
 from hashlib import sha1, sha256
 from heapq import nlargest
-from itertools import combinations
+from itertools import combinations, count
 from math import ceil, gcd
+from os.path import commonprefix
 from sys import stdout
 from threading import Thread
 from time import time
@@ -1255,6 +1257,55 @@ def challenge50():
     forged_snippet = forged_snippet_begin + nonsense + forged_snippet_end
     print("forged snippet:\n{}".format(forged_snippet.decode(errors="replace")))
     assert mac_hash(forged_snippet) == mac
+
+
+def challenge51():
+    """Compression Ratio Side-Channel Attacks"""
+    session_id = b"TmV2ZXIgcmV2ZWFsIHRoZSBXdS1UYW5nIFNlY3JldCE="
+    assert base64.b64decode(session_id) == b"Never reveal the Wu-Tang Secret!"
+
+    def format_request(payload):
+        return b"\n".join([
+            b"POST / HTTP/1.1",
+            b"Host: hapless.com",
+            b"Cookie: sessionid=" + session_id,
+            b"Content-Length: " + str(len(payload)).encode(),
+            payload
+        ])
+
+    def ctr_encrypt(plaintext):
+        nonce = random.randint(0, 2**64 - 1)
+        cipher = AES.new(random_aes_key(), AES.MODE_CTR, counter=ctr_counter(nonce))
+        return cipher.encrypt(plaintext)
+
+    def cbc_encrypt(plaintext):
+        cipher = AES.new(random_aes_key(), AES.MODE_CBC, IV=os.urandom(16))
+        return cipher.encrypt(pkcs7_pad(plaintext))
+
+    def crack_compression_oracle(oracle_fn):
+        base64_alphabet = (b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+            b"0123456789+/=")
+        base64_guesses = [bytes([x]) for x in base64_alphabet + b"\n"]
+        result = b""
+        while True:
+            for i in count(start=0):
+                prefix = os.urandom(i) + b"sessionid=" + result
+                length_map = {g: oracle_fn(prefix + g) for g in base64_guesses}
+                min_length = min(length_map.values())
+                good_guesses = {g for g in length_map if length_map[g] == min_length}
+                new_byte = commonprefix(good_guesses)
+                if new_byte == b"\n":
+                    return result
+                elif new_byte:
+                    result += new_byte
+                    break
+
+    for encrypt in [ctr_encrypt, cbc_encrypt]:
+        def oracle_fn(payload):
+            return len(encrypt(gzip.compress(format_request(payload))))
+
+        recovered_session_id = crack_compression_oracle(oracle_fn)
+        assert recovered_session_id == session_id
 
 
 class ChallengeNotFoundError(ValueError):
