@@ -18,7 +18,6 @@ from hashlib import sha1, sha256
 from heapq import nlargest
 from itertools import combinations, count
 from math import ceil, gcd
-from os.path import commonprefix
 from sys import stdout
 from threading import Thread
 from time import time
@@ -1273,37 +1272,32 @@ def challenge51():
             payload
         ])
 
-    def ctr_encrypt(plaintext):
+    def ctr_oracle_fn(payload):
         nonce = random.randint(0, 2**64 - 1)
         cipher = AES.new(random_aes_key(), AES.MODE_CTR, counter=ctr_counter(nonce))
-        return cipher.encrypt(plaintext)
+        return len(cipher.encrypt(gzip.compress(format_request(payload))))
 
-    def cbc_encrypt(plaintext):
+    def cbc_oracle_fn(payload):
         cipher = AES.new(random_aes_key(), AES.MODE_CBC, IV=os.urandom(16))
-        return cipher.encrypt(pkcs7_pad(plaintext))
+        return len(cipher.encrypt(pkcs7_pad(gzip.compress(format_request(payload)))))
 
     def crack_compression_oracle(oracle_fn):
-        base64_alphabet = (b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-            b"0123456789+/=")
-        base64_guesses = [bytes([x]) for x in base64_alphabet + b"\n"]
+        base64_alphabet = [bytes([x]) for x in b"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+            b"abcdefghijklmnopqrstuvwxyz0123456789+/=\n"]
         result = b""
         while True:
             for i in count(start=0):
                 prefix = os.urandom(i) + b"sessionid=" + result
-                length_map = {g: oracle_fn(prefix + g) for g in base64_guesses}
+                length_map = {x: oracle_fn(prefix + x) for x in base64_alphabet}
                 min_length = min(length_map.values())
-                good_guesses = {g for g in length_map if length_map[g] == min_length}
-                new_byte = commonprefix(good_guesses)
-                if new_byte == b"\n":
+                good_guesses = [x for x in length_map if length_map[x] == min_length]
+                if good_guesses == [b"\n"]:
                     return result
-                elif new_byte:
-                    result += new_byte
+                elif len(good_guesses) == 1:
+                    result += good_guesses[0]
                     break
 
-    for encrypt in [ctr_encrypt, cbc_encrypt]:
-        def oracle_fn(payload):
-            return len(encrypt(gzip.compress(format_request(payload))))
-
+    for oracle_fn in [ctr_oracle_fn, cbc_oracle_fn]:
         recovered_session_id = crack_compression_oracle(oracle_fn)
         assert recovered_session_id == session_id
 
