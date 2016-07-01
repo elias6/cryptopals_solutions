@@ -65,7 +65,7 @@ class TimingServer(ThreadingMixIn, HTTPServer):
 
 
 def server_approves_of_signature(signature):
-    query = urlencode({"file": "hamlet.txt", "signature": signature.hex()})
+    query = urlencode({"file": "text_files/hamlet.txt", "signature": signature.hex()})
     try:
         urlopen("http://localhost:31415/signature_is_valid?" + query)
     except HTTPError:

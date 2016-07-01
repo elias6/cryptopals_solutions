@@ -100,7 +100,7 @@ def challenge3():
 
 def challenge4():
     """Detect single-character XOR"""
-    with open("4.txt") as f:
+    with open("text_files/4.txt") as f:
         ciphertexts = [bytes.fromhex(line.strip()) for line in f.readlines()]
     decoded_string_data = enumerate(english.best_score_data(c) for c in ciphertexts)
     best_decodings = nlargest(3, decoded_string_data, key=lambda d: d[1]["score"])
@@ -131,7 +131,7 @@ def challenge6():
 
     assert bit_hamming_distance(b"this is a test", b"wokka wokka!!!") == 37
 
-    with open("6.txt") as f:
+    with open("text_files/6.txt") as f:
         ciphertext = base64.b64decode(f.read())
 
     best_key_size = min(range(2, 41), key=lambda x: index_of_coincidence(ciphertext, x))
@@ -145,7 +145,7 @@ def challenge6():
 
 def challenge7():
     """AES in ECB mode"""
-    with open("7.txt") as f:
+    with open("text_files/7.txt") as f:
         ciphertext = base64.b64decode(f.read())
     message = AES.new(b"YELLOW SUBMARINE", AES.MODE_ECB).decrypt(ciphertext)
     print(message.decode())
@@ -154,7 +154,7 @@ def challenge7():
 
 def challenge8():
     """Detect AES in ECB mode"""
-    with open("8.txt") as f:
+    with open("text_files/8.txt") as f:
         ciphertexts = [bytes.fromhex(line.strip()) for line in f.readlines()]
     ecb_texts = [(i, c) for i, c in enumerate(ciphertexts) if looks_like_ecb(c)]
     pprint(ecb_texts)
@@ -190,7 +190,7 @@ def challenge10():
             last_cipher_block = cipher_block
         return bytes(result)
 
-    with open("10.txt") as f:
+    with open("text_files/10.txt") as f:
         ciphertext = base64.b64decode(f.read())
     key = b"YELLOW SUBMARINE"
     iv = bytes([0] * 16)
@@ -223,7 +223,7 @@ def challenge11():
     # file, there seems to be a precise amount of data at which this
     # function works reliably, and below which it frequently thinks ECB is
     # CBC.
-    with open("hamlet.txt", "rb") as f:
+    with open("text_files/hamlet.txt", "rb") as f:
         plain_bytes = f.read(3000)
     for _ in range(1000):
         ciphertext, mode = encrypt_with_random_mode(plain_bytes)
@@ -496,7 +496,7 @@ def challenge20():
         cipher = AES.new(key, AES.MODE_CTR, counter=ctr_counter(0))
         return cipher.encrypt(ciphertext)
 
-    with open("20.txt") as f:
+    with open("text_files/20.txt") as f:
         plaintexts = [base64.b64decode(x) for x in f.readlines()]
     ciphertexts = [encrypt(x) for x in plaintexts]
     recovered_key = english.crack_common_xor_key(ciphertexts)
@@ -624,7 +624,7 @@ def challenge25():
         return bytes(result)
 
     # 25.txt is identical to 7.txt
-    with open("25.txt") as f:
+    with open("text_files/25.txt") as f:
         temp_bytes = base64.b64decode(f.read())
     plain_bytes = AES.new(b"YELLOW SUBMARINE", AES.MODE_ECB).decrypt(temp_bytes)
     cipher = AES.new(key, AES.MODE_CTR, counter=ctr_counter(nonce))
@@ -735,7 +735,7 @@ def challenge30():
 def challenge31():
     """Implement and break HMAC-SHA1 with an artificial timing leak"""
     hmac_key = os.urandom(16)
-    with open("hamlet.txt", "rb") as f:
+    with open("text_files/hamlet.txt", "rb") as f:
         data = f.read()
     hmac = calculate_hmac(hmac_key, data)
 
@@ -762,7 +762,7 @@ def challenge31():
 def challenge32():
     """Break HMAC-SHA1 with a slightly less artificial timing leak"""
     hmac_key = os.urandom(16)
-    with open("hamlet.txt", "rb") as f:
+    with open("text_files/hamlet.txt", "rb") as f:
         data = f.read()
     hmac = calculate_hmac(hmac_key, data)
 
@@ -1061,7 +1061,7 @@ def challenge43():
 def challenge44():
     """DSA nonce recovery from repeated nonce"""
     messages = []
-    with open("44.txt") as f:
+    with open("text_files/44.txt") as f:
         message_data = {}
         for line in f.readlines():
             key, value = re.match("^(.+): (.+)$", line).groups()
