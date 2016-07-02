@@ -41,8 +41,8 @@ import srp
 from block_tools import (crack_ecb_oracle, ctr_counter, ctr_iterator, guess_block_size,
     looks_like_ecb, pkcs7_pad, pkcs7_padding_is_valid, pkcs7_unpad, random_aes_key)
 from mersenne_twister import MT19937_RNG
-from timing_server import (TimingServer, make_insecure_compare_fn, recover_signature,
-    server_approves_of_signature)
+from timing_server import (TimingServer, make_insecure_compare_fn, pretty_sig,
+    recover_signature, server_approves_of_signature)
 from util import (IETF_PRIME, big_int_cube_root, calculate_hmac, chunks, int_to_bytes,
     mod_inv, random, xor_bytes, xor_encrypt)
 
@@ -739,7 +739,7 @@ def challenge31():
         data = f.read()
     hmac = calculate_hmac(hmac_key, data)
 
-    print("looking for {}".format(list(hmac)))
+    print("looking for {}".format(pretty_sig(hmac)))
     print()
     server = TimingServer(
         ("localhost", 31415), hmac_key, make_insecure_compare_fn(0.05))
@@ -767,7 +767,7 @@ def challenge32():
         data = f.read()
     hmac = calculate_hmac(hmac_key, data)
 
-    print("looking for {}".format(list(hmac)))
+    print("looking for {}".format(pretty_sig(hmac)))
     print()
     server = TimingServer(
         ("localhost", 31415), hmac_key, make_insecure_compare_fn(0.025))

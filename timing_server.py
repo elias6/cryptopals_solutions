@@ -9,7 +9,7 @@ from urllib.error import HTTPError
 from urllib.parse import parse_qs, urlencode, urlparse
 from urllib.request import urlopen
 
-from util import calculate_hmac
+from util import calculate_hmac, chunks
 
 
 def insecure_compare(data1, data2, delay):
@@ -78,6 +78,20 @@ class CantRecoverSignatureError(Exception):
     pass
 
 
+def pretty_sig(sig):
+    return " ".join(chunks(sig.hex(), 2))
+
+
+def pretty_status(sig, attempt_count, duration_difference, byte_was_recovered=True):
+    return ("recovered so far: {}{}, {} {} for last byte, {:.3f} ms difference").format(
+        pretty_sig(sig),
+        "" if byte_was_recovered else " ?",
+        attempt_count,
+        "attempt" if attempt_count == 1 else "attempts",
+        1000 * duration_difference
+    )
+
+
 def recover_signature(validate_signature, thread_count, threshold, attempt_limit, retry_limit):
     # TODO: make this function figure out threshold on its own
 
@@ -97,9 +111,7 @@ def recover_signature(validate_signature, thread_count, threshold, attempt_limit
                 for sig_data in pool.imap_unordered(try_signature, test_sigs):
                     signature = sig_data["signature"]
                     if sig_data["is_valid"]:
-                        print("signature recovered: {}, "
-                            "{} attempt(s) for last byte".format(
-                                list(signature), len(sig_durations[signature])))
+                        print("signature recovered: {}".format(pretty_sig(signature)))
                         return signature
                     sig_durations[signature].append(sig_data["duration"])
                 slowest_sig, second_slowest_sig = nlargest(
@@ -109,14 +121,13 @@ def recover_signature(validate_signature, thread_count, threshold, attempt_limit
                 duration_difference = slowest_duration - second_slowest_duration
                 if duration_difference > threshold:
                     result.append(slowest_sig[len(result)])
-                    print("recovered so far: {}, {} attempt(s) for last byte, "
-                        "duration difference: {:.3f} ms".format(list(result),
-                        len(sig_durations[slowest_sig]), 1000 * duration_difference))
+                    print(pretty_status(
+                        result, len(sig_durations[slowest_sig]), duration_difference))
                     break
             else:
-                print("recovered so far: {}, {} attempt(s) for last byte, "
-                    "duration difference: {:.3f} ms".format(list(result) + ["?"],
-                        len(sig_durations[slowest_sig]), 1000 * duration_difference))
+                print(pretty_status(
+                    result, len(sig_durations[slowest_sig]), duration_difference,
+                    byte_was_recovered=False))
                 if retry_count < retry_limit or len(result) >= 20:
                     if len(result) >= 20:
                         print("result is too long, ", end="")
