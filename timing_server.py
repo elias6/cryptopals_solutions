@@ -78,7 +78,7 @@ class CantRecoverSignatureError(Exception):
     pass
 
 
-def recover_signature(validate_signature, thread_count, threshold, attempt_limit):
+def recover_signature(validate_signature, thread_count, threshold, attempt_limit, retry_limit):
     # TODO: make this function figure out threshold on its own
 
     def try_signature(signature):
@@ -89,16 +89,17 @@ def recover_signature(validate_signature, thread_count, threshold, attempt_limit
 
     result = bytearray()
     sig_durations = defaultdict(list)
+    retry_count = 0
     with ThreadPool(thread_count) as pool:
-        for pos in range(20):
-            assert pos == len(result)
-            test_sigs = [bytes(result + bytes([b] + [0]*(19 - pos))) for b in range(256)]
+        while True:
+            test_sigs = [(bytes(list(result) + [b])).ljust(20, b"\x00") for b in range(256)]
             for i in range(attempt_limit):
                 for sig_data in pool.imap_unordered(try_signature, test_sigs):
                     signature = sig_data["signature"]
                     if sig_data["is_valid"]:
                         print("signature recovered: {}, "
-                            "{} attempt(s) for last byte".format(list(signature), i + 1))
+                            "{} attempt(s) for last byte".format(
+                                list(signature), len(sig_durations[signature])))
                         return signature
                     sig_durations[signature].append(sig_data["duration"])
                 slowest_sig, second_slowest_sig = nlargest(
@@ -107,14 +108,20 @@ def recover_signature(validate_signature, thread_count, threshold, attempt_limit
                 second_slowest_duration = median(sig_durations[second_slowest_sig])
                 duration_difference = slowest_duration - second_slowest_duration
                 if duration_difference > threshold:
-                    result.append(slowest_sig[pos])
+                    result.append(slowest_sig[len(result)])
                     print("recovered so far: {}, {} attempt(s) for last byte, "
-                        "duration difference: {:.3f} ms".format(list(result), i + 1,
-                        1000 * duration_difference))
+                        "duration difference: {:.3f} ms".format(list(result),
+                        len(sig_durations[slowest_sig]), 1000 * duration_difference))
                     break
             else:
                 print("recovered so far: {}, {} attempt(s) for last byte, "
-                    "duration difference: {:.3f} ms".format(list(result), i + 1,
-                    1000 * duration_difference))
-                raise CantRecoverSignatureError("can't recover signature")
-    raise CantRecoverSignatureError("can't recover signature")
+                    "duration difference: {:.3f} ms".format(list(result) + ["?"],
+                        len(sig_durations[slowest_sig]), 1000 * duration_difference))
+                if retry_count < retry_limit or len(result) >= 20:
+                    if len(result) >= 20:
+                        print("result is too long, ", end="")
+                    retry_count += 1
+                    result = bytearray()
+                    print("starting over, retry count: {}".format(retry_count))
+                else:
+                    raise CantRecoverSignatureError("can't recover signature")

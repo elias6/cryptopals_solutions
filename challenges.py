@@ -749,9 +749,10 @@ def challenge31():
         print()
         signature = recover_signature(
             server_approves_of_signature,
-            thread_count=15,
-            threshold=0.01,
-            attempt_limit=20)
+            thread_count=35,
+            threshold=0.0075,
+            attempt_limit=5,
+            retry_limit=20)
     finally:
         server.shutdown()
         server.server_close()
@@ -778,7 +779,8 @@ def challenge32():
             server_approves_of_signature,
             thread_count=15,
             threshold=0.006,
-            attempt_limit=20)
+            attempt_limit=10,
+            retry_limit=10)
     finally:
         server.shutdown()
         server.server_close()
