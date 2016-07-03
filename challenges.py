@@ -37,12 +37,11 @@ import english
 import mersenne_twister
 import rsa
 import srp
+import timing_server
 
 from block_tools import (crack_ecb_oracle, ctr_counter, ctr_iterator, guess_block_size,
     looks_like_ecb, pkcs7_pad, pkcs7_padding_is_valid, pkcs7_unpad, random_aes_key)
 from mersenne_twister import MT19937_RNG
-from timing_server import (TimingServer, make_insecure_compare_fn, pretty_sig,
-    recover_signature, server_approves_of_signature)
 from util import (IETF_PRIME, big_int_cube_root, calculate_hmac, chunks, int_to_bytes,
     mod_inv, random, xor_bytes, xor_encrypt)
 
@@ -739,16 +738,15 @@ def challenge31():
         data = f.read()
     hmac = calculate_hmac(hmac_key, data)
 
-    print("looking for {}".format(pretty_sig(hmac)))
-    print()
-    server = TimingServer(
-        ("localhost", 31415), hmac_key, make_insecure_compare_fn(0.05))
+    print("looking for {}\n".format(timing_server.pretty_sig(hmac)))
+    server = timing_server.TimingServer(
+        ("localhost", 31415),
+        hmac_key,
+        lambda a, b: timing_server.insecure_compare(a, b, delay=0.05))
     try:
         Thread(target=server.serve_forever).start()
-        print("Server is running on {}".format(server.server_address))
-        print()
-        signature = recover_signature(
-            server_approves_of_signature,
+        signature = timing_server.recover_signature(
+            timing_server.server_approves_of_signature,
             thread_count=35,
             threshold=0.0075,
             attempt_limit=5,
@@ -767,16 +765,15 @@ def challenge32():
         data = f.read()
     hmac = calculate_hmac(hmac_key, data)
 
-    print("looking for {}".format(pretty_sig(hmac)))
-    print()
-    server = TimingServer(
-        ("localhost", 31415), hmac_key, make_insecure_compare_fn(0.025))
+    print("looking for {}\n".format(timing_server.pretty_sig(hmac)))
+    server = timing_server.TimingServer(
+        ("localhost", 31415),
+        hmac_key,
+        lambda a, b: timing_server.insecure_compare(a, b, delay=0.025))
     try:
         Thread(target=server.serve_forever).start()
-        print("Server is running on {}".format(server.server_address))
-        print()
-        signature = recover_signature(
-            server_approves_of_signature,
+        signature = timing_server.recover_signature(
+            timing_server.server_approves_of_signature,
             thread_count=15,
             threshold=0.006,
             attempt_limit=10,

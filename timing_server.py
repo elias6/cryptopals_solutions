@@ -22,10 +22,6 @@ def insecure_compare(data1, data2, delay):
     return True
 
 
-def make_insecure_compare_fn(delay):
-    return lambda data1, data2: insecure_compare(data1, data2, delay)
-
-
 class ValidatingRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         url_components = urlparse(self.path)
@@ -63,6 +59,10 @@ class TimingServer(ThreadingMixIn, HTTPServer):
         self.validate_signature = validate_signature
         super().__init__(server_address, ValidatingRequestHandler, *args, **kwargs)
 
+    def serve_forever(self, *args, **kwargs):
+        print("Server is running on {}".format(self.server_address))
+        super().serve_forever(*args, **kwargs)
+
 
 def server_approves_of_signature(signature):
     query = urlencode({"file": "text_files/hamlet.txt", "signature": signature.hex()})
@@ -95,11 +95,11 @@ def pretty_status(sig, attempt_count, duration_difference, byte_was_recovered=Tr
 def recover_signature(validate_signature, thread_count, threshold, attempt_limit, retry_limit):
     # TODO: make this function figure out threshold on its own
 
-    def try_signature(signature):
+    def try_signature(sig):
         start_time = perf_counter()
-        is_valid = validate_signature(signature)
+        is_valid = validate_signature(sig)
         duration = perf_counter() - start_time
-        return {"signature": signature, "is_valid": is_valid, "duration": duration}
+        return {"signature": sig, "is_valid": is_valid, "duration": duration}
 
     result = bytearray()
     sig_durations = defaultdict(list)
@@ -109,11 +109,11 @@ def recover_signature(validate_signature, thread_count, threshold, attempt_limit
             test_sigs = [(bytes(list(result) + [b])).ljust(20, b"\x00") for b in range(256)]
             for i in range(attempt_limit):
                 for sig_data in pool.imap_unordered(try_signature, test_sigs):
-                    signature = sig_data["signature"]
+                    sig = sig_data["signature"]
                     if sig_data["is_valid"]:
-                        print("signature recovered: {}".format(pretty_sig(signature)))
-                        return signature
-                    sig_durations[signature].append(sig_data["duration"])
+                        print("signature recovered: {}".format(pretty_sig(sig)))
+                        return sig
+                    sig_durations[sig].append(sig_data["duration"])
                 slowest_sig, second_slowest_sig = nlargest(
                     2, test_sigs, key=lambda x: median(sig_durations[x]))
                 slowest_duration = median(sig_durations[slowest_sig])
