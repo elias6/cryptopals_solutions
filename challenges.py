@@ -744,7 +744,7 @@ def challenge31():
         return timing_attack.insecure_compare(a, b, delay=0.05)
 
     server_address = ("localhost", 31415)
-    server = timing_attack.TimingServer(server_address, hmac_key, compare_sigs)
+    server = timing_attack.Server(server_address, hmac_key, compare_sigs)
 
     def validate_signature(sig):
         return timing_attack.server_approves_of_signature(server_address, filename, sig)
@@ -774,7 +774,7 @@ def challenge32():
         return timing_attack.insecure_compare(a, b, delay=0.025)
 
     server_address = ("localhost", 31415)
-    server = timing_attack.TimingServer(server_address, hmac_key, compare_sigs)
+    server = timing_attack.Server(server_address, hmac_key, compare_sigs)
 
     def validate_signature(sig):
         return timing_attack.server_approves_of_signature(server_address, filename, sig)

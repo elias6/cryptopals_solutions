@@ -49,7 +49,7 @@ class ValidatingRequestHandler(BaseHTTPRequestHandler):
         pass
 
 
-class TimingServer(ThreadingMixIn, HTTPServer):
+class Server(ThreadingMixIn, HTTPServer):
     # Increase request_queue_size so server can handle many simultaneous
     # connections without crashing.
     request_queue_size = 128
