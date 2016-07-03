@@ -37,7 +37,7 @@ import english
 import mersenne_twister
 import rsa
 import srp
-import timing_server
+import timing_attack
 
 from block_tools import (crack_ecb_oracle, ctr_counter, ctr_iterator, guess_block_size,
     looks_like_ecb, pkcs7_pad, pkcs7_padding_is_valid, pkcs7_unpad, random_aes_key)
@@ -738,20 +738,20 @@ def challenge31():
     with open(filename, "rb") as f:
         data = f.read()
     hmac = calculate_hmac(hmac_key, data)
-    print("looking for {}\n".format(timing_server.pretty_sig(hmac)))
+    print("looking for {}\n".format(timing_attack.pretty_sig(hmac)))
 
     def compare_sigs(a, b):
-        return timing_server.insecure_compare(a, b, delay=0.05)
+        return timing_attack.insecure_compare(a, b, delay=0.05)
 
     server_address = ("localhost", 31415)
-    server = timing_server.TimingServer(server_address, hmac_key, compare_sigs)
+    server = timing_attack.TimingServer(server_address, hmac_key, compare_sigs)
 
     def validate_signature(sig):
-        return timing_server.server_approves_of_signature(server_address, filename, sig)
+        return timing_attack.server_approves_of_signature(server_address, filename, sig)
 
     try:
         Thread(target=server.serve_forever).start()
-        signature = timing_server.recover_signature(
+        signature = timing_attack.recover_signature(
             validate_signature, thread_count=35, threshold=0.0075, attempt_limit=5,
             retry_limit=20)
     finally:
@@ -768,20 +768,20 @@ def challenge32():
     with open(filename, "rb") as f:
         data = f.read()
     hmac = calculate_hmac(hmac_key, data)
-    print("looking for {}\n".format(timing_server.pretty_sig(hmac)))
+    print("looking for {}\n".format(timing_attack.pretty_sig(hmac)))
 
     def compare_sigs(a, b):
-        return timing_server.insecure_compare(a, b, delay=0.025)
+        return timing_attack.insecure_compare(a, b, delay=0.025)
 
     server_address = ("localhost", 31415)
-    server = timing_server.TimingServer(server_address, hmac_key, compare_sigs)
+    server = timing_attack.TimingServer(server_address, hmac_key, compare_sigs)
 
     def validate_signature(sig):
-        return timing_server.server_approves_of_signature(server_address, filename, sig)
+        return timing_attack.server_approves_of_signature(server_address, filename, sig)
 
     try:
         Thread(target=server.serve_forever).start()
-        signature = timing_server.recover_signature(
+        signature = timing_attack.recover_signature(
             validate_signature, thread_count=15, threshold=0.006, attempt_limit=10,
             retry_limit=10)
     finally:
