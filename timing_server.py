@@ -64,10 +64,12 @@ class TimingServer(ThreadingMixIn, HTTPServer):
         super().serve_forever(*args, **kwargs)
 
 
-def server_approves_of_signature(signature):
-    query = urlencode({"file": "text_files/hamlet.txt", "signature": signature.hex()})
+def server_approves_of_signature(server_address, filename, signature):
+    query = urlencode({"file": filename, "signature": signature.hex()})
+    url = "http://{}:{}/signature_is_valid?{}".format(
+        server_address[0], server_address[1], query)
     try:
-        urlopen("http://localhost:31415/signature_is_valid?" + query)
+        urlopen(url)
     except HTTPError:
         return False
     else:

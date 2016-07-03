@@ -734,22 +734,25 @@ def challenge30():
 def challenge31():
     """Implement and break HMAC-SHA1 with an artificial timing leak"""
     hmac_key = os.urandom(16)
-    with open("text_files/hamlet.txt", "rb") as f:
+    filename = "text_files/hamlet.txt"
+    with open(filename, "rb") as f:
         data = f.read()
     hmac = calculate_hmac(hmac_key, data)
-
     print("looking for {}\n".format(timing_server.pretty_sig(hmac)))
-    server = timing_server.TimingServer(
-        ("localhost", 31415),
-        hmac_key,
-        lambda a, b: timing_server.insecure_compare(a, b, delay=0.05))
+
+    def compare_sigs(a, b):
+        return timing_server.insecure_compare(a, b, delay=0.05)
+
+    server_address = ("localhost", 31415)
+    server = timing_server.TimingServer(server_address, hmac_key, compare_sigs)
+
+    def validate_signature(sig):
+        return timing_server.server_approves_of_signature(server_address, filename, sig)
+
     try:
         Thread(target=server.serve_forever).start()
         signature = timing_server.recover_signature(
-            timing_server.server_approves_of_signature,
-            thread_count=35,
-            threshold=0.0075,
-            attempt_limit=5,
+            validate_signature, thread_count=35, threshold=0.0075, attempt_limit=5,
             retry_limit=20)
     finally:
         server.shutdown()
@@ -761,22 +764,25 @@ def challenge31():
 def challenge32():
     """Break HMAC-SHA1 with a slightly less artificial timing leak"""
     hmac_key = os.urandom(16)
-    with open("text_files/hamlet.txt", "rb") as f:
+    filename = "text_files/hamlet.txt"
+    with open(filename, "rb") as f:
         data = f.read()
     hmac = calculate_hmac(hmac_key, data)
-
     print("looking for {}\n".format(timing_server.pretty_sig(hmac)))
-    server = timing_server.TimingServer(
-        ("localhost", 31415),
-        hmac_key,
-        lambda a, b: timing_server.insecure_compare(a, b, delay=0.025))
+
+    def compare_sigs(a, b):
+        return timing_server.insecure_compare(a, b, delay=0.025)
+
+    server_address = ("localhost", 31415)
+    server = timing_server.TimingServer(server_address, hmac_key, compare_sigs)
+
+    def validate_signature(sig):
+        return timing_server.server_approves_of_signature(server_address, filename, sig)
+
     try:
         Thread(target=server.serve_forever).start()
         signature = timing_server.recover_signature(
-            timing_server.server_approves_of_signature,
-            thread_count=15,
-            threshold=0.006,
-            attempt_limit=10,
+            validate_signature, thread_count=15, threshold=0.006, attempt_limit=10,
             retry_limit=10)
     finally:
         server.shutdown()
