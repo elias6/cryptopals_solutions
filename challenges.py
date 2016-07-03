@@ -736,19 +736,18 @@ def challenge31():
     hmac_key = os.urandom(16)
     filename = "text_files/hamlet.txt"
     with open(filename, "rb") as f:
-        data = f.read()
-    hmac = calculate_hmac(hmac_key, data)
+        hmac = calculate_hmac(hmac_key, f.read())
     print("looking for {}\n".format(timing_attack.pretty_sig(hmac)))
 
     def compare_sigs(a, b):
         return timing_attack.insecure_compare(a, b, delay=0.05)
 
     server_address = ("localhost", 31415)
-    server = timing_attack.Server(server_address, hmac_key, compare_sigs)
 
     def validate_signature(sig):
         return timing_attack.server_approves_of_signature(server_address, filename, sig)
 
+    server = timing_attack.Server(server_address, hmac_key, compare_sigs)
     try:
         Thread(target=server.serve_forever).start()
         signature = timing_attack.recover_signature(
@@ -766,19 +765,18 @@ def challenge32():
     hmac_key = os.urandom(16)
     filename = "text_files/hamlet.txt"
     with open(filename, "rb") as f:
-        data = f.read()
-    hmac = calculate_hmac(hmac_key, data)
+        hmac = calculate_hmac(hmac_key, f.read())
     print("looking for {}\n".format(timing_attack.pretty_sig(hmac)))
 
     def compare_sigs(a, b):
         return timing_attack.insecure_compare(a, b, delay=0.025)
 
     server_address = ("localhost", 31415)
-    server = timing_attack.Server(server_address, hmac_key, compare_sigs)
 
     def validate_signature(sig):
         return timing_attack.server_approves_of_signature(server_address, filename, sig)
 
+    server = timing_attack.Server(server_address, hmac_key, compare_sigs)
     try:
         Thread(target=server.serve_forever).start()
         signature = timing_attack.recover_signature(
