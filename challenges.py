@@ -1347,7 +1347,7 @@ def run_challenges(challenges, output_stream=stdout):
 
 parser = ArgumentParser(description="Solve the Matasano crypto challenges.")
 parser.add_argument(
-    "challenge", nargs="*",
+    "challenges", nargs="*",
     help="Challenge(s) to run. If not specified, all challenges will be run.")
 parser.add_argument(
     "-p", "--profile", help="Profile challenges.", action="store_true")
@@ -1357,7 +1357,7 @@ ARGS = parser.parse_args()
 
 if __name__ == "__main__":
     try:
-        challenges = get_challenges(ARGS.challenge) or get_all_challenges()
+        challenges = get_challenges(ARGS.challenges) or get_all_challenges()
     except ChallengeNotFoundError as e:
         parser.error(e)
     with ExitStack() as stack:
