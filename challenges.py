@@ -168,31 +168,29 @@ def challenge9():
 def challenge10():
     """Implement CBC mode"""
     def cbc_encrypt(key, iv, plain_bytes):
-        cipher = AES.new(key, AES.MODE_ECB)
-        last_cipher_block = iv
         result = bytearray()
+        prev_cipher_block = iv
         for plain_block in chunks(plain_bytes):
-            combined_block = xor_bytes(last_cipher_block, plain_block)
-            cipher_block = cipher.encrypt(combined_block)
+            combined_block = xor_bytes(prev_cipher_block, plain_block)
+            cipher_block = AES.new(key, AES.MODE_ECB).encrypt(combined_block)
             result.extend(cipher_block)
-            last_cipher_block = cipher_block
+            prev_cipher_block = cipher_block
         return bytes(result)
 
     def cbc_decrypt(key, iv, ciphertext):
-        cipher = AES.new(key, AES.MODE_ECB)
-        last_cipher_block = iv
         result = bytearray()
+        prev_cipher_block = iv
         for cipher_block in chunks(ciphertext):
-            decrypted_block = cipher.decrypt(cipher_block)
-            plain_block = xor_bytes(last_cipher_block, decrypted_block)
+            decrypted_block = AES.new(key, AES.MODE_ECB).decrypt(cipher_block)
+            plain_block = xor_bytes(prev_cipher_block, decrypted_block)
             result.extend(plain_block)
-            last_cipher_block = cipher_block
+            prev_cipher_block = cipher_block
         return bytes(result)
 
     with open("text_files/10.txt") as f:
         ciphertext = base64.b64decode(f.read())
     key = b"YELLOW SUBMARINE"
-    iv = bytes([0] * 16)
+    iv = b"\x00" * 16
 
     plain_bytes = cbc_decrypt(key, iv, ciphertext)
     assert b"white boy" in plain_bytes
