@@ -1345,17 +1345,17 @@ def run_challenges(challenges, output_stream=stdout):
             print("Challenge {} passed.".format(num), file=output_stream)
 
 
-if __name__ == "__main__":
-    parser = ArgumentParser(description="Solve the Matasano crypto challenges.")
-    parser.add_argument(
-        "challenge", nargs="*",
-        help="Challenge(s) to run. If not specified, all challenges will be run.")
-    parser.add_argument(
-        "-p", "--profile", help="Profile challenges.", action="store_true")
-    parser.add_argument(
-        "-q", "--quiet", help="Don't show challenge output.", action="store_true")
-    args = parser.parse_args()
+parser = ArgumentParser(description="Solve the Matasano crypto challenges.")
+parser.add_argument(
+    "challenge", nargs="*",
+    help="Challenge(s) to run. If not specified, all challenges will be run.")
+parser.add_argument(
+    "-p", "--profile", help="Profile challenges.", action="store_true")
+parser.add_argument(
+    "-q", "--quiet", help="Don't show challenge output.", action="store_true")
+args = parser.parse_args()
 
+if __name__ == "__main__":
     try:
         challenges = get_challenges(args.challenge) or get_all_challenges()
     except ChallengeNotFoundError as e:
