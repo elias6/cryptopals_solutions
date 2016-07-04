@@ -168,7 +168,7 @@ def challenge9():
 def challenge10():
     """Implement CBC mode"""
     def cbc_encrypt(key, iv, plain_bytes):
-        cipher = AES.new(key, AES.MODE_ECB, iv)
+        cipher = AES.new(key, AES.MODE_ECB)
         last_cipher_block = iv
         result = bytearray()
         for plain_block in chunks(plain_bytes):
@@ -179,7 +179,7 @@ def challenge10():
         return bytes(result)
 
     def cbc_decrypt(key, iv, ciphertext):
-        cipher = AES.new(key, AES.MODE_ECB, iv)
+        cipher = AES.new(key, AES.MODE_ECB)
         last_cipher_block = iv
         result = bytearray()
         for cipher_block in chunks(ciphertext):
