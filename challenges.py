@@ -1353,22 +1353,22 @@ parser.add_argument(
     "-p", "--profile", help="Profile challenges.", action="store_true")
 parser.add_argument(
     "-q", "--quiet", help="Don't show challenge output.", action="store_true")
-args = parser.parse_args()
+ARGS = parser.parse_args()
 
 if __name__ == "__main__":
     try:
-        challenges = get_challenges(args.challenge) or get_all_challenges()
+        challenges = get_challenges(ARGS.challenge) or get_all_challenges()
     except ChallengeNotFoundError as e:
         parser.error(e)
     with ExitStack() as stack:
-        if args.profile:
+        if ARGS.profile:
             profile = cProfile.Profile()
             stack.callback(profile.print_stats, sort="cumtime")
-        if args.quiet:
+        if ARGS.quiet:
             null_stream = open(os.devnull, "w")
             stack.enter_context(null_stream)
             stack.enter_context(redirect_stdout(null_stream))
-        if args.profile:
+        if ARGS.profile:
             profile.runcall(run_challenges, challenges)
         else:
             run_challenges(challenges)
