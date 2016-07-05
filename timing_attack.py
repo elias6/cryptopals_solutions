@@ -125,14 +125,17 @@ def recover_signature(validate_signature, thread_count, threshold, attempt_limit
                     result.append(slowest_sig[len(result)])
                     print(pretty_status(
                         result, len(sig_durations[slowest_sig]), duration_difference))
+                    if len(result) >= 20:
+                        print("result is too long, starting over, retry count: {}".format(
+                            retry_count))
+                        retry_count += 1
+                        result = bytearray()
                     break
             else:
                 print(pretty_status(
                     result, len(sig_durations[slowest_sig]), duration_difference,
                     byte_was_recovered=False))
-                if retry_count < retry_limit or len(result) >= 20:
-                    if len(result) >= 20:
-                        print("result is too long, ", end="")
+                if retry_count < retry_limit:
                     retry_count += 1
                     result = bytearray()
                     print("starting over, retry count: {}".format(retry_count))
