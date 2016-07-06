@@ -41,6 +41,10 @@ def int_to_bytes(x):
     return x.to_bytes(length=ceil(x.bit_length() / 8), byteorder="big")
 
 
+def pretty_hex_bytes(x):
+    return " ".join(chunks(x.hex(), 2))
+
+
 def calculate_hmac(key, message, hash_fn=sha1):
     key_hash = hash_fn(key).digest()
     o_key_pad = xor_encrypt(key_hash, b"\x5c")

@@ -43,7 +43,7 @@ from block_tools import (crack_ecb_oracle, ctr_counter, ctr_iterator, guess_bloc
     looks_like_ecb, pkcs7_pad, pkcs7_padding_is_valid, pkcs7_unpad, random_aes_key)
 from mersenne_twister import MT19937_RNG
 from util import (IETF_PRIME, big_int_cube_root, calculate_hmac, chunks, int_to_bytes,
-    mod_inv, random, xor_bytes, xor_encrypt)
+    mod_inv, pretty_hex_bytes, random, xor_bytes, xor_encrypt)
 
 
 warnings.simplefilter("default", BytesWarning)
@@ -735,7 +735,7 @@ def challenge31():
     filename = "text_files/hamlet.txt"
     with open(filename, "rb") as f:
         hmac = calculate_hmac(hmac_key, f.read())
-    print("looking for {}\n".format(timing_attack.pretty_sig(hmac)))
+    print("looking for {}\n".format(pretty_hex_bytes(hmac)))
 
     def compare_sigs(a, b):
         return timing_attack.insecure_compare(a, b, delay=0.05)
@@ -764,7 +764,7 @@ def challenge32():
     filename = "text_files/hamlet.txt"
     with open(filename, "rb") as f:
         hmac = calculate_hmac(hmac_key, f.read())
-    print("looking for {}\n".format(timing_attack.pretty_sig(hmac)))
+    print("looking for {}\n".format(pretty_hex_bytes(hmac)))
 
     def compare_sigs(a, b):
         return timing_attack.insecure_compare(a, b, delay=0.025)

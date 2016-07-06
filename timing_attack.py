@@ -9,7 +9,7 @@ from urllib.error import HTTPError
 from urllib.parse import parse_qs, urlencode, urlparse
 from urllib.request import urlopen
 
-from util import calculate_hmac, chunks
+from util import calculate_hmac, chunks, pretty_hex_bytes
 
 
 def insecure_compare(data1, data2, delay):
@@ -80,13 +80,9 @@ class CantRecoverSignatureError(Exception):
     pass
 
 
-def pretty_sig(sig):
-    return " ".join(chunks(sig.hex(), 2))
-
-
 def pretty_status(sig, attempt_count, duration_difference, byte_was_recovered=True):
     return ("recovered so far: {}{}, {} {} for last byte, {:.3f} ms difference").format(
-        pretty_sig(sig),
+        pretty_hex_bytes(sig),
         "" if byte_was_recovered else " ?",
         attempt_count,
         "attempt" if attempt_count == 1 else "attempts",
@@ -113,7 +109,7 @@ def recover_signature(validate_signature, thread_count, threshold, attempt_limit
                 for sig_data in pool.imap_unordered(try_signature, test_sigs):
                     sig = sig_data["signature"]
                     if sig_data["is_valid"]:
-                        print("signature recovered: {}".format(pretty_sig(sig)))
+                        print("signature recovered: {}".format(pretty_hex_bytes(sig)))
                         return sig
                     sig_durations[sig].append(sig_data["duration"])
                 slowest_sig, second_slowest_sig = nlargest(
