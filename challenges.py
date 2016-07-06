@@ -155,8 +155,12 @@ def challenge8():
     """Detect AES in ECB mode"""
     with open("text_files/8.txt") as f:
         ciphertexts = [bytes.fromhex(line.strip()) for line in f.readlines()]
-    ecb_texts = [(i, c) for i, c in enumerate(ciphertexts) if looks_like_ecb(c)]
-    pprint(ecb_texts)
+    ecb_texts = []
+    for i, ciphertext in enumerate(ciphertexts, start=1):
+        if looks_like_ecb(ciphertext):
+            ecb_texts.append(ciphertext)
+            print("ECB-like ciphertext found on line {}".format(i))
+            pprint([pretty_hex_bytes(x) for x in chunks(ciphertext)])
     assert len(ecb_texts) == 1
 
 
