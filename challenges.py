@@ -12,11 +12,11 @@ import traceback
 import warnings
 
 from argparse import ArgumentParser
-from collections import Counter
+from collections import Counter, defaultdict
 from contextlib import ExitStack, redirect_stdout
 from hashlib import sha1, sha256
 from heapq import nlargest
-from itertools import combinations, count
+from itertools import combinations, count, product, repeat
 from math import ceil, gcd
 from sys import stdout
 from threading import Thread
@@ -1305,6 +1305,73 @@ def challenge51():
     for oracle_fn in [ctr_oracle_fn, cbc_oracle_fn]:
         recovered_session_id = crack_compression_oracle(oracle_fn)
         assert recovered_session_id == session_id
+
+
+def challenge52():
+    """Iterated Hash Function Multicollisions"""
+    # Details of how this works can be found at the following URL:
+    # http://math.boisestate.edu/~liljanab/Math509Spring10/JouxAttackSHA-1.pdf
+    key = random_aes_key()
+
+    class HashFunction:
+        def __init__(self, block_size):
+            self.block_size = block_size
+            self.default_initial_state = os.urandom(block_size)
+
+        def compress(self, state, block):
+            cipher = AES.new(key, AES.MODE_ECB)
+            return cipher.encrypt(pkcs7_pad(state + block))[:self.block_size]
+
+        def __call__(self, message, initial_state=None):
+            state = initial_state or self.default_initial_state
+            for block in chunks(message, self.block_size):
+                state = self.compress(state, block)
+            return state
+
+    def find_collision(hash_fn, messages, state=None):
+        state = state or hash_fn.default_initial_state
+        collision_map = defaultdict(set)
+        for message in messages:
+            message_hash = hash_fn.compress(state, message)
+            collision_map[message_hash].add(message)
+            if len(collision_map[message_hash]) > 1:
+                return (collision_map[message_hash], message_hash)
+        raise ValueError("couldn't find collision")
+
+    def find_multiple_collisions(hash_fn, n):
+        """Generate 2**n messages, each with length n * hash_fn.block_size, that
+        have the same hash. Return a tuple with a list of the messages and the
+        hash.
+        """
+        state = hash_fn.default_initial_state
+        block_pairs = []
+        infinite_messages = (os.urandom(len(state)) for _ in repeat(None))
+        for i in range(n):
+            collision, state = find_collision(hash_fn, infinite_messages, state)
+            block_pairs.append(collision)
+        return ([b"".join(x) for x in product(*block_pairs)], state)
+
+    hash_fn = HashFunction(block_size=2)
+    n = 10
+    colliding_messages, message_hash = find_multiple_collisions(hash_fn, n)
+    assert len(colliding_messages) == 2**n
+    print("Generated {} messages with hash {}.\n".format(
+        len(colliding_messages), pretty_hex_bytes(message_hash)))
+
+    cheap_hash_fn = HashFunction(block_size=2)
+    expensive_hash_fn = HashFunction(block_size=5)
+    n = ceil(expensive_hash_fn.block_size * 8 / 2)
+    while True:
+        cheap_collisions, cheap_hash = find_multiple_collisions(cheap_hash_fn, n)
+        try:
+            messages, expensive_hash = find_collision(expensive_hash_fn, cheap_collisions)
+        except ValueError:
+            print("Collision not found, trying again")
+        else:
+            print("The following messages have combined hash [{}] + [{}]:".format(
+                pretty_hex_bytes(cheap_hash), pretty_hex_bytes(expensive_hash)))
+            pprint([pretty_hex_bytes(m) for m in messages])
+            break
 
 
 class ChallengeNotFoundError(ValueError):
