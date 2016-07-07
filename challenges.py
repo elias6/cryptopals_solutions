@@ -34,6 +34,7 @@ from sha1.sha1 import Sha1Hash as PurePythonSha1
 import diffie_hellman
 import dsa
 import english
+import merkle_damgard
 import mersenne_twister
 import rsa
 import srp
@@ -1311,23 +1312,6 @@ def challenge52():
     """Iterated Hash Function Multicollisions"""
     # Details of how this works can be found at the following URL:
     # http://math.boisestate.edu/~liljanab/Math509Spring10/JouxAttackSHA-1.pdf
-    key = random_aes_key()
-
-    class HashFunction:
-        def __init__(self, block_size):
-            self.block_size = block_size
-            self.default_initial_state = os.urandom(block_size)
-
-        def compress(self, state, block):
-            cipher = AES.new(key, AES.MODE_ECB)
-            return cipher.encrypt(pkcs7_pad(state + block))[:self.block_size]
-
-        def __call__(self, message, initial_state=None):
-            state = initial_state or self.default_initial_state
-            for block in chunks(message, self.block_size):
-                state = self.compress(state, block)
-            return state
-
     def find_collision(hash_fn, messages, state=None):
         state = state or hash_fn.default_initial_state
         collision_map = defaultdict(set)
@@ -1351,15 +1335,15 @@ def challenge52():
             block_pairs.append(collision)
         return ([b"".join(x) for x in product(*block_pairs)], state)
 
-    hash_fn = HashFunction(block_size=2)
+    hash_fn = merkle_damgard.HashFunction(block_size=2)
     n = 10
     colliding_messages, message_hash = find_multiple_collisions(hash_fn, n)
     assert len(colliding_messages) == 2**n
     print("Generated {} messages with hash {}.\n".format(
         len(colliding_messages), pretty_hex_bytes(message_hash)))
 
-    cheap_hash_fn = HashFunction(block_size=2)
-    expensive_hash_fn = HashFunction(block_size=5)
+    cheap_hash_fn = merkle_damgard.HashFunction(block_size=2)
+    expensive_hash_fn = merkle_damgard.HashFunction(block_size=5)
     n = ceil(expensive_hash_fn.block_size * 8 / 2)
     while True:
         cheap_collisions, cheap_hash = find_multiple_collisions(cheap_hash_fn, n)
