@@ -1354,7 +1354,7 @@ def challenge52():
         else:
             print("The following messages have combined hash [{}] + [{}]:".format(
                 pretty_hex_bytes(cheap_hash), pretty_hex_bytes(expensive_hash)))
-            pprint([pretty_hex_bytes(m) for m in messages])
+            print("\n\n".join(pretty_hex_bytes(m) for m in messages))
             break
 
 
