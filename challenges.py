@@ -553,14 +553,6 @@ def challenge24():
         prefix = os.urandom(random.randint(0, 64))
         return encrypt_with_rng(rng, prefix + plain_bytes)
 
-    def create_token(timestamp):
-        rng = MT19937_RNG(seed=timestamp)
-        return struct.pack(">4L", *[rng.get_number() for _ in range(4)])
-
-    def token_came_from_timestamp(token, timestamp):
-        rng = MT19937_RNG(seed=timestamp)
-        return token == struct.pack(">4L", *[rng.get_number() for _ in range(4)])
-
     def partially_twist(buffer, n):
         # Populate buffer with the first n results of twisting. This function
         # destroys the internal state of whatever RNG it belongs to, so the RNG
@@ -605,10 +597,6 @@ def challenge24():
             break
     else:
         assert False, "seed not found"
-
-    now = int(time())
-    token = create_token(now)
-    assert token_came_from_timestamp(token, now)
 
 
 def challenge25():
