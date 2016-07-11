@@ -553,17 +553,6 @@ def challenge24():
         prefix = os.urandom(random.randint(0, 64))
         return encrypt_with_rng(rng, prefix + plain_bytes)
 
-    def partially_twist(buffer, n):
-        # Populate buffer with the first n results of twisting. This function
-        # destroys the internal state of whatever RNG it belongs to, so the RNG
-        # should no longer be used after being passed to this function.
-        for i in range(n):
-            y = ((buffer[i] & 0x80000000) +
-                       (buffer[(i + 1) % 624] & 0x7fffffff))
-            buffer[i] = buffer[(i + 397) % 624] ^ (y >> 1)
-            if y & 1:
-                buffer[i] ^= 0x9908b0df
-
     seed = random.getrandbits(16)
     test_ciphertext = encrypt_with_rng(MT19937_RNG(seed), EXAMPLE_PLAIN_BYTES)
     test_plaintext = encrypt_with_rng(MT19937_RNG(seed), test_ciphertext)
@@ -588,8 +577,9 @@ def challenge24():
         # The obvious way to test whether seed_guess is right is to generate
         # (len(cipher_chunks) - 1) numbers from test_rng and see whether the
         # last 2 match keystream_numbers. However, that is agonizingly slow, so
-        # I am using partially_twist instead.
-        partially_twist(test_rng.buffer, len(cipher_chunks) - 1)
+        # I am twisting as much of the buffer as is necessary to see if it
+        # matches untempered_numbers.
+        test_rng.twist(limit=len(cipher_chunks) - 1)
         buffer_slice = test_rng.buffer[len(cipher_chunks) - 3 : len(cipher_chunks) - 1]
         if buffer_slice == untempered_numbers:
             print("found seed: {}".format(seed_guess))
