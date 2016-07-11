@@ -1015,9 +1015,8 @@ def challenge43():
     sig = dsa.sign(message, private_key)
     assert dsa.verify(message, public_key, sig)
 
-    sig, k = dsa.sign(message, private_key, leak=True)
-    digest = int.from_bytes(sha1(message).digest(), byteorder="big")
-    assert dsa.recover_private_key(k, digest, sig) == private_key
+    sig, k = dsa.sign_and_leak_k(message, private_key)
+    assert dsa.recover_private_key(k, message, sig) == private_key
 
     public_key = int("84ad4719d044495496a3201c8ff484feb45b962e7302e56a392aee4ab"
         "ab3e4bdebf2955b4736012f21a08084056b19bcd7fee56048e004e44984e2f411788ef"
@@ -1026,13 +1025,12 @@ def challenge43():
     message = (b"For those that envy a MC it can be hazardous to your health\n"
         b"So be friendly, a matter of life and death, just like a etch-a-sketch\n")
     assert sha1(message).hexdigest() == "d2d0714f014a9784047eaeccf956520045c45265"
-    digest = int.from_bytes(sha1(message).digest(), byteorder="big")
-    r = 548099063082341131477253921760299949438196259240
-    s = 857042759984254168557880549501802188789837994940
-    sig = dsa.Signature(r, s)
+    sig = dsa.Signature(
+        r=548099063082341131477253921760299949438196259240,
+        s=857042759984254168557880549501802188789837994940)
     assert dsa.verify(message, public_key, sig)
     for k_guess in range(2**16):
-        private_key_guess = dsa.recover_private_key(k_guess, digest, sig)
+        private_key_guess = dsa.recover_private_key(k_guess, message, sig)
         private_key_hash = sha1("{:x}".format(private_key_guess).encode()).hexdigest()
         if private_key_hash == "0954edd5e0afe5542a4adf012611a91912a3ec16":
             assert pow(dsa.g, private_key_guess, dsa.p) == public_key
@@ -1053,7 +1051,7 @@ def challenge44():
                 digest = sha1(message_data["msg"].encode()).hexdigest()
                 assert digest == message_data["m"].rjust(40, "0")
                 messages.append({
-                    "msg": message_data["msg"],
+                    "message": message_data["msg"].encode(),
                     "sig": dsa.Signature(int(message_data["r"]), int(message_data["s"])),
                     "hash": int(message_data["m"], 16),
                 })
@@ -1063,8 +1061,8 @@ def challenge44():
         if message1["sig"].r == message2["sig"].r:
             s_diff_inverse = mod_inv(message1["sig"].s - message2["sig"].s, dsa.q)
             k = ((message1["hash"] - message2["hash"]) * s_diff_inverse) % dsa.q
-            guess1 = dsa.recover_private_key(k, message1["hash"], message1["sig"])
-            guess2 = dsa.recover_private_key(k, message2["hash"], message2["sig"])
+            guess1 = dsa.recover_private_key(k, message1["message"], message1["sig"])
+            guess2 = dsa.recover_private_key(k, message2["message"], message2["sig"])
             assert guess1 == guess2
             public_key = int("2d026f4bf30195ede3a088da85e398ef869611d0f68f0713d"
                 "51c9c1a3a26c95105d915e2d8cdf26d056b86b8a7b85519b1c23cc3ecdc606"

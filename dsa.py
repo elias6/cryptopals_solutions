@@ -25,10 +25,15 @@ def generate_key_pair():
     return KeyPair(public_key, private_key)
 
 
-def sign(message, private_key, leak=False, g=g, secure=True):
+def sign(message, private_key, g=g, secure=True):
+    signature, k = sign_and_leak_k(message, private_key, g, secure)
+    return signature
+
+
+def sign_and_leak_k(message, private_key, g=g, secure=True):
     # Setting secure to False will prevent this function from retrying the
-    # signature if r == 0, which may happen on rare occasions, or if g is
-    # maliciously chosen.
+    # signature if r == 0, which may happen with invalid signatures, if g is
+    # maliciously chosen, or on other rare occasions.
     digest = int.from_bytes(sha1(message).digest(), byteorder="big")
     while True:
         # k == random, per-message number that must be secret
@@ -40,16 +45,13 @@ def sign(message, private_key, leak=False, g=g, secure=True):
         s = (mod_inv(k, q) * (digest + r*private_key)) % q
         if s == 0:
             continue
-        if leak:
-            return (Signature(r, s), k)
-        else:
-            return Signature(r, s)
+        return (Signature(r, s), k)
 
 
 def verify(message, public_key, signature, g=g, secure=True):
     # Setting secure to False will prevent this function from rejecting the
-    # signature if r is not in the allowed range, which may happen if g is
-    # maliciously chosen.
+    # signature if r is not in the allowed range, which may happen with
+    # invalid signatures or if g is maliciously chosen.
     r, s = signature
 
     if secure and not 0 < r < q:
@@ -64,5 +66,6 @@ def verify(message, public_key, signature, g=g, secure=True):
     return v == r
 
 
-def recover_private_key(k, digest, signature):
+def recover_private_key(k, message, signature):
+    digest = int.from_bytes(sha1(message).digest(), byteorder="big")
     return ((k*signature.s - digest) * mod_inv(signature.r, q)) % q
