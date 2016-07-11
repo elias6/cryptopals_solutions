@@ -12,8 +12,7 @@ from util import chunks
 def looks_like_ecb(ciphertext, block_size=16):
     # TODO: use birthday paradox to calculate an estimate for the expected
     # number of duplicate blocks so this function works on big ciphertexts.
-    block_counter = Counter(chunks(ciphertext, block_size))
-    return block_counter.most_common(1)[0][1] > 1
+    return max(Counter(chunks(ciphertext, block_size)).values()) > 1
 
 
 def random_aes_key():
