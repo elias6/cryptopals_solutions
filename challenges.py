@@ -932,10 +932,8 @@ def challenge40():
 
     cube = 0
     for x in ciphertext_data:
-        m_s_ = 1    # strange name picked for similarity to notation in challenge
-        for y in ciphertext_data:
-            if x != y:
-                m_s_ *= y["modulus"]
+        # strange name picked for similarity to notation in challenge
+        m_s_ = modulus_product // x["modulus"]
         cube += x["cipher_int"] * m_s_ * mod_inv(m_s_, x["modulus"])
     cube %= modulus_product
     assert all(x["cipher_int"] == cube % x["modulus"] for x in ciphertext_data)
