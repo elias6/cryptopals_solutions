@@ -1297,28 +1297,28 @@ def challenge52():
         raise ValueError("couldn't find collision")
 
     def find_multiple_collisions(hash_fn, n):
-        """Generate 2**n messages, each with length n * hash_fn.block_size, that
+        """Generate 2**n messages, each with length n * hash_fn.digest_size, that
         have the same hash. Return a tuple with a list of the messages and the
         hash.
         """
         state = hash_fn.default_initial_state
         block_pairs = []
-        infinite_messages = (os.urandom(len(state)) for _ in repeat(None))
+        infinite_messages = (os.urandom(hash_fn.digest_size) for _ in repeat(None))
         for i in range(n):
             collision, state = find_collision(hash_fn, infinite_messages, state)
             block_pairs.append(collision)
         return ([b"".join(x) for x in product(*block_pairs)], state)
 
-    hash_fn = merkle_damgard.HashFunction(block_size=2)
+    hash_fn = merkle_damgard.HashFunction(digest_size=2)
     n = 10
     colliding_messages, message_hash = find_multiple_collisions(hash_fn, n)
     assert len(colliding_messages) == 2**n
     print("Generated {} messages with hash {}.\n".format(
         len(colliding_messages), pretty_hex_bytes(message_hash)))
 
-    cheap_hash_fn = merkle_damgard.HashFunction(block_size=2)
-    expensive_hash_fn = merkle_damgard.HashFunction(block_size=5)
-    n = ceil(expensive_hash_fn.block_size * 8 / 2)
+    cheap_hash_fn = merkle_damgard.HashFunction(digest_size=2)
+    expensive_hash_fn = merkle_damgard.HashFunction(digest_size=5)
+    n = ceil(expensive_hash_fn.digest_size * 8 / 2)
     while True:
         cheap_collisions, cheap_hash = find_multiple_collisions(cheap_hash_fn, n)
         try:
