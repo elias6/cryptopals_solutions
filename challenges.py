@@ -1313,6 +1313,7 @@ def challenge52():
     n = 10
     colliding_messages, message_hash = find_multiple_collisions(hash_fn, n)
     assert len(colliding_messages) == 2**n
+    assert all(hash_fn(x) == message_hash for x in colliding_messages)
     print("Generated {} messages with hash {}.\n".format(
         len(colliding_messages), pretty_hex_bytes(message_hash)))
 
