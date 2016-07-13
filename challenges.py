@@ -1321,7 +1321,7 @@ def challenge52():
         len(colliding_messages), pretty_hex_bytes(message_hash)))
 
     cheap_hash_fn = merkle_damgard.HashFunction(digest_size=2)
-    expensive_hash_fn = merkle_damgard.HashFunction(digest_size=5)
+    expensive_hash_fn = merkle_damgard.HashFunction(digest_size=4)
     n = ceil(expensive_hash_fn.digest_size * 8 / 2)
     while True:
         cheap_collisions, cheap_hash = find_multiple_collisions(cheap_hash_fn, n)
