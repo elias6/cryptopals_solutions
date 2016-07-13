@@ -1286,14 +1286,15 @@ def challenge52():
     """Iterated Hash Function Multicollisions"""
     # Details of how this works can be found at the following URL:
     # http://math.boisestate.edu/~liljanab/Math509Spring10/JouxAttackSHA-1.pdf
-    def find_collision(hash_fn, messages, state=None):
-        state = state or hash_fn.default_initial_state
+    def find_collision(fn, inputs_iter):
+        """Find 2 inputs for which fn produces the same result. Return a tuple with
+        the inputs and the result."""
         collision_map = defaultdict(set)
-        for message in messages:
-            message_hash = hash_fn.compress(state, message)
-            collision_map[message_hash].add(message)
-            if len(collision_map[message_hash]) > 1:
-                return (collision_map[message_hash], message_hash)
+        for x in inputs_iter:
+            output = fn(x)
+            collision_map[output].add(x)
+            if len(collision_map[output]) > 1:
+                return (list(collision_map[output]), output)
         raise ValueError("couldn't find collision")
 
     def find_multiple_collisions(hash_fn, n):
@@ -1303,14 +1304,13 @@ def challenge52():
         """
         state = hash_fn.default_initial_state
         block_pairs = []
-        infinite_messages = (os.urandom(hash_fn.digest_size) for _ in repeat(None))
-        for i in range(n):
-            collision, state = find_collision(hash_fn, infinite_messages, state)
+        infinite_blocks = (os.urandom(hash_fn.digest_size) for _ in repeat(None))
+        for _ in range(n):
+            compress = lambda block: hash_fn.compress(state, block)
+            collision, state = find_collision(compress, infinite_blocks)
             block_pairs.append(collision)
         collisions = [b"".join(x) for x in product(*block_pairs)]
-        padding = hash_fn.produce_padding(n * hash_fn.digest_size)
-        common_hash = hash_fn.compress(state, padding)
-        return (collisions, common_hash)
+        return (collisions, hash_fn(collisions[0]))
 
     hash_fn = merkle_damgard.HashFunction(digest_size=2)
     n = 10
@@ -1325,16 +1325,15 @@ def challenge52():
     n = ceil(expensive_hash_fn.digest_size * 8 / 2)
     while True:
         cheap_collisions, cheap_hash = find_multiple_collisions(cheap_hash_fn, n)
-        collision_map = defaultdict(set)
-        for message in cheap_collisions:
-            expensive_hash = expensive_hash_fn(message)
-            collision_map[expensive_hash].add(message)
-            if len(collision_map[expensive_hash]) > 1:
-                print("The following messages have combined hash [{}] + [{}]:".format(
-                    pretty_hex_bytes(cheap_hash), pretty_hex_bytes(expensive_hash)))
-                print("\n\n".join(pretty_hex_bytes(m) for m in collision_map[expensive_hash]))
-                return
-        print("Collision not found, trying again")
+        try:
+            collision, expensive_hash = find_collision(expensive_hash_fn, cheap_collisions)
+        except ValueError:
+            print("Collision not found, trying again")
+        else:
+            print("The following messages have combined hash [{}] + [{}]:".format(
+                pretty_hex_bytes(cheap_hash), pretty_hex_bytes(expensive_hash)))
+            print("\n\n".join(pretty_hex_bytes(m) for m in collision))
+            break
 
 
 class ChallengeNotFoundError(ValueError):
