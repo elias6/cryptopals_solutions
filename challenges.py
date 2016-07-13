@@ -1307,7 +1307,10 @@ def challenge52():
         for i in range(n):
             collision, state = find_collision(hash_fn, infinite_messages, state)
             block_pairs.append(collision)
-        return ([b"".join(x) for x in product(*block_pairs)], state)
+        collisions = [b"".join(x) for x in product(*block_pairs)]
+        padding = hash_fn.produce_padding(n * hash_fn.digest_size)
+        common_hash = hash_fn.compress(state, padding)
+        return (collisions, common_hash)
 
     hash_fn = merkle_damgard.HashFunction(digest_size=2)
     n = 10
@@ -1322,15 +1325,16 @@ def challenge52():
     n = ceil(expensive_hash_fn.digest_size * 8 / 2)
     while True:
         cheap_collisions, cheap_hash = find_multiple_collisions(cheap_hash_fn, n)
-        try:
-            messages, expensive_hash = find_collision(expensive_hash_fn, cheap_collisions)
-        except ValueError:
-            print("Collision not found, trying again")
-        else:
-            print("The following messages have combined hash [{}] + [{}]:".format(
-                pretty_hex_bytes(cheap_hash), pretty_hex_bytes(expensive_hash)))
-            print("\n\n".join(pretty_hex_bytes(m) for m in messages))
-            break
+        collision_map = defaultdict(set)
+        for message in cheap_collisions:
+            expensive_hash = expensive_hash_fn(message)
+            collision_map[expensive_hash].add(message)
+            if len(collision_map[expensive_hash]) > 1:
+                print("The following messages have combined hash [{}] + [{}]:".format(
+                    pretty_hex_bytes(cheap_hash), pretty_hex_bytes(expensive_hash)))
+                print("\n\n".join(pretty_hex_bytes(m) for m in collision_map[expensive_hash]))
+                return
+        print("Collision not found, trying again")
 
 
 class ChallengeNotFoundError(ValueError):
