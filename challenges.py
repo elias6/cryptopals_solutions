@@ -1298,13 +1298,13 @@ def challenge52():
         raise ValueError("couldn't find collision")
 
     def find_multiple_collisions(hash_fn, n):
-        """Generate 2**n messages, each with length n * hash_fn.digest_size, that
+        """Generate 2**n messages, each with length n * hash_fn.block_size, that
         have the same hash. Return a tuple with a list of the messages and the
         hash.
         """
         state = hash_fn.default_initial_state
         block_pairs = []
-        infinite_blocks = (os.urandom(hash_fn.digest_size) for _ in repeat(None))
+        infinite_blocks = (os.urandom(hash_fn.block_size) for _ in repeat(None))
         for _ in range(n):
             compress = lambda block: hash_fn.compress(state, block)
             collision, state = find_collision(compress, infinite_blocks)
