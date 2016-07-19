@@ -1286,54 +1286,51 @@ def challenge52():
     """Iterated Hash Function Multicollisions"""
     # Details of how this works can be found at the following URL:
     # http://math.boisestate.edu/~liljanab/Math509Spring10/JouxAttackSHA-1.pdf
-    def find_collision(fn, inputs_iter):
-        """Find 2 inputs for which fn produces the same result. Return a tuple with
-        the inputs and the result."""
-        collision_map = defaultdict(set)
-        for x in inputs_iter:
-            output = fn(x)
-            collision_map[output].add(x)
-            if len(collision_map[output]) > 1:
-                return (list(collision_map[output]), output)
-        raise ValueError("couldn't find collision")
-
     def find_multiple_collisions(hash_fn, n):
-        """Generate 2**n messages, each with length n * hash_fn.block_size, that
-        have the same hash. Return a tuple with a list of the messages and the
-        hash.
+        """Return 2**n messages, each with length n * hash_fn.block_size, that have
+        the same hash.
         """
         state = hash_fn.default_initial_state
         block_pairs = []
-        infinite_blocks = (os.urandom(hash_fn.block_size) for _ in repeat(None))
         for _ in range(n):
-            compress = lambda block: hash_fn.compress(state, block)
-            collision, state = find_collision(compress, infinite_blocks)
-            block_pairs.append(collision)
-        collisions = [b"".join(x) for x in product(*block_pairs)]
-        return (collisions, hash_fn(collisions[0]))
+            collision_map = defaultdict(set)
+            while True:
+                block = os.urandom(hash_fn.block_size)
+                test_state = hash_fn.compress(state, block)
+                collision_map[test_state].add(block)
+                if len(collision_map[test_state]) > 1:
+                    state = test_state
+                    block_pairs.append(collision_map[test_state])
+                    break
+        return [b"".join(x) for x in product(*block_pairs)]
+
+    def find_cascaded_collision(cheap_hash_fn, expensive_hash_fn):
+        n = ceil(expensive_hash_fn.digest_size * 8 / 2)
+        while True:
+            collision_map = defaultdict(set)
+            for message in find_multiple_collisions(cheap_hash_fn, n):
+                expensive_hash = expensive_hash_fn(message)
+                collision_map[expensive_hash].add(message)
+                if len(collision_map[expensive_hash]) > 1:
+                    return list(collision_map[expensive_hash])
 
     hash_fn = merkle_damgard.HashFunction(digest_size=2)
     n = 10
-    colliding_messages, message_hash = find_multiple_collisions(hash_fn, n)
-    assert len(colliding_messages) == 2**n
-    assert all(hash_fn(x) == message_hash for x in colliding_messages)
+    messages = find_multiple_collisions(hash_fn, n)
+    assert len(messages) == 2**n
+    assert len(set(hash_fn(x) for x in messages)) == 1
     print("Generated {} messages with hash {}.\n".format(
-        len(colliding_messages), pretty_hex_bytes(message_hash)))
+        len(messages), pretty_hex_bytes(hash_fn(messages[0]))))
 
     cheap_hash_fn = merkle_damgard.HashFunction(digest_size=2)
     expensive_hash_fn = merkle_damgard.HashFunction(digest_size=4)
-    n = ceil(expensive_hash_fn.digest_size * 8 / 2)
-    while True:
-        cheap_collisions, cheap_hash = find_multiple_collisions(cheap_hash_fn, n)
-        try:
-            collision, expensive_hash = find_collision(expensive_hash_fn, cheap_collisions)
-        except ValueError:
-            print("Collision not found, trying again")
-        else:
-            print("The following messages have combined hash [{}] + [{}]:".format(
-                pretty_hex_bytes(cheap_hash), pretty_hex_bytes(expensive_hash)))
-            print("\n\n".join(pretty_hex_bytes(m) for m in collision))
-            break
+    print("Looking for collision on cascaded hash function")
+    messages = find_cascaded_collision(cheap_hash_fn, expensive_hash_fn)
+    assert len(set(cheap_hash_fn(x) + expensive_hash_fn(x) for x in messages)) == 1
+    print("The following messages have combined hash [{}] + [{}]:".format(
+         pretty_hex_bytes(cheap_hash_fn(messages[0])),
+         pretty_hex_bytes(expensive_hash_fn(messages[0]))))
+    print("\n\n".join(pretty_hex_bytes(m) for m in messages))
 
 
 class ChallengeNotFoundError(ValueError):
