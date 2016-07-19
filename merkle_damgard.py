@@ -1,26 +1,27 @@
-from os import urandom
+from itertools import cycle, islice
 
 import struct
 
 from Crypto.Cipher import AES
 
-from block_tools import pkcs7_pad, random_aes_key
+from block_tools import pkcs7_pad
 from util import chunks
 
 class HashFunction:
+    byte_pattern = bytes.fromhex("0123456789abcdef")
+
     def __init__(self, digest_size, block_size=16):
         self.digest_size = digest_size
         self.block_size = block_size
-        self.default_initial_state = urandom(digest_size)
-        self.key = random_aes_key()
-        self.iv = urandom(16)
+        self.default_initial_state = bytes(islice(cycle(self.byte_pattern), digest_size))
 
     def compress(self, state, block):
         if len(state) != self.digest_size:
             raise ValueError("length of state must equal digest_size")
         if len(block) != self.block_size:
             raise ValueError("length of block must equal block_size")
-        cipher = AES.new(self.key, AES.MODE_CBC, self.iv)
+        key = iv = b"\x00"*16
+        cipher = AES.new(key, AES.MODE_CBC, iv)
         return cipher.encrypt(pkcs7_pad(state + block))[:self.digest_size]
 
     def produce_padding(self, message_length):
