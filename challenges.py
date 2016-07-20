@@ -720,23 +720,32 @@ def challenge31():
         hmac = calculate_hmac(hmac_key, f.read())
     print("looking for {}\n".format(pretty_hex_bytes(hmac)))
 
-    def compare_sigs(a, b):
-        return timing_attack.insecure_compare(a, b, delay=0.05)
+    if ARGS.dummy_server:
+        def validate_signature(sig):
+            return timing_attack.insecure_compare(sig, hmac, delay=0.05)
 
-    server_address = ("localhost", 31415)
-
-    def validate_signature(sig):
-        return timing_attack.server_approves_of_signature(server_address, filename, sig)
-
-    server = timing_attack.Server(server_address, hmac_key, compare_sigs)
-    try:
-        Thread(target=server.serve_forever).start()
         signature = timing_attack.recover_signature(
-            validate_signature, thread_count=35, threshold=0.0075, attempt_limit=5,
+            validate_signature, thread_count=300, threshold=0.0075, attempt_limit=5,
             retry_limit=20)
-    finally:
-        server.shutdown()
-        server.server_close()
+    else:
+        def compare_sigs(a, b):
+            return timing_attack.insecure_compare(a, b, delay=0.05)
+
+        server_address = ("localhost", 31415)
+
+        def validate_signature(sig):
+            return timing_attack.server_approves_of_signature(
+                server_address, filename, sig)
+
+        server = timing_attack.Server(server_address, hmac_key, compare_sigs)
+        try:
+            Thread(target=server.serve_forever).start()
+            signature = timing_attack.recover_signature(
+                validate_signature, thread_count=35, threshold=0.0075, attempt_limit=5,
+                retry_limit=20)
+        finally:
+            server.shutdown()
+            server.server_close()
 
     assert signature == hmac
 
@@ -749,23 +758,32 @@ def challenge32():
         hmac = calculate_hmac(hmac_key, f.read())
     print("looking for {}\n".format(pretty_hex_bytes(hmac)))
 
-    def compare_sigs(a, b):
-        return timing_attack.insecure_compare(a, b, delay=0.025)
+    if ARGS.dummy_server:
+        def validate_signature(sig):
+            return timing_attack.insecure_compare(sig, hmac, delay=0.025)
 
-    server_address = ("localhost", 31415)
-
-    def validate_signature(sig):
-        return timing_attack.server_approves_of_signature(server_address, filename, sig)
-
-    server = timing_attack.Server(server_address, hmac_key, compare_sigs)
-    try:
-        Thread(target=server.serve_forever).start()
         signature = timing_attack.recover_signature(
-            validate_signature, thread_count=15, threshold=0.006, attempt_limit=10,
+            validate_signature, thread_count=300, threshold=0.006, attempt_limit=10,
             retry_limit=10)
-    finally:
-        server.shutdown()
-        server.server_close()
+    else:
+        def compare_sigs(a, b):
+            return timing_attack.insecure_compare(a, b, delay=0.025)
+
+        server_address = ("localhost", 31415)
+
+        def validate_signature(sig):
+            return timing_attack.server_approves_of_signature(
+                server_address, filename, sig)
+
+        server = timing_attack.Server(server_address, hmac_key, compare_sigs)
+        try:
+            Thread(target=server.serve_forever).start()
+            signature = timing_attack.recover_signature(
+                validate_signature, thread_count=15, threshold=0.006, attempt_limit=10,
+                retry_limit=10)
+        finally:
+            server.shutdown()
+            server.server_close()
 
     assert signature == hmac
 
@@ -1382,6 +1400,10 @@ if __name__ == "__main__":
         "-p", "--profile", help="Profile challenges.", action="store_true")
     parser.add_argument(
         "-q", "--quiet", help="Don't show challenge output.", action="store_true")
+    parser.add_argument(
+        "-d", "--dummy-server",
+        help="Use faster and more reliable dummy server for timing attacks instead of "
+            "actual web server", action="store_true")
     ARGS = parser.parse_args()
     try:
         challenges = get_challenges(ARGS.challenges) or get_all_challenges()
