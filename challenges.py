@@ -1308,7 +1308,7 @@ def challenge52():
         """Return 2**n messages, each with length n * hash_fn.block_size, that have
         the same hash.
         """
-        state = hash_fn.default_initial_state
+        state = hash_fn.initial_state
         block_pairs = []
         for _ in range(n):
             collision_map = defaultdict(set)

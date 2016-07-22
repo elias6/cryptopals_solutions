@@ -13,7 +13,7 @@ class HashFunction:
     def __init__(self, digest_size, block_size=16):
         self.digest_size = digest_size
         self.block_size = block_size
-        self.default_initial_state = bytes(islice(cycle(self.byte_pattern), digest_size))
+        self.initial_state = bytes(islice(cycle(self.byte_pattern), digest_size))
 
     def compress(self, state, block):
         if len(state) != self.digest_size:
@@ -31,8 +31,8 @@ class HashFunction:
         padding[0] |= (1 << 7)
         return bytes(padding[-self.block_size:])
 
-    def __call__(self, message, initial_state=None):
-        state = initial_state or self.default_initial_state
+    def __call__(self, message, state=None):
+        state = state or self.initial_state
         padded_message = message + self.produce_padding(len(message))
         for block in chunks(padded_message, self.block_size):
             state = self.compress(state, block)
