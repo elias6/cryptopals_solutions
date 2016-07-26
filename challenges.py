@@ -59,11 +59,9 @@ def pprint(*args, width=120, **kwargs):
     pprint_module.pprint(*args, width=width, **kwargs)
 
 
-def encrypted_query_string(cipher, user_data):
-    query_string = ("comment1=cooking%20MCs;userdata=" + url_quote(user_data) +
-        ";comment2=%20like%20a%20pound%20of%20bacon")
-    bytes_to_encrypt = pkcs7_pad(query_string.encode())
-    return cipher.encrypt(bytes_to_encrypt)
+def make_user_query_string(user_data):
+    return ("comment1=cooking%20MCs;userdata=" + url_quote(user_data) +
+        ";comment2=%20like%20a%20pound%20of%20bacon").encode()
 
 
 def challenge1():
@@ -334,7 +332,7 @@ def challenge16():
     iv = os.urandom(16)
 
     cipher = AES.new(key, AES.MODE_CBC, iv)
-    ciphertext = encrypted_query_string(cipher, "foo")
+    ciphertext = cipher.encrypt(pkcs7_pad(make_user_query_string("foo")))
 
     new_ciphertext = bytearray(ciphertext)
     new_ciphertext[32:48] = xor_bytes(
@@ -621,7 +619,7 @@ def challenge26():
     nonce = random.getrandbits(64)
 
     cipher = AES.new(key, AES.MODE_CTR, counter=ctr_counter(nonce))
-    ciphertext = encrypted_query_string(cipher, "A" * 16)
+    ciphertext = cipher.encrypt(pkcs7_pad(make_user_query_string("A" * 16)))
     new_ciphertext = bytearray(ciphertext)
     new_ciphertext[32:48] = xor_bytes(
         b"A" * 16, b"ha_ha;admin=true", new_ciphertext[32:48])
