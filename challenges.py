@@ -436,9 +436,9 @@ def challenge19():
     """Break fixed-nonce CTR mode using substitutions"""
     key = random_aes_key()
 
-    def encrypt(ciphertext):
+    def encrypt(plaintext):
         cipher = AES.new(key, AES.MODE_CTR, counter=ctr_counter(0))
-        return cipher.encrypt(ciphertext)
+        return cipher.encrypt(plaintext)
 
     plaintexts = [base64.b64decode(x) for x in [
         "SSBoYXZlIG1ldCB0aGVtIGF0IGNsb3NlIG9mIGRheQ==",
@@ -492,9 +492,9 @@ def challenge20():
     """Break fixed-nonce CTR statistically"""
     key = random_aes_key()
 
-    def encrypt(ciphertext):
+    def encrypt(plaintext):
         cipher = AES.new(key, AES.MODE_CTR, counter=ctr_counter(0))
-        return cipher.encrypt(ciphertext)
+        return cipher.encrypt(plaintext)
 
     with open("text_files/20.txt") as f:
         plaintexts = [base64.b64decode(x) for x in f.readlines()]
