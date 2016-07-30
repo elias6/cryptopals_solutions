@@ -31,6 +31,7 @@ from sha1.sha1 import Sha1Hash as PurePythonSha1
 
 
 # modules in this project
+import block_tools
 import diffie_hellman
 import dsa
 import english
@@ -40,8 +41,6 @@ import rsa
 import srp
 import timing_attack
 
-from block_tools import (crack_ecb_oracle, ctr_counter, ctr_iterator, guess_block_size,
-    looks_like_ecb, pkcs7_pad, pkcs7_padding_is_valid, pkcs7_unpad, random_aes_key)
 from mersenne_twister import MT19937_RNG
 from util import (IETF_PRIME, big_int_cube_root, calculate_hmac, chunks, int_to_bytes,
     mod_inv, pretty_hex_bytes, random, xor_bytes, xor_encrypt)
@@ -156,7 +155,7 @@ def challenge8():
         ciphertexts = [bytes.fromhex(line.strip()) for line in f.readlines()]
     ecb_texts = []
     for i, ciphertext in enumerate(ciphertexts, start=1):
-        if looks_like_ecb(ciphertext):
+        if block_tools.looks_like_ecb(ciphertext):
             ecb_texts.append(ciphertext)
             print("ECB-like ciphertext found on line {}".format(i))
             pprint([pretty_hex_bytes(x) for x in chunks(ciphertext)])
@@ -165,7 +164,8 @@ def challenge8():
 
 def challenge9():
     """Implement PKCS#7 padding"""
-    assert pkcs7_pad(b"YELLOW SUBMARINE", 20) == b"YELLOW SUBMARINE\x04\x04\x04\x04"
+    assert (block_tools.pkcs7_pad(b"YELLOW SUBMARINE", 20) ==
+        b"YELLOW SUBMARINE\x04\x04\x04\x04")
 
 
 def challenge10():
@@ -207,13 +207,13 @@ def challenge10():
 def challenge11():
     """An ECB/CBC detection oracle"""
     def encrypt_with_random_mode(plain_bytes):
-        key = random_aes_key()
+        key = block_tools.random_aes_key()
         mode = random.choice(["MODE_CBC", "MODE_ECB"])
         # iv is ignored for MODE_ECB
         iv = os.urandom(16)
         prefix = os.urandom(random.randint(5, 10))
         suffix = os.urandom(random.randint(5, 10))
-        bytes_to_encrypt = pkcs7_pad(prefix + plain_bytes + suffix)
+        bytes_to_encrypt = block_tools.pkcs7_pad(prefix + plain_bytes + suffix)
         return (AES.new(key, getattr(AES, mode), iv).encrypt(bytes_to_encrypt), mode)
 
     # hamlet.txt from http://erdani.com/tdpl/hamlet.txt
@@ -227,8 +227,10 @@ def challenge11():
         plain_bytes = f.read(3000)
     for _ in range(1000):
         ciphertext, mode = encrypt_with_random_mode(plain_bytes)
-        apparent_mode = "MODE_ECB" if looks_like_ecb(ciphertext) else "MODE_CBC"
-        assert mode == apparent_mode
+        if block_tools.looks_like_ecb(ciphertext):
+            assert mode == "MODE_ECB"
+        else:
+            assert mode == "MODE_CBC"
 
 
 def challenge12():
@@ -237,30 +239,30 @@ def challenge12():
         "Um9sbGluJyBpbiBteSA1LjAKV2l0aCBteSByYWctdG9wIGRvd24gc28gbXkgaGFpciBjYW"
         "4gYmxvdwpUaGUgZ2lybGllcyBvbiBzdGFuZGJ5IHdhdmluZyBqdXN0IHRvIHNheSBoaQpE"
         "aWQgeW91IHN0b3A/IE5vLCBJIGp1c3QgZHJvdmUgYnkK")
-    cipher = AES.new(random_aes_key(), AES.MODE_ECB)
+    cipher = AES.new(block_tools.random_aes_key(), AES.MODE_ECB)
 
     def oracle_fn(attacker_bytes):
-        return cipher.encrypt(pkcs7_pad(attacker_bytes + unknown_bytes))
+        return cipher.encrypt(block_tools.pkcs7_pad(attacker_bytes + unknown_bytes))
 
-    block_size = guess_block_size(oracle_fn)
+    block_size = block_tools.guess_block_size(oracle_fn)
     assert block_size == 16
-    assert looks_like_ecb(oracle_fn(b"A" * 100), block_size)
+    assert block_tools.looks_like_ecb(oracle_fn(b"A" * 100), block_size)
 
-    plaintext = crack_ecb_oracle(oracle_fn, block_size)
+    plaintext = block_tools.crack_ecb_oracle(oracle_fn, block_size)
     print(plaintext.decode())
     assert plaintext == unknown_bytes
 
 
 def challenge13():
     """ECB cut-and-paste"""
-    cipher = AES.new(random_aes_key(), mode=AES.MODE_ECB)
+    cipher = AES.new(block_tools.random_aes_key(), mode=AES.MODE_ECB)
 
     def encrypted_user_profile(email_address):
         profile_data = [("email", email_address), ("uid", "10"), ("role", "user")]
-        return cipher.encrypt(pkcs7_pad(urlencode(profile_data).encode()))
+        return cipher.encrypt(block_tools.pkcs7_pad(urlencode(profile_data).encode()))
 
     def decrypt_profile(encrypted_profile):
-        return pkcs7_unpad(cipher.decrypt(encrypted_profile)).decode()
+        return block_tools.pkcs7_unpad(cipher.decrypt(encrypted_profile)).decode()
 
     profile1 = encrypted_user_profile("peter.gregory@piedpiper.com")
     profile1_blocks = chunks(profile1)
@@ -279,17 +281,17 @@ def challenge13():
 
 def challenge14():
     """Byte-at-a-time ECB decryption (Harder)"""
-    cipher = AES.new(random_aes_key(), AES.MODE_ECB)
+    cipher = AES.new(block_tools.random_aes_key(), AES.MODE_ECB)
     random_bytes = os.urandom(random.randint(0, 64))
     target_bytes = EXAMPLE_PLAIN_BYTES
 
     def oracle_fn(attacker_bytes):
-        plaintext = pkcs7_pad(random_bytes + attacker_bytes + target_bytes)
+        plaintext = block_tools.pkcs7_pad(random_bytes + attacker_bytes + target_bytes)
         return cipher.encrypt(plaintext)
 
-    block_size = guess_block_size(oracle_fn)
+    block_size = block_tools.guess_block_size(oracle_fn)
     assert block_size == 16
-    assert looks_like_ecb(oracle_fn(b"A" * 100), block_size)
+    assert block_tools.looks_like_ecb(oracle_fn(b"A" * 100), block_size)
 
     blocks = chunks(oracle_fn(b"A" * 3*block_size))
     attacker_block, attacker_block_count = Counter(blocks).most_common(1)[0]
@@ -303,23 +305,23 @@ def challenge14():
     # TODO: make prefix_length calculation work reliably even if attacker
     # bytes look like random bytes or target bytes.
 
-    plaintext = crack_ecb_oracle(oracle_fn, block_size, prefix_length)
+    plaintext = block_tools.crack_ecb_oracle(oracle_fn, block_size, prefix_length)
     assert plaintext == target_bytes
 
 
 def challenge15():
     """PKCS#7 padding validation"""
-    assert pkcs7_unpad(b"ICE ICE BABY\x04\x04\x04\x04") == b"ICE ICE BABY"
+    assert block_tools.pkcs7_unpad(b"ICE ICE BABY\x04\x04\x04\x04") == b"ICE ICE BABY"
 
     try:
-        pkcs7_unpad(b"ICE ICE BABY\x05\x05\x05\x05")
+        block_tools.pkcs7_unpad(b"ICE ICE BABY\x05\x05\x05\x05")
     except ValueError:
         pass
     else:
         assert False, "Padding should not be considered valid"
 
     try:
-        pkcs7_unpad(b"ICE ICE BABY\x01\x02\x03\x04")
+        block_tools.pkcs7_unpad(b"ICE ICE BABY\x01\x02\x03\x04")
     except ValueError:
         pass
     else:
@@ -328,11 +330,11 @@ def challenge15():
 
 def challenge16():
     """CBC bitflipping attacks"""
-    key = random_aes_key()
+    key = block_tools.random_aes_key()
     iv = os.urandom(16)
 
     cipher = AES.new(key, AES.MODE_CBC, iv)
-    ciphertext = cipher.encrypt(pkcs7_pad(make_user_query_string("foo")))
+    ciphertext = cipher.encrypt(block_tools.pkcs7_pad(make_user_query_string("foo")))
 
     new_ciphertext = bytearray(ciphertext)
     new_ciphertext[32:48] = xor_bytes(
@@ -340,7 +342,7 @@ def challenge16():
     new_ciphertext = bytes(new_ciphertext)
 
     cipher = AES.new(key, AES.MODE_CBC, iv)
-    assert b";admin=true;" in pkcs7_unpad(cipher.decrypt(new_ciphertext))
+    assert b";admin=true;" in block_tools.pkcs7_unpad(cipher.decrypt(new_ciphertext))
 
 
 def challenge17():
@@ -364,15 +366,16 @@ def challenge17():
 
     random.shuffle(plaintexts)
 
-    key = random_aes_key()
+    key = block_tools.random_aes_key()
 
     def encrypt(plaintext):
         iv = os.urandom(16)
-        return (iv, AES.new(key, AES.MODE_CBC, iv).encrypt(pkcs7_pad(plaintext)))
+        cipher = AES.new(key, AES.MODE_CBC, iv)
+        return (iv, cipher.encrypt(block_tools.pkcs7_pad(plaintext)))
 
     def has_valid_padding(iv, ciphertext):
         plain_bytes = AES.new(key, AES.MODE_CBC, bytes(iv)).decrypt(ciphertext)
-        return pkcs7_padding_is_valid(plain_bytes)
+        return block_tools.pkcs7_padding_is_valid(plain_bytes)
 
     def recover_plain_byte(prev_cipher_block, cipher_block, recovered_so_far):
         block_size = len(cipher_block)
@@ -405,7 +408,7 @@ def challenge17():
         for cipher_block in chunks(ciphertext):
             result += recover_plain_block(prev_cipher_block, cipher_block)
             prev_cipher_block = cipher_block
-        return pkcs7_unpad(result)
+        return block_tools.pkcs7_unpad(result)
 
     for plaintext in plaintexts:
         iv, ciphertext = encrypt(plaintext)
@@ -423,21 +426,21 @@ def challenge18():
     nonce = 0
 
     plaintext = bytearray()
-    for counter_value, block in zip(ctr_iterator(nonce), chunks(ciphertext)):
+    for counter_value, block in zip(block_tools.ctr_iterator(nonce), chunks(ciphertext)):
         keystream = ecb_cipher.encrypt(counter_value)
         plaintext += xor_bytes(keystream[:len(block)], block)
     print(plaintext.decode())
 
-    ctr_cipher = AES.new(key, AES.MODE_CTR, counter=ctr_counter(nonce))
+    ctr_cipher = AES.new(key, AES.MODE_CTR, counter=block_tools.ctr_counter(nonce))
     assert plaintext == ctr_cipher.decrypt(ciphertext)
 
 
 def challenge19():
     """Break fixed-nonce CTR mode using substitutions"""
-    key = random_aes_key()
+    key = block_tools.random_aes_key()
 
     def encrypt(plaintext):
-        cipher = AES.new(key, AES.MODE_CTR, counter=ctr_counter(0))
+        cipher = AES.new(key, AES.MODE_CTR, counter=block_tools.ctr_counter(0))
         return cipher.encrypt(plaintext)
 
     plaintexts = [base64.b64decode(x) for x in [
@@ -490,10 +493,10 @@ def challenge19():
 
 def challenge20():
     """Break fixed-nonce CTR statistically"""
-    key = random_aes_key()
+    key = block_tools.random_aes_key()
 
     def encrypt(plaintext):
-        cipher = AES.new(key, AES.MODE_CTR, counter=ctr_counter(0))
+        cipher = AES.new(key, AES.MODE_CTR, counter=block_tools.ctr_counter(0))
         return cipher.encrypt(plaintext)
 
     with open("text_files/20.txt") as f:
@@ -589,14 +592,14 @@ def challenge24():
 
 def challenge25():
     """Break "random access read/write" AES CTR"""
-    key = random_aes_key()
+    key = block_tools.random_aes_key()
     nonce = random.getrandbits(64)
 
     def edit(ciphertext, block_index, new_bytes):
         if len(new_bytes) % 16 != 0:
             raise ValueError("new_bytes must be a multiple of 16 bytes long")
-        cipher = AES.new(key, AES.MODE_CTR, counter=ctr_counter(nonce, block_index))
-        new_ciphertext = cipher.encrypt(new_bytes)
+        counter = block_tools.ctr_counter(nonce, block_index)
+        new_ciphertext = AES.new(key, AES.MODE_CTR, counter=counter).encrypt(new_bytes)
         result = bytearray(ciphertext)
         result[16*block_index : 16*block_index + len(new_bytes)] = new_ciphertext
         return bytes(result)
@@ -605,7 +608,7 @@ def challenge25():
     with open("text_files/25.txt") as f:
         temp_bytes = base64.b64decode(f.read())
     plain_bytes = AES.new(b"YELLOW SUBMARINE", AES.MODE_ECB).decrypt(temp_bytes)
-    cipher = AES.new(key, AES.MODE_CTR, counter=ctr_counter(nonce))
+    cipher = AES.new(key, AES.MODE_CTR, counter=block_tools.ctr_counter(nonce))
     ciphertext = cipher.encrypt(plain_bytes)
 
     keystream = edit(ciphertext, 0, bytes([0]) * len(plain_bytes))
@@ -615,27 +618,27 @@ def challenge25():
 
 def challenge26():
     """CTR bitflipping"""
-    key = random_aes_key()
+    key = block_tools.random_aes_key()
     nonce = random.getrandbits(64)
 
-    cipher = AES.new(key, AES.MODE_CTR, counter=ctr_counter(nonce))
-    ciphertext = cipher.encrypt(pkcs7_pad(make_user_query_string("A" * 16)))
+    cipher = AES.new(key, AES.MODE_CTR, counter=block_tools.ctr_counter(nonce))
+    ciphertext = cipher.encrypt(block_tools.pkcs7_pad(make_user_query_string("A" * 16)))
     new_ciphertext = bytearray(ciphertext)
     new_ciphertext[32:48] = xor_bytes(
         b"A" * 16, b"ha_ha;admin=true", new_ciphertext[32:48])
     new_ciphertext = bytes(new_ciphertext)
 
-    cipher = AES.new(key, AES.MODE_CTR, counter=ctr_counter(nonce))
-    assert b";admin=true;" in pkcs7_unpad(cipher.decrypt(new_ciphertext))
+    cipher = AES.new(key, AES.MODE_CTR, counter=block_tools.ctr_counter(nonce))
+    assert b";admin=true;" in block_tools.pkcs7_unpad(cipher.decrypt(new_ciphertext))
 
 
 def challenge27():
     """Recover the key from CBC with IV=Key"""
-    key = random_aes_key()
+    key = block_tools.random_aes_key()
     iv = key
 
     def encrypt(user_bytes):
-        return AES.new(key, AES.MODE_CBC, iv).encrypt(pkcs7_pad(user_bytes))
+        return AES.new(key, AES.MODE_CBC, iv).encrypt(block_tools.pkcs7_pad(user_bytes))
 
     def decrypt(ciphertext):
         # If plaintext has any non-ASCII bytes, raise exception, else do nothing
@@ -1176,7 +1179,7 @@ def challenge48():
 
 def challenge49():
     """CBC-MAC Message Forgery"""
-    key = random_aes_key()
+    key = block_tools.random_aes_key()
     block_size = 16
 
     def transaction_message(from_id, to_id, amount):
@@ -1187,7 +1190,8 @@ def challenge49():
         return urlencode([("from", from_id), ("tx_list", tx_list)], safe=":;").encode()
 
     def message_mac(message, iv=b"\x00"*block_size):
-        return AES.new(key, AES.MODE_CBC, iv).encrypt(pkcs7_pad(message))[-block_size:]
+        cipher = AES.new(key, AES.MODE_CBC, iv)
+        return cipher.encrypt(block_tools.pkcs7_pad(message))[-block_size:]
 
     def request_is_valid(message, expected_mac, iv=b"\x00"*block_size):
         return expected_mac == message_mac(message, iv)
@@ -1219,7 +1223,7 @@ def challenge49():
 
     extension = b";Pizza_The_Hutt:1000000"
     modified_extension = xor_bytes(mac2, extension[:block_size]) + extension[block_size:]
-    forged_message2 = pkcs7_pad(message2) + extension
+    forged_message2 = block_tools.pkcs7_pad(message2) + extension
     # TODO: try to forge a message without padding in the middle. Also
     # calculate MAC without calculating MAC of modified_extension.
     assert request_is_valid(forged_message2, message_mac(modified_extension))
@@ -1236,7 +1240,7 @@ def challenge50():
         return AES.new(key, AES.MODE_CBC, IV=b"\x00"*16).decrypt(message)
 
     def mac_hash(message):
-        return encrypt(pkcs7_pad(message))[-16:]
+        return encrypt(block_tools.pkcs7_pad(message))[-16:]
 
     snippet = b"alert('MZA who was that?');\n"
     mac = mac_hash(snippet)
@@ -1246,7 +1250,7 @@ def challenge50():
     forged_snippet_begin = b"alert('Ayo, the Wu is back!');\n/****************"
     forged_snippet_end = b"**************/"
     nonsense = xor_bytes(
-        decrypt(xor_bytes(pkcs7_pad(forged_snippet_end), decrypt(mac))),
+        decrypt(xor_bytes(block_tools.pkcs7_pad(forged_snippet_end), decrypt(mac))),
         encrypt(forged_snippet_begin)[-16:]
     )
     forged_snippet = forged_snippet_begin + nonsense + forged_snippet_end
@@ -1269,13 +1273,14 @@ def challenge51():
         ])
 
     def ctr_oracle_fn(payload):
-        nonce = random.randint(0, 2**64 - 1)
-        cipher = AES.new(random_aes_key(), AES.MODE_CTR, counter=ctr_counter(nonce))
+        counter = counter=block_tools.ctr_counter(nonce=random.randint(0, 2**64 - 1))
+        cipher = AES.new(block_tools.random_aes_key(), AES.MODE_CTR, counter=counter)
         return len(cipher.encrypt(gzip.compress(format_request(payload))))
 
     def cbc_oracle_fn(payload):
-        cipher = AES.new(random_aes_key(), AES.MODE_CBC, IV=os.urandom(16))
-        return len(cipher.encrypt(pkcs7_pad(gzip.compress(format_request(payload)))))
+        cipher = AES.new(block_tools.random_aes_key(), AES.MODE_CBC, IV=os.urandom(16))
+        plaintext = block_tools.pkcs7_pad(gzip.compress(format_request(payload)))
+        return len(cipher.encrypt(plaintext))
 
     def crack_compression_oracle(oracle_fn):
         base64_alphabet = [bytes([x]) for x in b"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
