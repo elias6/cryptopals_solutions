@@ -1349,6 +1349,87 @@ def challenge52():
     print("\n\n".join(pretty_hex_bytes(m) for m in messages))
 
 
+def challenge53():
+    """Kelsey and Schneier's Expandable Messages"""
+    # Details about how this works can be found at the following URL:
+    # https://www.schneier.com/academic/paperfiles/paper-preimages.pdf
+
+    def make_fixed_point_message_pieces(hash_fn):
+        while True:
+            first_block = os.urandom(hash_fn.block_size)
+            state = hash_fn.compress(hash_fn.initial_state, first_block)
+            for i in range(2**(hash_fn.digest_size * 8 // 2)):
+                repeatable_block = os.urandom(hash_fn.block_size)
+                if hash_fn.compress(state, repeatable_block) == state:
+                    return (first_block, repeatable_block)
+
+    def produce_fixed_point_message(message_pieces, block_count):
+        first_block, repeatable_block = message_pieces
+        return first_block + ((block_count - 1) * repeatable_block)
+
+    def find_collision(block_count, hash_fn, state):
+        """Produce 2 messages with the same hash. The first will be one block long
+        and the second will be block_count blocks long.
+        """
+        while True:
+            filler_block = os.urandom(hash_fn.block_size)
+            filler_state = state
+            for _ in range(block_count - 1):
+                filler_state = hash_fn.compress(filler_state, filler_block)
+            filler = filler_block * (block_count - 1)
+            blocks = set()
+            while len(blocks) < 2**(hash_fn.digest_size * 8 // 2):
+                blocks.add(os.urandom(hash_fn.block_size))
+            long_message_ends = {hash_fn.compress(filler_state, b): b for b in blocks}
+            for short_message in blocks:
+                block_state = hash_fn.compress(state, short_message)
+                if block_state in long_message_ends:
+                    long_message = filler + long_message_ends[block_state]
+                    assert hash_fn(short_message, state) == hash_fn(long_message, state)
+                    return ((short_message, long_message), block_state)
+
+    def find_expandable_message_pieces(hash_fn, k):
+        """Make pieces that can be used to make messages containing k to
+        (k + 2**k - 1) blocks, inclusive, all with the same hash.
+        """
+        state = hash_fn.initial_state
+        result = []
+        for i in range(k):
+            collision, state = find_collision(2**i + 1, hash_fn, state)
+            result.append(collision)
+        return result
+
+    def make_expandable_message(message_piece_pairs, block_count):
+        """Make a message using pieces from message_piece_pairs, consisting of
+        block_count blocks. message_piece_pairs should be produced by
+        find_expandable_message_pieces. The message will have the same hash as
+        it would if the same message_piece_pairs were passed with a different
+        block_count.
+        """
+        k = len(message_piece_pairs)
+        if not (k <= block_count <= 2**k + k - 1):
+            raise ValueError(
+                "block_count must be between {} and {} for {} message piece pairs".format(
+                    k, 2**k + k - 1, block_count))
+        bits = [int(x) for x in reversed("{:b}".format(block_count - k).zfill(k))]
+        return b"".join(pair[bit] for pair, bit in zip(message_piece_pairs, bits))
+
+    hash_fn = merkle_damgard.HashFunction(digest_size=2)
+
+    message_pieces = make_fixed_point_message_pieces(hash_fn)
+    messages = [produce_fixed_point_message(message_pieces, block_count)
+        for block_count in range(1, 101)]
+    hashes = set(hash_fn(m) for m in messages)
+    assert len(hashes) == 1
+
+    for k in range(1, 7):
+        message_piece_pairs = find_expandable_message_pieces(hash_fn, k)
+        messages = [make_expandable_message(message_piece_pairs, block_count)
+            for block_count in range(k, 2**k + k)]
+        hashes = set(hash_fn(m) for m in messages)
+        assert len(hashes) == 1
+
+
 class ChallengeNotFoundError(ValueError):
     pass
 
