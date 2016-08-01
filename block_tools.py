@@ -5,8 +5,20 @@ from itertools import count
 from math import gcd
 from os import urandom
 
+from Crypto.Cipher import AES
+
 from english import all_bytes_by_frequency
 from util import chunks
+
+
+def aes_encrypt(plaintext, key, mode, *args, **kwargs):
+    cipher = AES.new(key, getattr(AES, "MODE_" + mode), *args, **kwargs)
+    return cipher.encrypt(plaintext)
+
+
+def aes_decrypt(ciphertext, key, mode, *args, **kwargs):
+    cipher = AES.new(key, getattr(AES, "MODE_" + mode), *args, **kwargs)
+    return cipher.decrypt(ciphertext)
 
 
 def looks_like_ecb(ciphertext, block_size=16):
