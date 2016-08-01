@@ -63,13 +63,13 @@ def crack_ecb_oracle(oracle_fn, block_size=16, prefix_length=0):
 
 
 def ctr_iterator(nonce, block_index=0):
-    return (struct.pack("<QQ", nonce, i) for i in count(start=block_index))
+    return (nonce + struct.pack("<Q", i) for i in count(start=block_index))
 
 
 def ctr_counter(nonce, block_index=0):
     # This is roughly equivalent to the following code:
     # return Crypto.Util.Counter.new(
-    #     nbits=64, prefix=struct.pack("<Q", nonce), initial_value=block_index,
+    #     nbits=64, prefix=nonce, initial_value=block_index,
     #     little_endian=True)
     # I prefer to use my own implementation because it is simpler, more
     # readable, and good enough for my purposes. The nonce and the counter

@@ -422,7 +422,7 @@ def challenge18():
     ciphertext = base64.b64decode("L77na/nrFsKvynd6HzOoG7GHTLXsTVu9qvY/"
         "2syLXzhPweyyMTJULu/6/kXX0KSvoOLSFQ==")
     key = b"YELLOW SUBMARINE"
-    nonce = 0
+    nonce = b"\x00" * 8
 
     plaintext = bytearray()
     for counter_value, block in zip(block_tools.ctr_iterator(nonce), chunks(ciphertext)):
@@ -439,7 +439,7 @@ def challenge19():
     key = block_tools.random_aes_key()
 
     def encrypt(plaintext):
-        counter = block_tools.ctr_counter(0)
+        counter = block_tools.ctr_counter(b"\x00" * 8)
         return block_tools.aes_encrypt(plaintext, key, "CTR", counter=counter)
 
     plaintexts = [base64.b64decode(x) for x in [
@@ -495,7 +495,7 @@ def challenge20():
     key = block_tools.random_aes_key()
 
     def encrypt(plaintext):
-        counter = block_tools.ctr_counter(0)
+        counter = block_tools.ctr_counter(b"\x00" * 8)
         return block_tools.aes_encrypt(plaintext, key, "CTR", counter=counter)
 
     with open("text_files/20.txt") as f:
@@ -594,7 +594,7 @@ def challenge24():
 def challenge25():
     """Break "random access read/write" AES CTR"""
     key = block_tools.random_aes_key()
-    nonce = random.getrandbits(64)
+    nonce = os.urandom(8)
 
     def edit(ciphertext, block_index, new_bytes):
         if len(new_bytes) % 16 != 0:
@@ -620,7 +620,7 @@ def challenge25():
 def challenge26():
     """CTR bitflipping"""
     key = block_tools.random_aes_key()
-    nonce = random.getrandbits(64)
+    nonce = os.urandom(8)
 
     counter = block_tools.ctr_counter(nonce)
     query_string = make_user_query_string("A" * 16)
@@ -1276,7 +1276,7 @@ def challenge51():
 
     def ctr_oracle_fn(payload):
         key = block_tools.random_aes_key()
-        counter = block_tools.ctr_counter(nonce=random.randint(0, 2**64 - 1))
+        counter = block_tools.ctr_counter(nonce=os.urandom(8))
         plaintext = gzip.compress(format_request(payload))
         return len(block_tools.aes_encrypt(plaintext, key, "CTR", counter=counter))
 
