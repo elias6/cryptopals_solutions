@@ -205,17 +205,17 @@ def challenge10():
 def challenge11():
     """An ECB/CBC detection oracle"""
     def encrypt_with_random_mode(plain_bytes):
-        key = block_tools.random_aes_key()
-        mode = random.choice(["CBC", "ECB"])
+        settings = {
+            "key": block_tools.random_aes_key(),
+            "mode": random.choice(["CBC", "ECB"]),
+            "pad": True,
+        }
         prefix = os.urandom(random.randint(5, 10))
         suffix = os.urandom(random.randint(5, 10))
-        bytes_to_encrypt = prefix + plain_bytes + suffix
-        if mode == "ECB":
-            ciphertext = block_tools.aes_encrypt(bytes_to_encrypt, key, mode, pad=True)
-        elif mode == "CBC":
-            iv = os.urandom(16)
-            ciphertext = block_tools.aes_encrypt(bytes_to_encrypt, key, mode, iv, pad=True)
-        return (ciphertext, mode)
+        cipher_input = prefix + plain_bytes + suffix
+        if settings["mode"] == "CBC":
+            settings["IV"] = os.urandom(16)
+        return (block_tools.aes_encrypt(cipher_input, **settings), settings["mode"])
 
     # hamlet.txt from http://erdani.com/tdpl/hamlet.txt
     # This seems to work perfectly when encrypting 2923 or more bytes of
