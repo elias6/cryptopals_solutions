@@ -2,7 +2,7 @@ from itertools import cycle, islice
 
 import struct
 
-from block_tools import aes_encrypt, pkcs7_pad
+from block_tools import aes_encrypt
 from util import chunks
 
 class HashFunction:
@@ -19,7 +19,7 @@ class HashFunction:
         if len(block) != self.block_size:
             raise ValueError("length of block must equal block_size")
         key = iv = b"\x00"*16
-        return aes_encrypt(pkcs7_pad(state + block), key, "CBC", iv)[:self.digest_size]
+        return aes_encrypt(state + block, key, "CBC", iv, pad=True)[:self.digest_size]
 
     def produce_padding(self, message_length):
         length_repr = struct.pack(">Q", message_length * 8)

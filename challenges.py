@@ -209,12 +209,12 @@ def challenge11():
         mode = random.choice(["CBC", "ECB"])
         prefix = os.urandom(random.randint(5, 10))
         suffix = os.urandom(random.randint(5, 10))
-        bytes_to_encrypt = block_tools.pkcs7_pad(prefix + plain_bytes + suffix)
+        bytes_to_encrypt = prefix + plain_bytes + suffix
         if mode == "ECB":
-            ciphertext = block_tools.aes_encrypt(bytes_to_encrypt, key, mode)
+            ciphertext = block_tools.aes_encrypt(bytes_to_encrypt, key, mode, pad=True)
         elif mode == "CBC":
             iv = os.urandom(16)
-            ciphertext = block_tools.aes_encrypt(bytes_to_encrypt, key, mode, iv)
+            ciphertext = block_tools.aes_encrypt(bytes_to_encrypt, key, mode, iv, pad=True)
         return (ciphertext, mode)
 
     # hamlet.txt from http://erdani.com/tdpl/hamlet.txt
@@ -241,7 +241,7 @@ def challenge12():
 
     def oracle_fn(attacker_bytes):
         plaintext = attacker_bytes + unknown_bytes
-        return block_tools.aes_encrypt(block_tools.pkcs7_pad(plaintext), key, "ECB")
+        return block_tools.aes_encrypt(plaintext, key, "ECB", pad=True)
 
     block_size = block_tools.guess_block_size(oracle_fn)
     assert block_size == 16
@@ -259,11 +259,10 @@ def challenge13():
     def encrypted_user_profile(email_address):
         profile_data = [("email", email_address), ("uid", "10"), ("role", "user")]
         profile = urlencode(profile_data).encode()
-        return block_tools.aes_encrypt(block_tools.pkcs7_pad(profile), key, "ECB")
+        return block_tools.aes_encrypt(profile, key, "ECB", pad=True)
 
     def decrypt_profile(encrypted_profile):
-        padded_profile = block_tools.aes_decrypt(encrypted_profile, key, "ECB")
-        profile = block_tools.pkcs7_unpad(padded_profile)
+        profile = block_tools.aes_decrypt(encrypted_profile, key, "ECB", unpad=True)
         return profile.decode()
 
     profile1 = encrypted_user_profile("peter.gregory@piedpiper.com")
@@ -289,7 +288,7 @@ def challenge14():
 
     def oracle_fn(attacker_bytes):
         plaintext = random_bytes + attacker_bytes + target_bytes
-        return block_tools.aes_encrypt(block_tools.pkcs7_pad(plaintext), key, "ECB")
+        return block_tools.aes_encrypt(plaintext, key, "ECB", pad=True)
 
     block_size = block_tools.guess_block_size(oracle_fn)
     assert block_size == 16
@@ -336,14 +335,14 @@ def challenge16():
     iv = os.urandom(16)
 
     query_string = make_user_query_string("foo")
-    ciphertext = block_tools.aes_encrypt(block_tools.pkcs7_pad(query_string), key, "CBC", iv)
+    ciphertext = block_tools.aes_encrypt(query_string, key, "CBC", iv, pad=True)
 
     new_ciphertext = bytearray(ciphertext)
     new_ciphertext[32:48] = xor_bytes(
         b"like%20a%20pound", b";admin=true;foo=", new_ciphertext[32:48])
     new_ciphertext = bytes(new_ciphertext)
 
-    query_string = block_tools.pkcs7_unpad(block_tools.aes_decrypt(new_ciphertext, key, "CBC", iv))
+    query_string = block_tools.aes_decrypt(new_ciphertext, key, "CBC", iv, unpad=True)
     assert b";admin=true;" in query_string
 
 
@@ -372,7 +371,7 @@ def challenge17():
 
     def encrypt(plaintext):
         iv = os.urandom(16)
-        return (iv, block_tools.aes_encrypt(block_tools.pkcs7_pad(plaintext), key, "CBC", iv))
+        return (iv, block_tools.aes_encrypt(plaintext, key, "CBC", iv, pad=True))
 
     def has_valid_padding(iv, ciphertext):
         plain_bytes = block_tools.aes_decrypt(ciphertext, key, "CBC", bytes(iv))
@@ -625,14 +624,14 @@ def challenge26():
 
     counter = block_tools.ctr_counter(nonce)
     query_string = make_user_query_string("A" * 16)
-    ciphertext = block_tools.aes_encrypt(block_tools.pkcs7_pad(query_string), key, "CTR", counter=counter)
+    ciphertext = block_tools.aes_encrypt(query_string, key, "CTR", counter=counter, pad=True)
     new_ciphertext = bytearray(ciphertext)
     new_ciphertext[32:48] = xor_bytes(
         b"A" * 16, b"ha_ha;admin=true", new_ciphertext[32:48])
     new_ciphertext = bytes(new_ciphertext)
 
     counter = block_tools.ctr_counter(nonce)
-    new_plaintext = block_tools.pkcs7_unpad(block_tools.aes_decrypt(new_ciphertext, key, "CTR", counter=counter))
+    new_plaintext = block_tools.aes_decrypt(new_ciphertext, key, "CTR", counter=counter, unpad=True)
     assert b";admin=true;" in new_plaintext
 
 
@@ -642,7 +641,7 @@ def challenge27():
     iv = key
 
     def encrypt(user_bytes):
-        return block_tools.aes_encrypt(block_tools.pkcs7_pad(user_bytes), key, "CBC", iv)
+        return block_tools.aes_encrypt(user_bytes, key, "CBC", iv, pad=True)
 
     def decrypt(ciphertext):
         # If plaintext has any non-ASCII bytes, raise exception, else do nothing
@@ -1194,7 +1193,7 @@ def challenge49():
         return urlencode([("from", from_id), ("tx_list", tx_list)], safe=":;").encode()
 
     def message_mac(message, iv=b"\x00"*block_size):
-        return block_tools.aes_encrypt(block_tools.pkcs7_pad(message), key, "CBC", iv)[-block_size:]
+        return block_tools.aes_encrypt(message, key, "CBC", iv, pad=True)[-block_size:]
 
     def request_is_valid(message, expected_mac, iv=b"\x00"*block_size):
         return expected_mac == message_mac(message, iv)
@@ -1283,8 +1282,9 @@ def challenge51():
 
     def cbc_oracle_fn(payload):
         key = block_tools.random_aes_key()
-        plaintext = block_tools.pkcs7_pad(gzip.compress(format_request(payload)))
-        return len(block_tools.aes_encrypt(plaintext, key, "CBC", IV=os.urandom(16)))
+        iv = os.urandom(16)
+        plaintext = gzip.compress(format_request(payload))
+        return len(block_tools.aes_encrypt(plaintext, key, "CBC", iv, pad=True))
 
     def crack_compression_oracle(oracle_fn):
         base64_alphabet = [bytes([x]) for x in b"ABCDEFGHIJKLMNOPQRSTUVWXYZ"

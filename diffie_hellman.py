@@ -2,7 +2,7 @@ from collections import defaultdict
 from hashlib import sha1
 from os import urandom
 
-from block_tools import aes_decrypt, aes_encrypt, pkcs7_pad, pkcs7_unpad
+from block_tools import aes_decrypt, aes_encrypt
 from util import IETF_PRIME, int_to_bytes, random
 
 
@@ -38,8 +38,8 @@ class User:
     def _encrypt_message(self, message, other):
         iv = urandom(16)
         key = self._generate_symmetric_key(other)
-        return (iv, aes_encrypt(pkcs7_pad(message), key, "CBC", iv))
+        return (iv, aes_encrypt(message, key, "CBC", iv, pad=True))
 
     def _decrypt_message(self, iv, ciphertext, other):
         key = self._generate_symmetric_key(other)
-        return pkcs7_unpad(aes_decrypt(ciphertext, key, "CBC", iv))
+        return aes_decrypt(ciphertext, key, "CBC", iv, unpad=True)

@@ -11,14 +11,15 @@ from english import all_bytes_by_frequency
 from util import chunks
 
 
-def aes_encrypt(plaintext, key, mode, *args, **kwargs):
+def aes_encrypt(plaintext, key, mode, *args, pad=False, **kwargs):
     cipher = AES.new(key, getattr(AES, "MODE_" + mode), *args, **kwargs)
-    return cipher.encrypt(plaintext)
+    return cipher.encrypt(pkcs7_pad(plaintext) if pad else plaintext)
 
 
-def aes_decrypt(ciphertext, key, mode, *args, **kwargs):
+def aes_decrypt(ciphertext, key, mode, *args, unpad=False, **kwargs):
     cipher = AES.new(key, getattr(AES, "MODE_" + mode), *args, **kwargs)
-    return cipher.decrypt(ciphertext)
+    plaintext = cipher.decrypt(ciphertext)
+    return pkcs7_unpad(plaintext) if unpad else plaintext
 
 
 def looks_like_ecb(ciphertext, block_size=16):
