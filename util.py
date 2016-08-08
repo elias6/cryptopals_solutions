@@ -29,7 +29,7 @@ def xor_bytes(*bytes_objects):
     return bytes(result)
 
 
-def xor_encrypt(input_bytes, key):
+def apply_repeating_xor_key(input_bytes, key):
     return bytes(a ^ b for a, b in zip(input_bytes, cycle(key)))
 
 
@@ -47,8 +47,8 @@ def pretty_hex_bytes(x):
 
 def calculate_hmac(key, message, hash_fn=sha1):
     key_hash = hash_fn(key).digest()
-    o_key_pad = xor_encrypt(key_hash, b"\x5c")
-    i_key_pad = xor_encrypt(key_hash, b"\x36")
+    o_key_pad = apply_repeating_xor_key(key_hash, b"\x5c")
+    i_key_pad = apply_repeating_xor_key(key_hash, b"\x36")
     return hash_fn(o_key_pad + hash_fn(i_key_pad + message).digest()).digest()
 
 

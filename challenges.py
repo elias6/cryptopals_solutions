@@ -40,8 +40,8 @@ import rsa
 import srp
 import timing_attack
 
-from util import (IETF_PRIME, big_int_cube_root, calculate_hmac, chunks, int_to_bytes,
-    mod_inv, pretty_hex_bytes, random, xor_bytes, xor_encrypt)
+from util import (IETF_PRIME, apply_repeating_xor_key, big_int_cube_root, calculate_hmac,
+    chunks, int_to_bytes, mod_inv, pretty_hex_bytes, random, xor_bytes)
 
 
 warnings.simplefilter("default", BytesWarning)
@@ -107,7 +107,7 @@ def challenge5():
     """Implement repeating-key XOR"""
     stanza = ("Burning 'em, if you ain't quick and nimble\n"
         "I go crazy when I hear a cymbal")
-    result = xor_encrypt(stanza.encode(), b"ICE").hex()
+    result = apply_repeating_xor_key(stanza.encode(), b"ICE").hex()
     assert result == ("0b3637272a2b2e63622c2e69692a23693a2a3c6324202d623d63343"
         "c2a26226324272765272a282b2f20430a652e2c652a3124333a653e2b2027630c692b"
         "20283165286326302e27282f")
@@ -131,7 +131,7 @@ def challenge6():
 
     best_key_size = min(range(2, 41), key=lambda x: index_of_coincidence(ciphertext, x))
     key = english.crack_common_xor_key(chunks(ciphertext, best_key_size))
-    plaintext = xor_encrypt(ciphertext, key).decode()
+    plaintext = apply_repeating_xor_key(ciphertext, key).decode()
     print("key: {}".format(key.decode()))
     print()
     print(plaintext)
@@ -487,7 +487,8 @@ def challenge19():
     ciphertexts = [encrypt(x) for x in plaintexts]
 
     recovered_key = english.crack_common_xor_key(ciphertexts)
-    print("\n".join(xor_encrypt(c, recovered_key).decode() for c in ciphertexts))
+    plaintexts = [apply_repeating_xor_key(c, recovered_key).decode() for c in ciphertexts]
+    print("\n".join(plaintexts))
 
 
 def challenge20():
@@ -502,7 +503,7 @@ def challenge20():
         plaintexts = [base64.b64decode(x) for x in f.readlines()]
     ciphertexts = [encrypt(x) for x in plaintexts]
     recovered_key = english.crack_common_xor_key(ciphertexts)
-    print("\n".join(xor_encrypt(c, recovered_key).decode() for c in ciphertexts))
+    print("\n".join(apply_repeating_xor_key(c, recovered_key).decode() for c in ciphertexts))
 
 
 def challenge21():
@@ -568,7 +569,7 @@ def challenge24():
     # 4 bytes, and therefore may not allow me to determine the keystream
     # numbers.
     ciphertext_with_my_bytes = b"".join(cipher_chunks[-3:-1])
-    keystream = xor_encrypt(ciphertext_with_my_bytes, b"A")
+    keystream = apply_repeating_xor_key(ciphertext_with_my_bytes, b"A")
     keystream_numbers = struct.unpack(">LL", keystream)
     untempered_numbers = [mersenne_twister.untemper(x) for x in keystream_numbers]
 

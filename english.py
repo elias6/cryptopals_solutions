@@ -1,7 +1,7 @@
 from collections import Counter, defaultdict
 from itertools import chain
 
-from util import xor_encrypt
+from util import apply_repeating_xor_key
 
 # All bytes, from most common to least common in UTF-8-encoded English
 # text. Data for this sequence is mostly taken from
@@ -92,7 +92,7 @@ def english_like_score(text_bytes):
 
 def iter_xor_score_data(ciphertext):
     for i in range(256):
-        message = xor_encrypt(ciphertext, bytes([i]))
+        message = apply_repeating_xor_key(ciphertext, bytes([i]))
         score = english_like_score(message)
         yield {"key": i, "message": message, "score": score}
 
