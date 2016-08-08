@@ -4,6 +4,7 @@
 import base64
 import cProfile
 import gzip
+import itertools
 import os
 import pprint as pprint_module
 import re
@@ -16,7 +17,6 @@ from collections import Counter, defaultdict
 from contextlib import ExitStack, redirect_stdout
 from hashlib import sha1, sha256
 from heapq import nlargest
-from itertools import combinations, count, product, repeat
 from math import ceil, gcd
 from sys import stdout
 from threading import Thread
@@ -951,7 +951,7 @@ def challenge40():
         modulus_product *= public_key.modulus
 
     assert all(gcd(x["modulus"], y["modulus"]) == 1
-        for x, y in combinations(ciphertext_data, 2))
+        for x, y in itertools.combinations(ciphertext_data, 2))
 
     cube = 0
     for x in ciphertext_data:
@@ -1078,7 +1078,7 @@ def challenge44():
                 })
                 message_data = {}
             message_data[key] = value
-    for message1, message2 in combinations(messages, 2):
+    for message1, message2 in itertools.combinations(messages, 2):
         if message1["sig"].r == message2["sig"].r:
             s_diff_inverse = mod_inv(message1["sig"].s - message2["sig"].s, dsa.q)
             k = ((message1["hash"] - message2["hash"]) * s_diff_inverse) % dsa.q
@@ -1292,7 +1292,7 @@ def challenge51():
             b"abcdefghijklmnopqrstuvwxyz0123456789+/=\n"]
         result = b""
         while True:
-            for i in count(start=0):
+            for i in itertools.count(start=0):
                 prefix = os.urandom(i) + b"sessionid=" + result
                 length_map = {x: oracle_fn(prefix + x) for x in base64_alphabet}
                 min_length = min(length_map.values())
@@ -1328,7 +1328,7 @@ def challenge52():
                     state = test_state
                     block_pairs.append(collision_map[test_state])
                     break
-        return [b"".join(x) for x in product(*block_pairs)]
+        return [b"".join(x) for x in itertools.product(*block_pairs)]
 
     def find_cascaded_collision(cheap_hash_fn, expensive_hash_fn):
         n = ceil(expensive_hash_fn.digest_size * 8 / 2)
