@@ -625,14 +625,14 @@ def challenge26():
 
     counter = block_tools.ctr_counter(nonce)
     query_string = make_user_query_string("A" * 16)
-    ciphertext = block_tools.aes_encrypt(query_string, key, "CTR", counter=counter, pad=True)
+    ciphertext = block_tools.aes_encrypt(query_string, key, "CTR", counter=counter)
     new_ciphertext = bytearray(ciphertext)
     new_ciphertext[32:48] = xor_bytes(
         b"A" * 16, b"ha_ha;admin=true", new_ciphertext[32:48])
     new_ciphertext = bytes(new_ciphertext)
 
     counter = block_tools.ctr_counter(nonce)
-    new_plaintext = block_tools.aes_decrypt(new_ciphertext, key, "CTR", counter=counter, unpad=True)
+    new_plaintext = block_tools.aes_decrypt(new_ciphertext, key, "CTR", counter=counter)
     assert b";admin=true;" in new_plaintext
 
 
