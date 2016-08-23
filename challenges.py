@@ -1367,7 +1367,7 @@ def challenge53():
     def make_fixed_point_message_pieces(hash_fn):
         while True:
             first_block = os.urandom(hash_fn.block_size)
-            state = hash_fn.compress(hash_fn.initial_state, first_block)
+            state = hash_fn(first_block, pad=False)
             for i in range(2**(hash_fn.digest_size * 8 // 2)):
                 repeatable_block = os.urandom(hash_fn.block_size)
                 if hash_fn.compress(state, repeatable_block) == state:
@@ -1382,11 +1382,8 @@ def challenge53():
         and the second will be block_count blocks long.
         """
         while True:
-            filler_block = os.urandom(hash_fn.block_size)
-            filler_state = state
-            for _ in range(block_count - 1):
-                filler_state = hash_fn.compress(filler_state, filler_block)
-            filler = filler_block * (block_count - 1)
+            filler = os.urandom(hash_fn.block_size) * (block_count - 1)
+            filler_state = hash_fn(filler, state, pad=False)
             blocks = set()
             while len(blocks) < 2**(hash_fn.digest_size * 8 // 2):
                 blocks.add(os.urandom(hash_fn.block_size))

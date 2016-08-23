@@ -28,9 +28,9 @@ class HashFunction:
         padding[0] |= (1 << 7)
         return bytes(padding[-self.block_size:])
 
-    def __call__(self, message, state=None):
+    def __call__(self, message, state=None, *, pad=True):
         state = state or self.initial_state
-        padded_message = message + self.produce_padding(len(message))
-        for block in chunks(padded_message, self.block_size):
+        prepared_message = message + (self.produce_padding(len(message)) if pad else b"")
+        for block in chunks(prepared_message, self.block_size):
             state = self.compress(state, block)
         return state
