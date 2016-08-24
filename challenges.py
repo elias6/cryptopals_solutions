@@ -1437,6 +1437,92 @@ def challenge53():
         assert len(hashes) == 1
 
 
+def challenge54():
+    """Kelsey and Kohno's Nostradamus Attack"""
+    # Details about how this works can be found at the following URL:
+    # https://homes.cs.washington.edu/~yoshi/papers/EC06/herding.pdf
+    class Diamond:
+        def __init__(self, hash_fn, k):
+            # TODO: make diamond more efficiently, as described in paper
+
+            self.hash_fn = hash_fn
+            self.k = k
+            self.nodes = {}
+            for i in range(2**self.k):
+                self.nodes[0, i] = {"state": os.urandom(self.hash_fn.digest_size)}
+
+            for level_idx in range(self.k):
+                for j in range(2 ** (self.k - level_idx - 1)):
+                    pair = [self.nodes[level_idx, 2*j], self.nodes[level_idx, 2*j + 1]]
+                    block_maps = [{}, {}]
+                    while (level_idx + 1, j) not in self.nodes:
+                        block = os.urandom(self.hash_fn.block_size)
+                        for i in [0, 1]:
+                            state = self.hash_fn.compress(pair[i]["state"], block)
+                            if state in block_maps[1 - i]:
+                                pair[i]["block"] = block
+                                pair[1 - i]["block"] = block_maps[1 - i][state]
+                                self.nodes[level_idx + 1, j] = {"state": state}
+                                break
+                            block_maps[i][state] = block
+
+            self.state_dict = {node["state"]: indexes
+                for indexes, node in self.nodes.items()}
+
+            self.assert_consistent()
+
+        def assert_consistent(self):
+            for indexes, node in self.nodes.items():
+                level_idx, node_idx = indexes
+                if level_idx < self.k:
+                    next_state = self.hash_fn.compress(node["state"], node["block"])
+                    assert next_state == self.nodes[level_idx + 1, node_idx // 2]["state"]
+                suffix = self.suffix_for_indexes(indexes)
+                assert self.hash_fn(suffix, node["state"], pad=False) == self.final_hash
+
+        @property
+        def final_hash(self):
+            return self.nodes[self.k, 0]["state"]
+
+        def suffix_for_indexes(self, indexes):
+            blocks = []
+            level_idx, node_idx = indexes
+            for i in itertools.count(start=0):
+                node = self.nodes[i + level_idx, node_idx // 2**i]
+                if "block" in node:
+                    blocks.append(node["block"])
+                else:
+                    return b"".join(blocks)
+
+        def make_message_with_prefix(self, prefix):
+            # TODO: make more meaningful messages, as described in paper
+
+            if len(prefix) % self.hash_fn.block_size != 0:
+                raise ValueError(
+                    "length of prefix must be a multiple of hash_fn.block_size")
+            while True:
+                linking_message = os.urandom(self.hash_fn.block_size)
+                state = self.hash_fn(prefix + linking_message, pad=False)
+                if state in self.state_dict:
+                    break
+            suffix = self.suffix_for_indexes(self.state_dict[state])
+            result = prefix + linking_message + suffix
+            assert self.hash_fn(result, pad=False) == self.final_hash
+            return result
+
+    hash_fn = merkle_damgard.HashFunction(digest_size=2)
+    diamond = Diamond(hash_fn, k=4)
+
+    prefix = random.choice([
+        b"SF Giants win the World Series!!",
+        b"Tigers win 2017 World Series 4-1",
+        b"Red Sox win '17 World Series 4-2",
+    ])
+    print(diamond.make_message_with_prefix(prefix))
+
+    # TODO: make this work even if message is padded
+
+
 class ChallengeNotFoundError(ValueError):
     pass
 
