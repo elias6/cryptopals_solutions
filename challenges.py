@@ -8,6 +8,7 @@ import itertools
 import os
 import pprint as pprint_module
 import re
+import string
 import struct
 import traceback
 import warnings
@@ -1245,19 +1246,33 @@ def challenge50():
     def mac_hash(message):
         return encrypt(block_tools.pkcs7_pad(message))[-16:]
 
+    def comment_piece_is_valid(piece_bytes):
+        try:
+            piece_bytes.decode()
+        except UnicodeDecodeError:
+            return False
+        else:
+            return all(x not in b"/*\r\a" for x in piece_bytes)
+
     snippet = b"alert('MZA who was that?');\n"
     mac = mac_hash(snippet)
     assert mac.hex() == "296b8d7cb78a243dda4d0a61d33bbdd1"
     print("snippet:\n{}".format(snippet.decode()))
 
-    forged_snippet_begin = b"alert('Ayo, the Wu is back!');\n/****************"
+    valid_chars = string.ascii_letters + string.digits
     forged_snippet_end = b"**************/"
-    nonsense = xor_bytes(
-        decrypt(xor_bytes(block_tools.pkcs7_pad(forged_snippet_end), decrypt(mac))),
-        encrypt(forged_snippet_begin)[-16:]
-    )
-    forged_snippet = forged_snippet_begin + nonsense + forged_snippet_end
-    print("forged snippet:\n{}".format(forged_snippet.decode(errors="replace")))
+    nonsense_input = decrypt(
+        xor_bytes(
+            block_tools.pkcs7_pad(forged_snippet_end),
+            decrypt(mac)))
+    while True:
+        comment_begin = b"".join(random.choice(valid_chars).encode() for _ in range(15))
+        forged_snippet_begin = b"alert('Ayo, the Wu is back!');\n/*" + comment_begin
+        nonsense = xor_bytes(nonsense_input, encrypt(forged_snippet_begin)[-16:])
+        if comment_piece_is_valid(nonsense):
+            forged_snippet = forged_snippet_begin + nonsense + forged_snippet_end
+            break
+    print("forged snippet:\n{}".format(forged_snippet.decode()))
     assert mac_hash(forged_snippet) == mac
 
 
