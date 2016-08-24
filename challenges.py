@@ -41,7 +41,7 @@ import srp
 import timing_attack
 
 from util import (IETF_PRIME, apply_repeating_xor_key, big_int_cube_root, calculate_hmac,
-    chunks, int_to_bytes, mod_inv, pretty_hex_bytes, random, xor_bytes)
+                  chunks, int_to_bytes, mod_inv, pretty_hex_bytes, random, xor_bytes)
 
 
 warnings.simplefilter("default", BytesWarning)
@@ -49,7 +49,7 @@ warnings.simplefilter("default", ResourceWarning)
 warnings.simplefilter("default", DeprecationWarning)
 
 EXAMPLE_PLAIN_BYTES = (b"Give a man a beer, he'll waste an hour. "
-    b"Teach a man to brew, he'll waste a lifetime.")
+                       b"Teach a man to brew, he'll waste a lifetime.")
 
 
 def pprint(*args, width=120, **kwargs):
@@ -58,13 +58,13 @@ def pprint(*args, width=120, **kwargs):
 
 def make_user_query_string(user_data):
     return ("comment1=cooking%20MCs;userdata=" + url_quote(user_data) +
-        ";comment2=%20like%20a%20pound%20of%20bacon").encode()
+            ";comment2=%20like%20a%20pound%20of%20bacon").encode()
 
 
 def challenge1():
     """Convert hex to base64"""
-    encoded_text = ("49276d206b696c6c696e6720796f757220627261696e206c" +
-        "696b65206120706f69736f6e6f7573206d757368726f6f6d")
+    encoded_text = ("49276d206b696c6c696e6720796f757220627261696e206c696b65206120706f6973"
+                    "6f6e6f7573206d757368726f6f6d")
     message = bytes.fromhex(encoded_text)
     print(message.decode())
     result = base64.b64encode(message)
@@ -106,11 +106,11 @@ def challenge4():
 def challenge5():
     """Implement repeating-key XOR"""
     stanza = ("Burning 'em, if you ain't quick and nimble\n"
-        "I go crazy when I hear a cymbal")
+              "I go crazy when I hear a cymbal")
     result = apply_repeating_xor_key(stanza.encode(), b"ICE").hex()
-    assert result == ("0b3637272a2b2e63622c2e69692a23693a2a3c6324202d623d63343"
-        "c2a26226324272765272a282b2f20430a652e2c652a3124333a653e2b2027630c692b"
-        "20283165286326302e27282f")
+    assert result == ("0b3637272a2b2e63622c2e69692a23693a2a3c6324202d623d63343c2a26226324"
+                      "272765272a282b2f20430a652e2c652a3124333a653e2b2027630c692b20283165"
+                      "286326302e27282f")
     print(result)
 
 
@@ -163,7 +163,7 @@ def challenge8():
 def challenge9():
     """Implement PKCS#7 padding"""
     assert (block_tools.pkcs7_pad(b"YELLOW SUBMARINE", 20) ==
-        b"YELLOW SUBMARINE\x04\x04\x04\x04")
+            b"YELLOW SUBMARINE\x04\x04\x04\x04")
 
 
 def challenge10():
@@ -419,8 +419,8 @@ def challenge17():
 
 def challenge18():
     """Implement CTR, the stream cipher mode"""
-    ciphertext = base64.b64decode("L77na/nrFsKvynd6HzOoG7GHTLXsTVu9qvY/"
-        "2syLXzhPweyyMTJULu/6/kXX0KSvoOLSFQ==")
+    ciphertext = base64.b64decode(
+        "L77na/nrFsKvynd6HzOoG7GHTLXsTVu9qvY/2syLXzhPweyyMTJULu/6/kXX0KSvoOLSFQ==")
     key = b"YELLOW SUBMARINE"
     nonce = b"\x00" * 8
 
@@ -511,7 +511,7 @@ def challenge21():
     rng = mersenne_twister.MT19937_RNG(seed=0)
     numbers = [rng.get_number() for _ in range(10)]
     assert numbers == [2357136044, 2546248239, 3071714933, 3626093760, 2588848963,
-        3684848379, 2340255427, 3638918503, 1819583497, 2678185683]
+                       3684848379, 2340255427, 3638918503, 1819583497, 2678185683]
 
 
 def challenge22():
@@ -671,8 +671,8 @@ def challenge29():
     """Break a SHA-1 keyed MAC using length extension"""
     def sha1_padding(message_length):
         return (b"\x80" +
-            b"\x00" * ((55 - message_length) % 64) +
-            struct.pack(">Q", message_length * 8))
+                b"\x00" * ((55 - message_length) % 64) +
+                struct.pack(">Q", message_length * 8))
 
     my_padding = sha1_padding(len(EXAMPLE_PLAIN_BYTES))
     their_padding = PurePythonSha1().update(EXAMPLE_PLAIN_BYTES)._produce_padding()
@@ -680,7 +680,7 @@ def challenge29():
 
     key = os.urandom(16)
     query_string = (b"comment1=cooking%20MCs;userdata=foo;"
-        b"comment2=%20like%20a%20pound%20of%20bacon")
+                    b"comment2=%20like%20a%20pound%20of%20bacon")
     mac = sha1(key + query_string).digest()
 
     glue_padding = sha1_padding(len(key + query_string))
@@ -699,19 +699,19 @@ def challenge30():
     def md4_padding(message_length):
         # Very similar to sha1_padding, but little endian instead of big endian
         return (b"\x80" +
-            b"\x00" * ((55 - message_length) % 64) +
-            struct.pack("<Q", message_length * 8))
+                b"\x00" * ((55 - message_length) % 64) +
+                struct.pack("<Q", message_length * 8))
 
     key = os.urandom(16)
     query_string = (b"comment1=cooking%20MCs;userdata=foo;"
-        b"comment2=%20like%20a%20pound%20of%20bacon")
+                    b"comment2=%20like%20a%20pound%20of%20bacon")
     mac = MD4(key + query_string)
 
     glue_padding = md4_padding(len(key + query_string))
     new_param = b";admin=true"
     new_hash = MD4(new_param,
-        fake_byte_len=len(key + query_string + glue_padding + new_param),
-        state=struct.unpack("<4I", mac))
+                   fake_byte_len=len(key + query_string + glue_padding + new_param),
+                   state=struct.unpack("<4I", mac))
 
     expected_hash = MD4(key + query_string + glue_padding + new_param)
     assert new_hash == expected_hash
@@ -859,7 +859,7 @@ def challenge35():
     bob = diffie_hellman.User(g=IETF_PRIME - 1)
     # Private key must be even.
     mallory = diffie_hellman.User(g=IETF_PRIME - 1,
-        private_key=random.randrange(0, IETF_PRIME, 2))
+                                  private_key=random.randrange(0, IETF_PRIME, 2))
     assert mallory.public_key == 1
     assert alice.get_shared_key_for(mallory) == 1
     assert bob.get_shared_key_for(mallory) == 1
@@ -951,7 +951,7 @@ def challenge40():
         modulus_product *= public_key.modulus
 
     assert all(gcd(x["modulus"], y["modulus"]) == 1
-        for x, y in itertools.combinations(ciphertext_data, 2))
+               for x, y in itertools.combinations(ciphertext_data, 2))
 
     cube = 0
     for x in ciphertext_data:
@@ -1039,12 +1039,12 @@ def challenge43():
     sig, k = dsa.sign_and_leak_k(message, private_key)
     assert dsa.recover_private_key(k, message, sig) == private_key
 
-    public_key = int("84ad4719d044495496a3201c8ff484feb45b962e7302e56a392aee4ab"
-        "ab3e4bdebf2955b4736012f21a08084056b19bcd7fee56048e004e44984e2f411788ef"
-        "dc837a0d2e5abb7b555039fd243ac01f0fb2ed1dec568280ce678e931868d23eb095fd"
-        "e9d3779191b8c0299d6e07bbb283e6633451e535c45513b2d33c99ea17", 16)
+    public_key = int("84ad4719d044495496a3201c8ff484feb45b962e7302e56a392aee4abab3e4bdebf"
+                     "2955b4736012f21a08084056b19bcd7fee56048e004e44984e2f411788efdc837a0"
+                     "d2e5abb7b555039fd243ac01f0fb2ed1dec568280ce678e931868d23eb095fde9d3"
+                     "779191b8c0299d6e07bbb283e6633451e535c45513b2d33c99ea17", 16)
     message = (b"For those that envy a MC it can be hazardous to your health\n"
-        b"So be friendly, a matter of life and death, just like a etch-a-sketch\n")
+               b"So be friendly, a matter of life and death, just like a etch-a-sketch\n")
     assert sha1(message).hexdigest() == "d2d0714f014a9784047eaeccf956520045c45265"
     sig = dsa.Signature(
         r=548099063082341131477253921760299949438196259240,
@@ -1085,11 +1085,11 @@ def challenge44():
             guess1 = dsa.recover_private_key(k, message1["message"], message1["sig"])
             guess2 = dsa.recover_private_key(k, message2["message"], message2["sig"])
             assert guess1 == guess2
-            public_key = int("2d026f4bf30195ede3a088da85e398ef869611d0f68f0713d"
-                "51c9c1a3a26c95105d915e2d8cdf26d056b86b8a7b85519b1c23cc3ecdc606"
-                "2650462e3063bd179c2a6581519f674a61f1d89a1fff27171ebc1b93d4dc57"
-                "bceb7ae2430f98a6a4d83d8279ee65d71c1203d2c96d65ebbf7cce9d32971c"
-                "3de5084cce04a2e147821", 16)
+            public_key = int("2d026f4bf30195ede3a088da85e398ef869611d0f68f0713d51c9c1a3a2"
+                             "6c95105d915e2d8cdf26d056b86b8a7b85519b1c23cc3ecdc6062650462"
+                             "e3063bd179c2a6581519f674a61f1d89a1fff27171ebc1b93d4dc57bceb"
+                             "7ae2430f98a6a4d83d8279ee65d71c1203d2c96d65ebbf7cce9d32971c3"
+                             "de5084cce04a2e147821", 16)
             assert pow(dsa.g, guess1, dsa.p) == public_key
             private_key_hash = sha1("{:x}".format(guess1).encode()).hexdigest()
             assert private_key_hash == "ca8f6f7c66fa362d40760d135b763eb8527d3d52"
@@ -1137,7 +1137,7 @@ def challenge46():
         return rsa.decrypt(ciphertext, private_key)[-1] & 1 == 1
 
     message = base64.b64decode(b"VGhhdCdzIHdoeSBJIGZvdW5kIHlvdSBkb24ndCBwbGF5IG"
-        b"Fyb3VuZCB3aXRoIHRoZSBGdW5reSBDb2xkIE1lZGluYQ==")
+                               b"Fyb3VuZCB3aXRoIHRoZSBGdW5reSBDb2xkIE1lZGluYQ==")
 
     ciphertext = rsa.pad_and_encrypt(message, public_key)
 
@@ -1289,7 +1289,7 @@ def challenge51():
 
     def crack_compression_oracle(oracle_fn):
         base64_alphabet = [bytes([x]) for x in b"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-            b"abcdefghijklmnopqrstuvwxyz0123456789+/=\n"]
+                           b"abcdefghijklmnopqrstuvwxyz0123456789+/=\n"]
         result = b""
         while True:
             for i in itertools.count(start=0):
@@ -1354,8 +1354,8 @@ def challenge52():
     messages = find_cascaded_collision(cheap_hash_fn, expensive_hash_fn)
     assert len(set(cheap_hash_fn(x) + expensive_hash_fn(x) for x in messages)) == 1
     print("The following messages have combined hash [{}] + [{}]:".format(
-         pretty_hex_bytes(cheap_hash_fn(messages[0])),
-         pretty_hex_bytes(expensive_hash_fn(messages[0]))))
+        pretty_hex_bytes(cheap_hash_fn(messages[0])),
+        pretty_hex_bytes(expensive_hash_fn(messages[0]))))
     print("\n\n".join(pretty_hex_bytes(m) for m in messages))
 
 
@@ -1368,7 +1368,7 @@ def challenge53():
         while True:
             first_block = os.urandom(hash_fn.block_size)
             state = hash_fn(first_block, pad=False)
-            for i in range(2**(hash_fn.digest_size * 8 // 2)):
+            for _ in range(2**(hash_fn.digest_size * 8 // 2)):
                 repeatable_block = os.urandom(hash_fn.block_size)
                 if hash_fn.compress(state, repeatable_block) == state:
                     return (first_block, repeatable_block)
@@ -1425,14 +1425,14 @@ def challenge53():
 
     message_pieces = make_fixed_point_message_pieces(hash_fn)
     messages = [produce_fixed_point_message(message_pieces, block_count)
-        for block_count in range(1, 101)]
+                for block_count in range(1, 101)]
     hashes = set(hash_fn(m) for m in messages)
     assert len(hashes) == 1
 
     for k in range(1, 7):
         message_piece_pairs = find_expandable_message_pieces(hash_fn, k)
         messages = [make_expandable_message(message_piece_pairs, block_count)
-            for block_count in range(k, 2**k + k)]
+                    for block_count in range(k, 2**k + k)]
         hashes = set(hash_fn(m) for m in messages)
         assert len(hashes) == 1
 
@@ -1467,7 +1467,7 @@ def challenge54():
                             block_maps[i][state] = block
 
             self.state_dict = {node["state"]: indexes
-                for indexes, node in self.nodes.items()}
+                               for indexes, node in self.nodes.items()}
 
             self.assert_consistent()
 
@@ -1541,7 +1541,7 @@ def get_all_challenges():
     challenges = {}
     for name, var in globals().items():
         try:
-            num = int(re.findall("^challenge(\d+)$", name)[0])
+            num = int(re.findall(r"^challenge(\d+)$", name)[0])
         except IndexError:
             pass
         else:
@@ -1552,12 +1552,12 @@ def get_all_challenges():
 
 def run_challenges(challenges, output_stream=stdout):
     for challenge in challenges:
-        num = re.findall("^challenge(.+)$", challenge.__name__)[0]
+        num = re.findall(r"^challenge(.+)$", challenge.__name__)[0]
         print("Running challenge {}: {}".format(num, challenge.__doc__),
-            file=output_stream)
+              file=output_stream)
         try:
             challenge()
-        except Exception as e:
+        except Exception:
             traceback.print_exc(file=output_stream)
         else:
             print("Challenge {} passed.".format(num), file=output_stream)
@@ -1575,7 +1575,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-d", "--dummy-server",
         help="Use faster and more reliable dummy server for timing attacks instead of "
-            "actual web server", action="store_true")
+             "actual web server", action="store_true")
     ARGS = parser.parse_args()
     try:
         challenges = get_challenges(ARGS.challenges) or get_all_challenges()

@@ -8,7 +8,7 @@ from math import ceil, floor, gcd
 
 from Crypto.Util.number import getPrime, getStrongPrime
 
-from util import int_to_bytes, mod_inv, random
+from util import mod_inv, random
 
 KeyPair = namedtuple("KeyPair", ["public_key", "private_key"])
 Key = namedtuple("Key", ["modulus", "exponent"])
@@ -66,7 +66,7 @@ def pad_and_encrypt(plaintext, key, block_type=2):
 def create_digest_asn1(message):
     """Produce unpadded, unencrypted PKCS v1.5 signature"""
     # TODO: make this handle more hash functions
-    
+
     digest_algorithm_asn1 = (
         b"\x06"         # object identifier
         b"\x08"         # length (8)

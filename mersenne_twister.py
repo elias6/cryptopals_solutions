@@ -16,14 +16,13 @@ class MT19937_RNG:
         return result
 
     def twist(self, limit=624):
-        # limit makes this function only twist part of the buffer, instead of
+        # limit makes this function twist only part of the buffer, instead of
         # the whole buffer. This is a performance optimization for code that
         # cracks the RNG by examining its output, and not intended for normal
         # use of the RNG.
         buffer = self.buffer
         for i in range(limit):
-            y = ((buffer[i] & 0x80000000) +
-                       (buffer[(i + 1) % 624] & 0x7fffffff))
+            y = ((buffer[i] & 0x80000000) + (buffer[(i + 1) % 624] & 0x7fffffff))
             buffer[i] = buffer[(i + 397) % 624] ^ (y >> 1)
 
             if y & 1:

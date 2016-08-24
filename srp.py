@@ -48,9 +48,10 @@ class MitmServer(Server):
     def _verify_hmac(self, hmac, username):
         user = self.users[username]
         # 20 most common passwords according to xato.net
-        common_passwords = ["password", "123456", "12345678", "1234", "qwerty", "12345",
-            "dragon", "pussy", "baseball", "football", "letmein", "monkey", "696969",
-            "abc123", "mustang", "michael", "shadow", "master", "jennifer", "111111"]
+        common_passwords = [
+            "password", "123456", "12345678", "1234", "qwerty", "12345", "dragon",
+            "pussy", "baseball", "football", "letmein", "monkey", "696969", "abc123",
+            "mustang", "michael", "shadow", "master", "jennifer", "111111"]
         u = 1
         for test_password in common_passwords:
             test_x = generate_private_key(username, test_password, user["salt"])
