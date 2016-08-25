@@ -215,7 +215,7 @@ def challenge11():
         suffix = os.urandom(random.randint(5, 10))
         cipher_input = prefix + plain_bytes + suffix
         if settings["mode"] == "CBC":
-            settings["IV"] = os.urandom(16)
+            settings["iv"] = os.urandom(16)
         return (block_tools.aes_encrypt(cipher_input, **settings), settings["mode"])
 
     # hamlet.txt from http://erdani.com/tdpl/hamlet.txt
@@ -431,8 +431,7 @@ def challenge18():
         plaintext += xor_bytes(keystream[:len(block)], block)
     print(plaintext.decode())
 
-    counter = block_tools.ctr_counter(nonce)
-    assert plaintext == block_tools.aes_decrypt(ciphertext, key, "CTR", counter=counter)
+    assert plaintext == block_tools.aes_decrypt(ciphertext, key, "CTR", nonce)
 
 
 def challenge19():
@@ -440,8 +439,7 @@ def challenge19():
     key = block_tools.random_aes_key()
 
     def encrypt(plaintext):
-        counter = block_tools.ctr_counter(b"\x00" * 8)
-        return block_tools.aes_encrypt(plaintext, key, "CTR", counter=counter)
+        return block_tools.aes_encrypt(plaintext, key, "CTR", nonce=b"\x00" * 8)
 
     plaintexts = [base64.b64decode(x) for x in [
         "SSBoYXZlIG1ldCB0aGVtIGF0IGNsb3NlIG9mIGRheQ==",
@@ -497,8 +495,7 @@ def challenge20():
     key = block_tools.random_aes_key()
 
     def encrypt(plaintext):
-        counter = block_tools.ctr_counter(b"\x00" * 8)
-        return block_tools.aes_encrypt(plaintext, key, "CTR", counter=counter)
+        return block_tools.aes_encrypt(plaintext, key, "CTR", nonce=b"\x00" * 8)
 
     with open("text_files/20.txt") as f:
         plaintexts = [base64.b64decode(x) for x in f.readlines()]
@@ -601,8 +598,7 @@ def challenge25():
     def edit(ciphertext, block_index, new_bytes):
         if len(new_bytes) % 16 != 0:
             raise ValueError("new_bytes must be a multiple of 16 bytes long")
-        counter = block_tools.ctr_counter(nonce, block_index)
-        new_ciphertext = block_tools.aes_encrypt(new_bytes, key, "CTR", counter=counter)
+        new_ciphertext = block_tools.aes_encrypt(new_bytes, key, "CTR", nonce, block_index)
         result = bytearray(ciphertext)
         result[16*block_index : 16*block_index + len(new_bytes)] = new_ciphertext
         return bytes(result)
@@ -611,8 +607,7 @@ def challenge25():
     with open("text_files/25.txt") as f:
         temp_bytes = base64.b64decode(f.read())
     plain_bytes = block_tools.aes_decrypt(temp_bytes, key=b"YELLOW SUBMARINE", mode="ECB")
-    counter = block_tools.ctr_counter(nonce)
-    ciphertext = block_tools.aes_encrypt(plain_bytes, key, "CTR", counter=counter)
+    ciphertext = block_tools.aes_encrypt(plain_bytes, key, "CTR", nonce)
 
     keystream = edit(ciphertext, 0, bytes([0]) * len(plain_bytes))
     recovered_plaintext = xor_bytes(ciphertext, keystream)
@@ -624,16 +619,14 @@ def challenge26():
     key = block_tools.random_aes_key()
     nonce = os.urandom(8)
 
-    counter = block_tools.ctr_counter(nonce)
     query_string = make_user_query_string("A" * 16)
-    ciphertext = block_tools.aes_encrypt(query_string, key, "CTR", counter=counter)
+    ciphertext = block_tools.aes_encrypt(query_string, key, "CTR", nonce)
     new_ciphertext = bytearray(ciphertext)
     new_ciphertext[32:48] = xor_bytes(
         b"A" * 16, b"ha_ha;admin=true", new_ciphertext[32:48])
     new_ciphertext = bytes(new_ciphertext)
 
-    counter = block_tools.ctr_counter(nonce)
-    new_plaintext = block_tools.aes_decrypt(new_ciphertext, key, "CTR", counter=counter)
+    new_plaintext = block_tools.aes_decrypt(new_ciphertext, key, "CTR", nonce)
     assert b";admin=true;" in new_plaintext
 
 
@@ -1238,10 +1231,10 @@ def challenge50():
     key = b"YELLOW SUBMARINE"
 
     def encrypt(message):
-        return block_tools.aes_encrypt(message, key, "CBC", IV=b"\x00"*16)
+        return block_tools.aes_encrypt(message, key, "CBC", iv=b"\x00"*16)
 
     def decrypt(message):
-        return block_tools.aes_decrypt(message, key, "CBC", IV=b"\x00"*16)
+        return block_tools.aes_decrypt(message, key, "CBC", iv=b"\x00"*16)
 
     def mac_hash(message):
         return encrypt(block_tools.pkcs7_pad(message))[-16:]
@@ -1292,9 +1285,8 @@ def challenge51():
 
     def ctr_oracle_fn(payload):
         key = block_tools.random_aes_key()
-        counter = block_tools.ctr_counter(nonce=os.urandom(8))
         plaintext = gzip.compress(format_request(payload))
-        return len(block_tools.aes_encrypt(plaintext, key, "CTR", counter=counter))
+        return len(block_tools.aes_encrypt(plaintext, key, "CTR", nonce=os.urandom(8)))
 
     def cbc_oracle_fn(payload):
         key = block_tools.random_aes_key()

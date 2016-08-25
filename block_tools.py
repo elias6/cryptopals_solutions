@@ -12,14 +12,26 @@ from util import chunks
 
 
 def aes_encrypt(plaintext, key, mode, *args, pad=False, **kwargs):
-    cipher = AES.new(key, getattr(AES, "MODE_" + mode), *args, **kwargs)
+    cipher = globals()["_aes_" + mode + "_cipher"](key, *args, **kwargs)
     return cipher.encrypt(pkcs7_pad(plaintext) if pad else plaintext)
 
 
 def aes_decrypt(ciphertext, key, mode, *args, unpad=False, **kwargs):
-    cipher = AES.new(key, getattr(AES, "MODE_" + mode), *args, **kwargs)
+    cipher = globals()["_aes_" + mode + "_cipher"](key, *args, **kwargs)
     plaintext = cipher.decrypt(ciphertext)
     return pkcs7_unpad(plaintext) if unpad else plaintext
+
+
+def _aes_ECB_cipher(key):
+    return AES.new(key, AES.MODE_ECB)
+
+
+def _aes_CBC_cipher(key, iv):
+    return AES.new(key, AES.MODE_CBC, iv)
+
+
+def _aes_CTR_cipher(key, nonce, block_index=0):
+    return AES.new(key, AES.MODE_CTR, counter=ctr_counter(nonce, block_index))
 
 
 def looks_like_ecb(ciphertext, block_size=16):
