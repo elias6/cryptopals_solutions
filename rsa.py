@@ -6,7 +6,7 @@ from hashlib import md5
 from itertools import count
 from math import ceil, floor, gcd
 
-from Crypto.Util.number import getPrime, getStrongPrime
+from Cryptodome.Util.number import getPrime, getStrongPrime
 
 from util import mod_inv, random
 

@@ -426,12 +426,13 @@ def challenge18():
     nonce = b"\x00" * 8
 
     plaintext = bytearray()
-    for counter_value, block in zip(block_tools.ctr_iterator(nonce), chunks(ciphertext)):
-        keystream = block_tools.aes_encrypt(counter_value, key, "ECB")
+    for i, block in enumerate(chunks(ciphertext)):
+        keystream = block_tools.aes_encrypt(nonce + struct.pack("<Q", i), key, "ECB")
         plaintext += xor_bytes(keystream[:len(block)], block)
     print(plaintext.decode())
 
-    assert plaintext == block_tools.aes_decrypt(ciphertext, key, "CTR", nonce)
+    assert (plaintext ==
+            block_tools.aes_decrypt(ciphertext, key, "CTR", nonce, little_endian=True))
 
 
 def challenge19():

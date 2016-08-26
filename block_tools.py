@@ -1,11 +1,9 @@
-import struct
-
 from collections import Counter
-from itertools import count
 from math import gcd
 from os import urandom
 
-from Crypto.Cipher import AES
+import Cryptodome.Util.Counter
+from Cryptodome.Cipher import AES
 
 from english import all_bytes_by_frequency
 from util import chunks
@@ -30,8 +28,13 @@ def _aes_CBC_cipher(key, iv):
     return AES.new(key, AES.MODE_CBC, iv)
 
 
-def _aes_CTR_cipher(key, nonce, block_index=0):
-    return AES.new(key, AES.MODE_CTR, counter=ctr_counter(nonce, block_index))
+def _aes_CTR_cipher(key, nonce, block_index=0, little_endian=False):
+    if little_endian:
+        counter = Cryptodome.Util.Counter.new(
+            nbits=64, prefix=nonce, initial_value=block_index, little_endian=True)
+        return AES.new(key, AES.MODE_CTR, counter=counter)
+    else:
+        return AES.new(key, AES.MODE_CTR, nonce=nonce, initial_value=block_index)
 
 
 def looks_like_ecb(ciphertext, block_size=16):
@@ -72,24 +75,6 @@ def crack_ecb_oracle(oracle_fn, block_size=16, prefix_length=0):
                 break
         else:  # if no byte matches
             return pkcs7_unpad(result)
-
-
-def ctr_iterator(nonce, block_index=0):
-    return (nonce + struct.pack("<Q", i) for i in count(start=block_index))
-
-
-def ctr_counter(nonce, block_index=0):
-    # This is roughly equivalent to the following code:
-    # return Crypto.Util.Counter.new(
-    #     nbits=64, prefix=nonce, initial_value=block_index,
-    #     little_endian=True)
-    # I prefer to use my own implementation because it is simpler, more
-    # readable, and good enough for my purposes. The nonce and the counter
-    # are encoded as 64-bit little-endian integers. I am returning the
-    # iterator's __next__ method instead of the iterator itself because
-    # PyCrypto's CTR implementation requires a function that returns a new
-    # value each time it is called.
-    return ctr_iterator(nonce, block_index).__next__
 
 
 def pkcs7_pad(input_bytes, block_size=16):
