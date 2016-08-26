@@ -1298,7 +1298,7 @@ def challenge51():
     def crack_compression_oracle(oracle_fn):
         base64_alphabet = [bytes([x]) for x in b"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
                            b"abcdefghijklmnopqrstuvwxyz0123456789+/=\n"]
-        result = b""
+        result = bytearray()
         while True:
             for i in itertools.count(start=0):
                 prefix = os.urandom(i) + b"sessionid=" + result
@@ -1306,7 +1306,7 @@ def challenge51():
                 min_length = min(length_map.values())
                 good_guesses = [x for x in length_map if length_map[x] == min_length]
                 if good_guesses == [b"\n"]:
-                    return result
+                    return bytes(result)
                 elif len(good_guesses) == 1:
                     result += good_guesses[0]
                     break
