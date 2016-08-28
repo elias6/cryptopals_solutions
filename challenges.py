@@ -4,6 +4,7 @@
 import base64
 import cProfile
 import gzip
+import hashlib
 import itertools
 import os
 import pprint as pprint_module
@@ -687,6 +688,9 @@ def challenge30():
     key = os.urandom(16)
     query_string = make_user_query_string("foo")
     mac = MD4(key + query_string)
+    hash_fn = hashlib.new("md4")
+    hash_fn.update(key + query_string)
+    assert hash_fn.digest() == mac
 
     glue_padding = md4_padding(len(key + query_string))
     new_param = b";admin=true"
