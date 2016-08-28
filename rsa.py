@@ -2,10 +2,11 @@ import re
 
 from collections import namedtuple
 from fractions import Fraction
-from hashlib import md5
+from hashlib import md5, sha1, sha224, sha256, sha384, sha512
 from itertools import count
 from math import ceil, floor, gcd
 
+from Cryptodome.Util.asn1 import DerObjectId, DerOctetString, DerSequence
 from Cryptodome.Util.number import getPrime, getStrongPrime
 
 from util import mod_inv, random
@@ -63,32 +64,21 @@ def pad_and_encrypt(plaintext, key, block_type=2):
     return encrypt(padded_message, key)
 
 
-def create_digest_asn1(message):
+def create_digest_asn1(message, hash_fn=sha1):
     """Produce unpadded, unencrypted PKCS v1.5 signature"""
-    # TODO: make this handle more hash functions
+    asn1_object_ids = {
+        md5: "1.2.840.113549.2.5",
+        sha1: "1.3.14.3.2.26",
+        sha224: "2.16.840.1.101.3.4.2.4",
+        sha256: "2.16.840.1.101.3.4.2.1",
+        sha384: "2.16.840.1.101.3.4.2.2",
+        sha512: "2.16.840.1.101.3.4.2.3",
+    }
 
-    digest_algorithm_asn1 = (
-        b"\x06"         # object identifier
-        b"\x08"         # length (8)
-        b"\x2a"         # iso (1), member-body (2)
-        b"\x86\x48"     # US (840)
-        b"\x86\xf7\x0d" # RSA Data Security, Inc.
-        b"\x82"         # digestAlgorithm
-        b"\x85"         # md5
-    )
-
-    digest_asn1 = (
-        b"\x04"     # octet string
-        b"\x10"     # length
-        + md5(message).digest()
-    )
-
-    return (
-        b"\x10"     # sequence
-        b"\x18"     # length
-        + digest_algorithm_asn1
-        + digest_asn1
-    )
+    return DerSequence([
+        DerObjectId(asn1_object_ids[hash_fn]),
+        DerOctetString(hash_fn(message).digest())
+    ]).encode()
 
 
 def sign(message, private_key):
@@ -101,12 +91,11 @@ def verify(message, public_key, signature, secure=True):
     # Setting secure to False emulates RSA implementations that don't
     # properly check that the signature is right-aligned, allowing
     # Bleichenbacher's signature forgery (BERserk).
-    asn1_stuff = b"\x10\x18\x06\x08\x2a\x86\x48\x86\xf7\x0d\x82\x85\x04\x10"
     sig_data = unpad(decrypt(signature, public_key))
     if secure:
-        return sig_data == asn1_stuff + md5(message).digest()
+        return sig_data == create_digest_asn1(message)
     else:
-        return sig_data.startswith(asn1_stuff + md5(message).digest())
+        return sig_data.startswith(create_digest_asn1(message))
 
 
 def pad(message, length, block_type=2):
