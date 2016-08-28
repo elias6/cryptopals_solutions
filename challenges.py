@@ -662,8 +662,7 @@ def challenge28():
 def challenge29():
     """Break a SHA-1 keyed MAC using length extension"""
     key = os.urandom(16)
-    query_string = (b"comment1=cooking%20MCs;userdata=foo;"
-                    b"comment2=%20like%20a%20pound%20of%20bacon")
+    query_string = make_user_query_string("foo")
     mac = sha1(key + query_string).digest()
 
     glue_padding = pure_python_sha1.padding(len(key + query_string))
@@ -686,8 +685,7 @@ def challenge30():
                 struct.pack("<Q", message_length * 8))
 
     key = os.urandom(16)
-    query_string = (b"comment1=cooking%20MCs;userdata=foo;"
-                    b"comment2=%20like%20a%20pound%20of%20bacon")
+    query_string = make_user_query_string("foo")
     mac = MD4(key + query_string)
 
     glue_padding = md4_padding(len(key + query_string))
