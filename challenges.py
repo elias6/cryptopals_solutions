@@ -27,7 +27,6 @@ from urllib.parse import parse_qs, quote as url_quote, urlencode
 
 # third-party modules
 from md4 import MD4
-from sha1.sha1 import Sha1Hash as PurePythonSha1
 
 
 # modules in this project
@@ -38,6 +37,7 @@ import english
 import merkle_damgard
 import mersenne_twister
 import rsa
+import sha1.sha1 as pure_python_sha1
 import srp
 import timing_attack
 
@@ -659,23 +659,14 @@ def challenge28():
 
 def challenge29():
     """Break a SHA-1 keyed MAC using length extension"""
-    def sha1_padding(message_length):
-        return (b"\x80" +
-                b"\x00" * ((55 - message_length) % 64) +
-                struct.pack(">Q", message_length * 8))
-
-    my_padding = sha1_padding(len(EXAMPLE_PLAIN_BYTES))
-    their_padding = PurePythonSha1().update(EXAMPLE_PLAIN_BYTES)._produce_padding()
-    assert their_padding == my_padding
-
     key = os.urandom(16)
     query_string = (b"comment1=cooking%20MCs;userdata=foo;"
                     b"comment2=%20like%20a%20pound%20of%20bacon")
     mac = sha1(key + query_string).digest()
 
-    glue_padding = sha1_padding(len(key + query_string))
+    glue_padding = pure_python_sha1.padding(len(key + query_string))
     new_param = b";admin=true"
-    modified_hash_fn = PurePythonSha1(
+    modified_hash_fn = pure_python_sha1.Sha1Hash(
         prefix_hash=mac,
         prefix_length=len(key + query_string + glue_padding))
     new_hash = modified_hash_fn.update(new_param).digest()

@@ -110,26 +110,11 @@ class Sha1Hash(object):
         """Produce the final hash value (big-endian) as a hex string"""
         return '%08x%08x%08x%08x%08x' % self._produce_digest()
 
-    def _produce_padding(self):
-        message_byte_length = self._message_byte_length + len(self._unprocessed)
-
-        # append the bit '1' to the message
-        result = b'\x80'
-
-        # append 0 <= k < 512 bits '0', so that the resulting message length (in bytes)
-        # is congruent to 56 (mod 64)
-        result += b'\x00' * ((56 - (message_byte_length + 1) % 64) % 64)
-
-        # append length of message (before pre-processing), in bits, as 64-bit big-endian integer
-        message_bit_length = message_byte_length * 8
-        result += struct.pack(b'>Q', message_bit_length)
-
-        return result
-
     def _produce_digest(self):
         """Return finalized digest variables for the data processed so far."""
         # Pre-processing:
-        message = self._unprocessed + self._produce_padding()
+        message_byte_length = self._message_byte_length + len(self._unprocessed)
+        message = self._unprocessed + padding(message_byte_length)
         message_byte_length = self._message_byte_length + len(message)
 
         # Process the final chunk
@@ -139,6 +124,20 @@ class Sha1Hash(object):
             return h
         return _process_chunk(message[64:], *h)
 
+
+def padding(message_byte_length):
+    # append the bit '1' to the message
+    result = b'\x80'
+
+    # append 0 <= k < 512 bits '0', so that the resulting message length (in bytes)
+    # is congruent to 56 (mod 64)
+    result += b'\x00' * ((56 - (message_byte_length + 1) % 64) % 64)
+
+    # append length of message (before pre-processing), in bits, as 64-bit big-endian integer
+    message_bit_length = message_byte_length * 8
+    result += struct.pack(b'>Q', message_bit_length)
+
+    return result
 
 def sha1(data):
     """SHA-1 Hashing Function
