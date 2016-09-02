@@ -298,15 +298,13 @@ def challenge14():
     blocks = chunks(oracle_fn(b"A" * 3*block_size))
     attacker_block, attacker_block_count = Counter(blocks).most_common(1)[0]
     assert attacker_block_count >= 2
-    attacker_block_pos = block_size * blocks.index(attacker_block)
+    last_attacker_block_index = ((len(blocks) - 1) - blocks[::-1].index(attacker_block))
+    last_attacker_block_pos = block_size * last_attacker_block_index
     for i in range(block_size):
         blocks = chunks(oracle_fn(b"A" * (3*block_size - i - 1)))
         if blocks.count(attacker_block) < attacker_block_count:
-            prefix_length = attacker_block_pos - (-i % block_size)
+            prefix_length = last_attacker_block_pos - 2*block_size + i
             break
-    # TODO: make prefix_length calculation work reliably even if attacker
-    # bytes look like random bytes or target bytes.
-
     plaintext = block_tools.crack_ecb_oracle(oracle_fn, block_size, prefix_length)
     assert plaintext == target_bytes
 
