@@ -244,11 +244,7 @@ def challenge12():
         plaintext = attacker_bytes + unknown_bytes
         return block_tools.aes_encrypt(plaintext, key, "ECB", pad=True)
 
-    block_size = block_tools.guess_block_size(oracle_fn)
-    assert block_size == 16
-    assert block_tools.looks_like_ecb(oracle_fn(b"A" * 100), block_size)
-
-    plaintext = block_tools.crack_ecb_oracle(oracle_fn, block_size)
+    plaintext = block_tools.crack_ecb_oracle(oracle_fn)
     print(plaintext.decode())
     assert plaintext == unknown_bytes
 
@@ -291,7 +287,9 @@ def challenge14():
         plaintext = random_bytes + attacker_bytes + target_bytes
         return block_tools.aes_encrypt(plaintext, key, "ECB", pad=True)
 
-    def guess_prefix_length(oracle_fn, block_size):
+    def guess_prefix_length(oracle_fn):
+        block_size = block_tools.guess_block_size(oracle_fn)
+        assert block_tools.looks_like_ecb(oracle_fn(b"A" * 100), block_size)
         blocks = chunks(oracle_fn(b"A" * 3*block_size))
         attacker_block, attacker_block_count = Counter(blocks).most_common(1)[0]
         assert attacker_block_count >= 2
@@ -302,12 +300,8 @@ def challenge14():
             if blocks.count(attacker_block) < attacker_block_count:
                 return last_attacker_block_pos - 2*block_size + i
 
-    block_size = block_tools.guess_block_size(oracle_fn)
-    assert block_size == 16
-    assert block_tools.looks_like_ecb(oracle_fn(b"A" * 100), block_size)
-
-    prefix_length = guess_prefix_length(oracle_fn, block_size)
-    plaintext = block_tools.crack_ecb_oracle(oracle_fn, block_size, prefix_length)
+    prefix_length = guess_prefix_length(oracle_fn)
+    plaintext = block_tools.crack_ecb_oracle(oracle_fn, prefix_length)
     assert plaintext == target_bytes
 
 

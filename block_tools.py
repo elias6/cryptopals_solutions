@@ -61,7 +61,10 @@ def guess_block_size(oracle_fn):
         raise ValueError("Could not guess block size")
 
 
-def crack_ecb_oracle(oracle_fn, block_size=16, prefix_length=0):
+def crack_ecb_oracle(oracle_fn, prefix_length=0):
+    block_size = guess_block_size(oracle_fn)
+    if not looks_like_ecb(oracle_fn(b"A" * 100), block_size):
+        raise ValueError("oracle_fn does not appear to produce ECB mode output")
     result = bytearray()
     while True:
         short_block_length = (block_size - len(result) - 1 - prefix_length) % block_size
