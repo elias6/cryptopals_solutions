@@ -289,16 +289,17 @@ def challenge14():
 
     def guess_prefix_length(oracle_fn):
         block_size = block_tools.guess_block_size(oracle_fn)
-        assert block_tools.looks_like_ecb(oracle_fn(b"A" * 100), block_size)
-        blocks = chunks(oracle_fn(b"A" * 3*block_size))
+        test_output = oracle_fn(b"A" * (3*block_size))
+        assert block_tools.looks_like_ecb(test_output, block_size)
+        blocks = chunks(test_output)
         attacker_block, attacker_block_count = Counter(blocks).most_common(1)[0]
         assert attacker_block_count >= 2
-        last_attacker_block_index = ((len(blocks) - 1) - blocks[::-1].index(attacker_block))
-        last_attacker_block_pos = block_size * last_attacker_block_index
         for i in range(block_size):
             blocks = chunks(oracle_fn(b"A" * (3*block_size - i - 1)))
             if blocks.count(attacker_block) < attacker_block_count:
-                return last_attacker_block_pos - 2*block_size + i
+                last_attacker_block_index = (len(blocks) - 1 -
+                                             list(reversed(blocks)).index(attacker_block))
+                return block_size * (last_attacker_block_index - 1) + i
 
     prefix_length = guess_prefix_length(oracle_fn)
     plaintext = block_tools.crack_ecb_oracle(oracle_fn, prefix_length)
