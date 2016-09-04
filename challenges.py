@@ -40,9 +40,9 @@ import rsa
 import sha1.sha1 as pure_python_sha1
 import srp
 import timing_attack
+import util
 
-from util import (IETF_PRIME, apply_repeating_xor_key, big_int_cube_root, calculate_hmac,
-                  chunks, int_to_bytes, mod_inv, pretty_hex_bytes, random, xor_bytes)
+random = util.random
 
 
 warnings.simplefilter("default", BytesWarning)
@@ -75,7 +75,7 @@ def challenge1():
 
 def challenge2():
     """Fixed XOR"""
-    output = xor_bytes(
+    output = util.xor_bytes(
         bytes.fromhex("1c0111001f010100061a024b53535009181c"),
         bytes.fromhex("686974207468652062756c6c277320657965"))
     assert output == b"the kid don't play"
@@ -108,7 +108,7 @@ def challenge5():
     """Implement repeating-key XOR"""
     stanza = ("Burning 'em, if you ain't quick and nimble\n"
               "I go crazy when I hear a cymbal")
-    result = apply_repeating_xor_key(stanza.encode(), b"ICE").hex()
+    result = util.apply_repeating_xor_key(stanza.encode(), b"ICE").hex()
     assert result == ("0b3637272a2b2e63622c2e69692a23693a2a3c6324202d623d63343c2a26226324"
                       "272765272a282b2f20430a652e2c652a3124333a653e2b2027630c692b20283165"
                       "286326302e27282f")
@@ -131,8 +131,8 @@ def challenge6():
         ciphertext = base64.b64decode(f.read())
 
     best_key_size = min(range(2, 41), key=lambda x: index_of_coincidence(ciphertext, x))
-    key = english.crack_common_xor_key(chunks(ciphertext, best_key_size))
-    plaintext = apply_repeating_xor_key(ciphertext, key).decode()
+    key = english.crack_common_xor_key(util.chunks(ciphertext, best_key_size))
+    plaintext = util.apply_repeating_xor_key(ciphertext, key).decode()
     print("key: {}".format(key.decode()))
     print()
     print(plaintext)
@@ -157,7 +157,7 @@ def challenge8():
         if block_tools.looks_like_ecb(ciphertext):
             ecb_texts.append(ciphertext)
             print("ECB-like ciphertext found on line {}".format(i))
-            pprint([pretty_hex_bytes(x) for x in chunks(ciphertext)])
+            pprint([util.pretty_hex_bytes(x) for x in util.chunks(ciphertext)])
     assert len(ecb_texts) == 1
 
 
@@ -172,8 +172,8 @@ def challenge10():
     def cbc_encrypt(key, iv, plain_bytes):
         result = bytearray()
         prev_cipher_block = iv
-        for plain_block in chunks(plain_bytes):
-            combined_block = xor_bytes(prev_cipher_block, plain_block)
+        for plain_block in util.chunks(plain_bytes):
+            combined_block = util.xor_bytes(prev_cipher_block, plain_block)
             cipher_block = block_tools.aes_encrypt(combined_block, key, "ECB")
             result.extend(cipher_block)
             prev_cipher_block = cipher_block
@@ -182,9 +182,9 @@ def challenge10():
     def cbc_decrypt(key, iv, ciphertext):
         result = bytearray()
         prev_cipher_block = iv
-        for cipher_block in chunks(ciphertext):
+        for cipher_block in util.chunks(ciphertext):
             decrypted_block = block_tools.aes_decrypt(cipher_block, key, "ECB")
-            plain_block = xor_bytes(prev_cipher_block, decrypted_block)
+            plain_block = util.xor_bytes(prev_cipher_block, decrypted_block)
             result.extend(plain_block)
             prev_cipher_block = cipher_block
         return bytes(result)
@@ -263,13 +263,13 @@ def challenge13():
         return profile.decode()
 
     profile1 = encrypted_user_profile("peter.gregory@piedpiper.com")
-    profile1_blocks = chunks(profile1)
+    profile1_blocks = util.chunks(profile1)
 
     profile2 = encrypted_user_profile("zach.woods@piedpiper.comadmin")
-    profile2_blocks = chunks(profile2)
+    profile2_blocks = util.chunks(profile2)
 
     profile3 = encrypted_user_profile("a@a.com")
-    padding_only_block = chunks(profile3)[-1]
+    padding_only_block = util.chunks(profile3)[-1]
 
     new_profile = b"".join(profile1_blocks[:3]) + profile2_blocks[2] + padding_only_block
     decrypted_new_profile = decrypt_profile(new_profile)
@@ -291,11 +291,11 @@ def challenge14():
         block_size = block_tools.guess_block_size(oracle_fn)
         test_output = oracle_fn(b"A" * (3*block_size))
         assert block_tools.looks_like_ecb(test_output, block_size)
-        blocks = chunks(test_output)
+        blocks = util.chunks(test_output)
         attacker_block, attacker_block_count = Counter(blocks).most_common(1)[0]
         assert attacker_block_count >= 2
         for i in range(block_size):
-            blocks = chunks(oracle_fn(b"A" * (3*block_size - i - 1)))
+            blocks = util.chunks(oracle_fn(b"A" * (3*block_size - i - 1)))
             if blocks.count(attacker_block) < attacker_block_count:
                 last_attacker_block_index = (len(blocks) - 1 -
                                              list(reversed(blocks)).index(attacker_block))
@@ -334,7 +334,7 @@ def challenge16():
     ciphertext = block_tools.aes_encrypt(query_string, key, "CBC", iv, pad=True)
 
     new_ciphertext = bytearray(ciphertext)
-    new_ciphertext[32:48] = xor_bytes(
+    new_ciphertext[32:48] = util.xor_bytes(
         b"like%20a%20pound", b";admin=true;foo=", new_ciphertext[32:48])
     new_ciphertext = bytes(new_ciphertext)
 
@@ -377,7 +377,7 @@ def challenge17():
         block_size = len(cipher_block)
         pos = block_size - len(recovered_so_far) - 1
         padding = bytes([len(recovered_so_far) + 1]) * (len(recovered_so_far) + 1)
-        test_iv = bytearray(xor_bytes(
+        test_iv = bytearray(util.xor_bytes(
             prev_cipher_block,
             padding.rjust(block_size, b"\x00"),
             recovered_so_far.rjust(block_size, b"\x00")))
@@ -401,7 +401,7 @@ def challenge17():
     def crack_padding_oracle(iv, ciphertext):
         result = bytearray()
         prev_cipher_block = iv
-        for cipher_block in chunks(ciphertext):
+        for cipher_block in util.chunks(ciphertext):
             result += recover_plain_block(prev_cipher_block, cipher_block)
             prev_cipher_block = cipher_block
         return block_tools.pkcs7_unpad(result)
@@ -421,9 +421,9 @@ def challenge18():
     nonce = b"\x00" * 8
 
     plaintext = bytearray()
-    for i, block in enumerate(chunks(ciphertext)):
+    for i, block in enumerate(util.chunks(ciphertext)):
         keystream = block_tools.aes_encrypt(nonce + struct.pack("<Q", i), key, "ECB")
-        plaintext += xor_bytes(keystream[:len(block)], block)
+        plaintext += util.xor_bytes(keystream[:len(block)], block)
     print(plaintext.decode())
 
     assert (plaintext ==
@@ -482,7 +482,8 @@ def challenge19():
     ciphertexts = [encrypt(x) for x in plaintexts]
 
     recovered_key = english.crack_common_xor_key(ciphertexts)
-    plaintexts = [apply_repeating_xor_key(c, recovered_key).decode() for c in ciphertexts]
+    plaintexts = [util.apply_repeating_xor_key(c, recovered_key).decode()
+                  for c in ciphertexts]
     print("\n".join(plaintexts))
 
 
@@ -497,7 +498,8 @@ def challenge20():
         plaintexts = [base64.b64decode(x) for x in f.readlines()]
     ciphertexts = [encrypt(x) for x in plaintexts]
     recovered_key = english.crack_common_xor_key(ciphertexts)
-    print("\n".join(apply_repeating_xor_key(c, recovered_key).decode() for c in ciphertexts))
+    for c in ciphertexts:
+        print(util.apply_repeating_xor_key(c, recovered_key).decode())
 
 
 def challenge21():
@@ -538,10 +540,10 @@ def challenge24():
     """Create the MT19937 stream cipher and break it"""
     def encrypt_with_rng(rng, ciphertext):
         result = bytearray()
-        for chunk in chunks(ciphertext, 4):
+        for chunk in util.chunks(ciphertext, 4):
             # Create 4-byte chunk from rng
             keystream_bytes = struct.pack(">L", rng.get_number())
-            result += xor_bytes(chunk, keystream_bytes[:len(chunk)])
+            result += util.xor_bytes(chunk, keystream_bytes[:len(chunk)])
         return bytes(result)
 
     def encrypt_with_random_prefix(rng, plain_bytes):
@@ -558,12 +560,12 @@ def challenge24():
     seed = random.getrandbits(16)
     my_bytes = b"A" * 14
     ciphertext = encrypt_with_random_prefix(mersenne_twister.MT19937_RNG(seed), my_bytes)
-    cipher_chunks = chunks(ciphertext, 4)
+    cipher_chunks = util.chunks(ciphertext, 4)
     # Get bytes from last 2 chunks, excluding last chunk, which may not have
     # 4 bytes, and therefore may not allow me to determine the keystream
     # numbers.
     ciphertext_with_my_bytes = b"".join(cipher_chunks[-3:-1])
-    keystream = apply_repeating_xor_key(ciphertext_with_my_bytes, b"A")
+    keystream = util.apply_repeating_xor_key(ciphertext_with_my_bytes, b"A")
     keystream_numbers = struct.unpack(">LL", keystream)
     untempered_numbers = [mersenne_twister.untemper(x) for x in keystream_numbers]
 
@@ -606,7 +608,7 @@ def challenge25():
     ciphertext = block_tools.aes_encrypt(plain_bytes, key, "CTR", nonce)
 
     keystream = edit(ciphertext, 0, bytes([0]) * len(plain_bytes))
-    recovered_plaintext = xor_bytes(ciphertext, keystream)
+    recovered_plaintext = util.xor_bytes(ciphertext, keystream)
     assert recovered_plaintext == plain_bytes
 
 
@@ -618,7 +620,7 @@ def challenge26():
     query_string = make_user_query_string("A" * 16)
     ciphertext = block_tools.aes_encrypt(query_string, key, "CTR", nonce)
     new_ciphertext = bytearray(ciphertext)
-    new_ciphertext[32:48] = xor_bytes(
+    new_ciphertext[32:48] = util.xor_bytes(
         b"A" * 16, b"ha_ha;admin=true", new_ciphertext[32:48])
     new_ciphertext = bytes(new_ciphertext)
 
@@ -645,7 +647,7 @@ def challenge27():
         decrypt(modified_ciphertext)
     except UnicodeDecodeError as e:
         plain_bytes = e.object
-        recovered_key = xor_bytes(plain_bytes[0:16], plain_bytes[32:48])
+        recovered_key = util.xor_bytes(plain_bytes[0:16], plain_bytes[32:48])
         assert recovered_key == key
     else:
         assert False
@@ -703,8 +705,8 @@ def challenge31():
     hmac_key = os.urandom(16)
     filename = "text_files/hamlet.txt"
     with open(filename, "rb") as f:
-        hmac = calculate_hmac(hmac_key, f.read())
-    print("looking for {}\n".format(pretty_hex_bytes(hmac)))
+        hmac = util.calculate_hmac(hmac_key, f.read())
+    print("looking for {}\n".format(util.pretty_hex_bytes(hmac)))
 
     if ARGS.dummy_server:
         def validate_signature(sig):
@@ -741,8 +743,8 @@ def challenge32():
     hmac_key = os.urandom(16)
     filename = "text_files/hamlet.txt"
     with open(filename, "rb") as f:
-        hmac = calculate_hmac(hmac_key, f.read())
-    print("looking for {}\n".format(pretty_hex_bytes(hmac)))
+        hmac = util.calculate_hmac(hmac_key, f.read())
+    print("looking for {}\n".format(util.pretty_hex_bytes(hmac)))
 
     if ARGS.dummy_server:
         def validate_signature(sig):
@@ -823,9 +825,9 @@ def challenge35():
     assert EXAMPLE_PLAIN_BYTES in bob._decrypted_messages[mallory]
 
     # Mallory tricks Alice and Bob into using g=IETF_PRIME
-    alice = diffie_hellman.User(g=IETF_PRIME)
-    bob = diffie_hellman.User(g=IETF_PRIME)
-    mallory = diffie_hellman.User(g=IETF_PRIME)
+    alice = diffie_hellman.User(g=util.IETF_PRIME)
+    bob = diffie_hellman.User(g=util.IETF_PRIME)
+    mallory = diffie_hellman.User(g=util.IETF_PRIME)
     assert mallory.public_key == 0
     assert alice.get_shared_key_for(mallory) == 0
     assert bob.get_shared_key_for(mallory) == 0
@@ -836,11 +838,11 @@ def challenge35():
     assert EXAMPLE_PLAIN_BYTES in bob._decrypted_messages[mallory]
 
     # Mallory tricks Alice and Bob into using g=IETF_PRIME - 1
-    alice = diffie_hellman.User(g=IETF_PRIME - 1)
-    bob = diffie_hellman.User(g=IETF_PRIME - 1)
+    alice = diffie_hellman.User(g=util.IETF_PRIME - 1)
+    bob = diffie_hellman.User(g=util.IETF_PRIME - 1)
     # Private key must be even.
-    mallory = diffie_hellman.User(g=IETF_PRIME - 1,
-                                  private_key=random.randrange(0, IETF_PRIME, 2))
+    mallory = diffie_hellman.User(g=util.IETF_PRIME - 1,
+                                  private_key=random.randrange(0, util.IETF_PRIME, 2))
     assert mallory.public_key == 1
     assert alice.get_shared_key_for(mallory) == 1
     assert bob.get_shared_key_for(mallory) == 1
@@ -876,10 +878,10 @@ def challenge37():
 
     for i in range(10):
         # Attacker tricks server into computing easily derivable session key
-        salt, _, _ = server._respond_to_login_request(username, i * IETF_PRIME)
+        salt, _, _ = server._respond_to_login_request(username, i * util.IETF_PRIME)
         # Attacker derives shared session key without password
-        shared_session_key = sha256(int_to_bytes(0)).digest()
-        hmac = calculate_hmac(shared_session_key, salt, sha256)
+        shared_session_key = sha256(util.int_to_bytes(0)).digest()
+        hmac = util.calculate_hmac(shared_session_key, salt, sha256)
         # Attacker logs in without password
         assert server._verify_hmac(hmac, username)
 
@@ -906,7 +908,7 @@ def challenge38():
 
 def challenge39():
     """Implement RSA"""
-    assert mod_inv(17, 3120) == 2753
+    assert util.mod_inv(17, 3120) == 2753
 
     public_key, private_key = rsa.generate_key_pair()
 
@@ -938,13 +940,13 @@ def challenge40():
     for x in ciphertext_data:
         # strange name picked for similarity to notation in challenge
         m_s_ = modulus_product // x["modulus"]
-        cube += x["cipher_int"] * m_s_ * mod_inv(m_s_, x["modulus"])
+        cube += x["cipher_int"] * m_s_ * util.mod_inv(m_s_, x["modulus"])
     cube %= modulus_product
     assert all(x["cipher_int"] == cube % x["modulus"] for x in ciphertext_data)
 
-    root = round(big_int_cube_root(cube))
+    root = round(util.big_int_cube_root(cube))
     assert root ** 3 == cube
-    plaintext = int_to_bytes(root)
+    plaintext = util.int_to_bytes(root)
     assert plaintext == EXAMPLE_PLAIN_BYTES
 
 
@@ -977,7 +979,8 @@ def challenge41():
     S = random.randint(2, modulus - 1)
     oracle_ciphertext = rsa.multiply(ciphertext, S**public_key.exponent, modulus)
     oracle_plaintext = decrypt(oracle_ciphertext)
-    recovered_plaintext = rsa.multiply(oracle_plaintext, mod_inv(S, modulus), modulus)
+    S_inverse = util.mod_inv(S, modulus)
+    recovered_plaintext = rsa.multiply(oracle_plaintext, S_inverse, modulus)
     assert recovered_plaintext == plaintext
 
 
@@ -1002,7 +1005,7 @@ def challenge42():
     padded_sig = rsa.pad(digest_info, len(digest_info) + 11, block_type=1)
     sig_block = padded_sig.ljust(modulus_length, b"\x00")
     sig_block_int = int.from_bytes(sig_block, byteorder="big")
-    forged_sig_int = ceil(big_int_cube_root(sig_block_int))
+    forged_sig_int = ceil(util.big_int_cube_root(sig_block_int))
     forged_sig = forged_sig_int.to_bytes(length=modulus_length, byteorder="big")
 
     assert rsa.decrypt(forged_sig, public_key).startswith(padded_sig)
@@ -1061,7 +1064,7 @@ def challenge44():
             message_data[key] = value
     for message1, message2 in itertools.combinations(messages, 2):
         if message1["sig"].r == message2["sig"].r:
-            s_diff_inverse = mod_inv(message1["sig"].s - message2["sig"].s, dsa.q)
+            s_diff_inverse = util.mod_inv(message1["sig"].s - message2["sig"].s, dsa.q)
             k = ((message1["hash"] - message2["hash"]) * s_diff_inverse) % dsa.q
             guess1 = dsa.recover_private_key(k, message1["message"], message1["sig"])
             guess2 = dsa.recover_private_key(k, message2["message"], message2["sig"])
@@ -1104,7 +1107,7 @@ def challenge45():
         bad_g = i*dsa.p + 1
         z = random.randint(1, dsa.q - 1)
         r = pow(public_key, z, dsa.p) % dsa.q
-        s = (r * mod_inv(z, dsa.q)) % dsa.q
+        s = (r * util.mod_inv(z, dsa.q)) % dsa.q
         magic_sig = dsa.Signature(r, s)
         assert dsa.verify(b"Hello world", public_key, magic_sig, g=bad_g)
         assert dsa.verify(b"Goodbye, world", public_key, magic_sig, g=bad_g)
@@ -1194,7 +1197,7 @@ def challenge49():
     new_block = b"from=Lone_Starr&"
     forged_message1 = new_block + message1[block_size:]
     assert forged_message1 == b"from=Lone_Starr&to=Pizza_The_Hutt&amount=1000000"
-    attacker_iv = xor_bytes(iv, message1[:block_size], new_block)
+    attacker_iv = util.xor_bytes(iv, message1[:block_size], new_block)
     assert request_is_valid(forged_message1, mac1, attacker_iv)
 
     message2 = transaction_list_message(
@@ -1206,7 +1209,8 @@ def challenge49():
     mac2 = message_mac(message2)
 
     extension = b";Pizza_The_Hutt:1000000"
-    modified_extension = xor_bytes(mac2, extension[:block_size]) + extension[block_size:]
+    modified_extension = (util.xor_bytes(mac2, extension[:block_size]) +
+                          extension[block_size:])
     forged_message2 = block_tools.pkcs7_pad(message2) + extension
     # TODO: try to forge a message without padding in the middle. Also
     # calculate MAC without calculating MAC of modified_extension.
@@ -1242,13 +1246,13 @@ def challenge50():
     valid_chars = string.ascii_letters + string.digits
     forged_snippet_end = b"**************/"
     nonsense_input = decrypt(
-        xor_bytes(
+        util.xor_bytes(
             block_tools.pkcs7_pad(forged_snippet_end),
             decrypt(mac)))
     while True:
         comment_begin = b"".join(random.choice(valid_chars).encode() for _ in range(15))
         forged_snippet_begin = b"alert('Ayo, the Wu is back!');\n/*" + comment_begin
-        nonsense = xor_bytes(nonsense_input, encrypt(forged_snippet_begin)[-16:])
+        nonsense = util.xor_bytes(nonsense_input, encrypt(forged_snippet_begin)[-16:])
         if comment_piece_is_valid(nonsense):
             forged_snippet = forged_snippet_begin + nonsense + forged_snippet_end
             break
@@ -1340,7 +1344,7 @@ def challenge52():
     assert len(messages) == 2**n
     assert len(set(hash_fn(x) for x in messages)) == 1
     print("Generated {} messages with hash {}.\n".format(
-        len(messages), pretty_hex_bytes(hash_fn(messages[0]))))
+        len(messages), util.pretty_hex_bytes(hash_fn(messages[0]))))
 
     cheap_hash_fn = merkle_damgard.HashFunction(digest_size=2)
     expensive_hash_fn = merkle_damgard.HashFunction(digest_size=4)
@@ -1348,9 +1352,9 @@ def challenge52():
     messages = find_cascaded_collision(cheap_hash_fn, expensive_hash_fn)
     assert len(set(cheap_hash_fn(x) + expensive_hash_fn(x) for x in messages)) == 1
     print("The following messages have combined hash [{}] + [{}]:".format(
-        pretty_hex_bytes(cheap_hash_fn(messages[0])),
-        pretty_hex_bytes(expensive_hash_fn(messages[0]))))
-    print("\n\n".join(pretty_hex_bytes(m) for m in messages))
+        util.pretty_hex_bytes(cheap_hash_fn(messages[0])),
+        util.pretty_hex_bytes(expensive_hash_fn(messages[0]))))
+    print("\n\n".join(util.pretty_hex_bytes(m) for m in messages))
 
 
 def challenge53():
