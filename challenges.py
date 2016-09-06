@@ -483,9 +483,8 @@ def challenge19():
     ciphertexts = [encrypt(x) for x in plaintexts]
 
     recovered_key = english.crack_common_xor_key(ciphertexts)
-    plaintexts = [util.apply_repeating_xor_key(c, recovered_key).decode()
-                  for c in ciphertexts]
-    print("\n".join(plaintexts))
+    for c in ciphertexts:
+        print(util.apply_repeating_xor_key(c, recovered_key).decode())
 
 
 def challenge20():
