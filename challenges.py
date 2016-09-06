@@ -1327,10 +1327,10 @@ def challenge52():
                     state = test_state
                     block_pairs.append(collision_map[test_state])
                     break
-        return [b"".join(x) for x in itertools.product(*block_pairs)]
+        return (b"".join(x) for x in itertools.product(*block_pairs))
 
     def find_cascaded_collision(cheap_hash_fn, expensive_hash_fn):
-        n = ceil(expensive_hash_fn.digest_size * 8 / 2)
+        n = expensive_hash_fn.digest_size * 8 // 2
         while True:
             collision_map = defaultdict(set)
             for message in find_multiple_collisions(cheap_hash_fn, n):
@@ -1341,7 +1341,7 @@ def challenge52():
 
     hash_fn = merkle_damgard.HashFunction(digest_size=2)
     n = 10
-    messages = find_multiple_collisions(hash_fn, n)
+    messages = list(find_multiple_collisions(hash_fn, n))
     assert len(messages) == 2**n
     assert len(set(hash_fn(x) for x in messages)) == 1
     print("Generated {} messages with hash {}.\n".format(

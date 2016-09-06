@@ -21,7 +21,7 @@ class HashFunction:
         key = iv = b"\x00"*16
         return aes_encrypt(state + block, key, "CBC", iv, pad=True)[:self.digest_size]
 
-    def produce_padding(self, message_length):
+    def padding(self, message_length):
         length_repr = struct.pack(">Q", message_length * 8)
         padding_length = (-message_length % self.block_size) or self.block_size
         padding = bytearray(length_repr.rjust(padding_length, b"\x00"))
@@ -30,7 +30,7 @@ class HashFunction:
 
     def __call__(self, message, state=None, *, pad=True):
         state = state or self.initial_state
-        prepared_message = message + (self.produce_padding(len(message)) if pad else b"")
+        prepared_message = message + (self.padding(len(message)) if pad else b"")
         for block in chunks(prepared_message, self.block_size):
             state = self.compress(state, block)
         return state
