@@ -11,16 +11,16 @@ import pprint as pprint_module
 import re
 import string
 import struct
+import sys
 import traceback
 import warnings
 
 from argparse import ArgumentParser
 from collections import Counter, defaultdict
-from contextlib import ExitStack, redirect_stdout
+from contextlib import redirect_stdout
 from hashlib import sha1, sha256
 from heapq import nlargest
 from math import ceil, gcd
-from sys import stdout
 from threading import Thread
 from time import time
 from urllib.parse import parse_qs, quote as url_quote, urlencode
@@ -1549,19 +1549,6 @@ def get_all_challenges():
     return [challenges[num] for num in sorted(challenges)]
 
 
-def run_challenges(challenges, output_stream=stdout):
-    for challenge in challenges:
-        num = re.findall(r"^challenge(.+)$", challenge.__name__)[0]
-        print("Running challenge {}: {}".format(num, challenge.__doc__),
-              file=output_stream)
-        try:
-            challenge()
-        except Exception:
-            traceback.print_exc(file=output_stream)
-        else:
-            print("Challenge {} passed.".format(num), file=output_stream)
-
-
 if __name__ == "__main__":
     parser = ArgumentParser(description="Solve the Matasano crypto challenges.")
     parser.add_argument(
@@ -1580,15 +1567,25 @@ if __name__ == "__main__":
         challenges = get_challenges(ARGS.challenges) or get_all_challenges()
     except ChallengeNotFoundError as e:
         parser.error(e)
-    with ExitStack() as stack:
-        if ARGS.profile:
-            profile = cProfile.Profile()
-            stack.callback(profile.print_stats, sort="cumtime")
-        if ARGS.quiet:
-            null_stream = open(os.devnull, "w")
-            stack.enter_context(null_stream)
-            stack.enter_context(redirect_stdout(null_stream))
-        if ARGS.profile:
-            profile.runcall(run_challenges, challenges)
-        else:
-            run_challenges(challenges)
+
+    profile = cProfile.Profile() if ARGS.profile else None
+    try:
+        with open(os.devnull, "w") as null_stream:
+            output_stream = null_stream if ARGS.quiet else sys.stdout
+            for challenge in challenges:
+                num = re.findall(r"^challenge(.+)$", challenge.__name__)[0]
+                print("Running challenge {}: {}".format(num, challenge.__doc__))
+                try:
+                    with redirect_stdout(output_stream):
+                        if profile:
+                            profile.runcall(challenge)
+                        else:
+                            challenge()
+                except Exception:
+                    traceback.print_exc()
+                else:
+                    print("Challenge {} passed.".format(num))
+    finally:
+        if profile:
+            print()
+            profile.print_stats(sort="cumulative")
