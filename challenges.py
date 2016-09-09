@@ -1550,7 +1550,7 @@ def get_all_challenges():
 
 
 if __name__ == "__main__":
-    parser = ArgumentParser(description="Solve the Matasano crypto challenges.")
+    parser = ArgumentParser(description="Solve the Cryptopals crypto challenges.")
     parser.add_argument(
         "challenges", nargs="*",
         help="Challenge(s) to run. If not specified, all challenges will be run.")
