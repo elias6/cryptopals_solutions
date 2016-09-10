@@ -3,6 +3,7 @@
 # standard library modules
 import base64
 import cProfile
+import functools
 import gzip
 import hashlib
 import itertools
@@ -1349,6 +1350,7 @@ def challenge52():
 
     cheap_hash_fn = merkle_damgard.HashFunction(digest_size=2)
     expensive_hash_fn = merkle_damgard.HashFunction(digest_size=4)
+    expensive_hash_fn.compress = functools.lru_cache(maxsize=None)(expensive_hash_fn.compress)
     print("Looking for collision on cascaded hash function")
     messages = find_cascaded_collision(cheap_hash_fn, expensive_hash_fn)
     assert len(set(cheap_hash_fn(x) + expensive_hash_fn(x) for x in messages)) == 1
