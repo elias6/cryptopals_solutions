@@ -89,7 +89,7 @@ def challenge3():
     """Single-byte XOR cipher"""
     cipher_hex = "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736"
     ciphertext = bytes.fromhex(cipher_hex)
-    score_data = english.iter_xor_score_data(ciphertext)
+    score_data = (english.xor_score_data(ciphertext, bytes([i])) for i in range(256))
     best_data = nlargest(5, score_data, key=lambda x: x["score"])
     pprint(best_data)
     print(best_data[0]["message"].decode())
@@ -100,7 +100,8 @@ def challenge4():
     """Detect single-character XOR"""
     with open("text_files/4.txt") as f:
         ciphertexts = [bytes.fromhex(line.strip()) for line in f.readlines()]
-    decoded_string_data = enumerate(english.best_score_data(c) for c in ciphertexts)
+    decoded_string_data = enumerate(english.best_byte_xor_score_data(c)
+                                    for c in ciphertexts)
     best_decodings = nlargest(3, decoded_string_data, key=lambda d: d[1]["score"])
     pprint(best_decodings)
     assert best_decodings[0][1]["message"] == b"Now that the party is jumping\n"

@@ -90,20 +90,19 @@ def english_like_score(text_bytes):
     return 1e6 / chi_squared / text_length
 
 
-def iter_xor_score_data(ciphertext):
-    for i in range(256):
-        message = apply_repeating_xor_key(ciphertext, bytes([i]))
-        score = english_like_score(message)
-        yield {"key": i, "message": message, "score": score}
+def xor_score_data(ciphertext, key):
+    message = apply_repeating_xor_key(ciphertext, key)
+    return {"key": key, "message": message, "score": english_like_score(message)}
 
 
-def best_score_data(ciphertext):
-    return max(iter_xor_score_data(ciphertext), key=lambda x: x["score"])
+def best_byte_xor_score_data(ciphertext):
+    return max((xor_score_data(ciphertext, bytes([i])) for i in range(256)),
+               key=lambda x: x["score"])
 
 
 def crack_common_xor_key(ciphertexts):
     key = bytearray()
     for i in range(max(len(c) for c in ciphertexts)):
         transposed_block = bytes(c[i] for c in ciphertexts if i < len(c))
-        key.append(best_score_data(transposed_block)["key"])
+        key += best_byte_xor_score_data(transposed_block)["key"]
     return key
