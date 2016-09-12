@@ -162,48 +162,66 @@ def crack_parity_oracle(ciphertext, public_key, plaintext_is_odd, verbose=False)
 def crack_padding_oracle(ciphertext, public_key, padding_looks_ok):
     # Details of how this function works can be found at
     # http://archiv.infsec.ethz.ch/education/fs08/secsem/Bleichenbacher98.pdf
+    if not padding_looks_ok(ciphertext):
+        raise ValueError("ciphertext must be PKCS-padded")
 
     modulus = public_key.modulus    # called "n" in paper
     modulus_length = ceil(modulus.bit_length() / 8)    # called "k" in paper
     B = 2 ** (8*(modulus_length - 2))
 
-    def find_s(s_iter):
+    def first_good_s(s_iter):
         for s in s_iter:
             test_ciphertext = multiply(ciphertext, s**public_key.exponent, modulus)
             if padding_looks_ok(test_ciphertext):
                 return s
         return None
 
-    # step 1
-    intervals = {(2*B, 3*B - 1)}    # called "M" in paper
-    for i in count(start=1):
-        if i == 1:
-            s = find_s(count(start=ceil(Fraction(modulus, 3*B))))    # step 2a
-        else:
-            if len(intervals) >= 2:
-                s = find_s(count(start=s + 1))    # step 2b
-            else:
-                # step 2c
-                a, b = list(intervals)[0]
-                for r in count(start=ceil(Fraction(2 * (b*s - 2*B), modulus))):
-                    s_start = ceil(Fraction(2*B + r*modulus, b))
-                    s_stop = floor(Fraction(3*B + r*modulus, a)) + 1
-                    s = find_s(range(s_start, s_stop))
-                    if s is not None:
-                        break
-        # step 3
-        new_intervals = set()
+    def step2a():
+        return first_good_s(count(start=ceil(Fraction(modulus, 3*B))))
+
+    def step2b(s):
+        return first_good_s(count(start=s + 1))
+
+    def step2c(s, interval):
+        a, b = interval
+        for r in count(start=ceil(Fraction(2 * (b*s - 2*B), modulus))):
+            s_start = ceil(Fraction(2*B + r*modulus, b))
+            s_stop = floor(Fraction(3*B + r*modulus, a)) + 1
+            s = first_good_s(range(s_start, s_stop))
+            if s is not None:
+                return s
+
+    def step3(intervals, s):
+        result = set()
         for a, b in intervals:
             start = ceil(Fraction(a*s - 3*B + 1, modulus))
             stop = floor(Fraction(b*s - 2*B, modulus)) + 1
             for r in range(start, stop):
                 new_a = max(a, ceil(Fraction(2*B + r*modulus, s)))
                 new_b = min(b, floor(Fraction(3*B - 1 + r*modulus, s)))
-                new_intervals.add((new_a, new_b))
-        intervals = new_intervals
-        assert len(intervals) >= 1
-        # step 4
+                result.add((new_a, new_b))
+        return result
+
+    def step4(intervals):
         single_message_intervals = {x for x in intervals if x[0] == x[1]}
         if len(single_message_intervals) == 1:
             a, b = list(single_message_intervals)[0]
             return a.to_bytes(length=modulus_length, byteorder="big")
+        return None
+
+    # TODO: implement step 1 from the paper so this function works on
+    # non-PKCS-padded messages.
+    intervals = {(2*B, 3*B - 1)}    # called "M" in paper
+    for i in count(start=1):
+        if i == 1:
+            s = step2a()
+        else:
+            if len(intervals) > 1:
+                s = step2b(s)
+            else:
+                s = step2c(s, list(intervals)[0])
+        intervals = step3(intervals, s)
+        assert len(intervals) >= 1
+        result = step4(intervals)
+        if result is not None:
+            return result
