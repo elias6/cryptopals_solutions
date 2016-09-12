@@ -1471,16 +1471,19 @@ def challenge54():
             self.state_dict = {node["state"]: indexes
                                for indexes, node in self.nodes.items()}
 
-            self.assert_consistent()
+            assert self.is_consistent()
 
-        def assert_consistent(self):
+        def is_consistent(self):
             for indexes, node in self.nodes.items():
                 level_idx, node_idx = indexes
                 if level_idx < self.k:
                     next_state = self.hash_fn.compress(node["state"], node["block"])
-                    assert next_state == self.nodes[level_idx + 1, node_idx // 2]["state"]
+                    if next_state != self.nodes[level_idx + 1, node_idx // 2]["state"]:
+                        return False
                 suffix = self.suffix_for_indexes(indexes)
-                assert self.hash_fn(suffix, node["state"], pad=False) == self.final_hash
+                if self.hash_fn(suffix, node["state"], pad=False) != self.final_hash:
+                    return False
+            return True
 
         @property
         def final_hash(self):
