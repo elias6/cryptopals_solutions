@@ -1375,11 +1375,11 @@ def challenge53():
                 if hash_fn.compress(state, repeatable_block) == state:
                     return (first_block, repeatable_block)
 
-    def produce_fixed_point_message(message_pieces, block_count):
+    def make_fixed_point_message(message_pieces, block_count):
         first_block, repeatable_block = message_pieces
         return first_block + ((block_count - 1) * repeatable_block)
 
-    def find_collision(block_count, hash_fn, state):
+    def make_unequal_length_collision(block_count, hash_fn, state):
         """Produce 2 messages with the same hash. The first will be one block long
         and the second will be block_count blocks long.
         """
@@ -1397,21 +1397,21 @@ def challenge53():
                     assert hash_fn(short_message, state) == hash_fn(long_message, state)
                     return ((short_message, long_message), block_state)
 
-    def find_expandable_message_pieces(hash_fn, k):
+    def make_expandable_message_pieces(hash_fn, k):
         """Make pieces that can be used to make messages containing k to
         (k + 2**k - 1) blocks, inclusive, all with the same hash.
         """
         state = hash_fn.initial_state
         result = []
         for i in range(k):
-            collision, state = find_collision(2**i + 1, hash_fn, state)
+            collision, state = make_unequal_length_collision(2**i + 1, hash_fn, state)
             result.append(collision)
         return result
 
     def make_expandable_message(message_piece_pairs, block_count):
         """Make a message using pieces from message_piece_pairs, consisting of
         block_count blocks. message_piece_pairs should be produced by
-        find_expandable_message_pieces. The message will have the same hash as
+        make_expandable_message_pieces. The message will have the same hash as
         it would if the same message_piece_pairs were passed with a different
         block_count.
         """
@@ -1426,13 +1426,13 @@ def challenge53():
     hash_fn = merkle_damgard.HashFunction(digest_size=2)
 
     message_pieces = make_fixed_point_message_pieces(hash_fn)
-    messages = [produce_fixed_point_message(message_pieces, block_count)
+    messages = [make_fixed_point_message(message_pieces, block_count)
                 for block_count in range(1, 101)]
     hashes = set(hash_fn(m) for m in messages)
     assert len(hashes) == 1
 
     for k in range(1, 7):
-        message_piece_pairs = find_expandable_message_pieces(hash_fn, k)
+        message_piece_pairs = make_expandable_message_pieces(hash_fn, k)
         messages = [make_expandable_message(message_piece_pairs, block_count)
                     for block_count in range(k, 2**k + k)]
         hashes = set(hash_fn(m) for m in messages)
