@@ -1490,14 +1490,9 @@ def challenge54():
             return self.nodes[self.k, 0]["state"]
 
         def suffix_for_indexes(self, indexes):
-            blocks = []
             level_idx, node_idx = indexes
-            for i in itertools.count(start=0):
-                node = self.nodes[i + level_idx, node_idx // 2**i]
-                if "block" in node:
-                    blocks.append(node["block"])
-                else:
-                    return b"".join(blocks)
+            return b"".join(self.nodes[i, node_idx // 2**(i - level_idx)]["block"]
+                            for i in range(level_idx, self.k))
 
         def make_message_with_prefix(self, prefix):
             # TODO: make more meaningful messages, as described in paper
