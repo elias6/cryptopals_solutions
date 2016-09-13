@@ -1,4 +1,6 @@
 from itertools import cycle, islice
+from math import inf
+from os import urandom
 
 import struct
 
@@ -34,3 +36,11 @@ class HashFunction:
         for block in chunks(prepared_message, self.block_size):
             state = self.compress(state, block)
         return state
+
+    def random_unique_blocks(self, n=inf):
+        seen = set()
+        while len(seen) < n:
+            block = urandom(self.block_size)
+            if block not in seen:
+                yield block
+                seen.add(block)

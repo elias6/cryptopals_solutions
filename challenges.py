@@ -1321,8 +1321,7 @@ def challenge52():
         block_pairs = []
         for _ in range(n):
             collision_map = defaultdict(set)
-            while True:
-                block = os.urandom(hash_fn.block_size)
+            for block in hash_fn.random_unique_blocks():
                 test_state = hash_fn.compress(state, block)
                 collision_map[test_state].add(block)
                 if len(collision_map[test_state]) > 1:
@@ -1367,11 +1366,10 @@ def challenge53():
     # https://www.schneier.com/academic/paperfiles/paper-preimages.pdf
 
     def make_fixed_point_message_pieces(hash_fn):
-        while True:
-            first_block = os.urandom(hash_fn.block_size)
+        trial_block_count = 2**(hash_fn.digest_size * 8 // 2)
+        for first_block in hash_fn.random_unique_blocks():
             state = hash_fn(first_block, pad=False)
-            for _ in range(2**(hash_fn.digest_size * 8 // 2)):
-                repeatable_block = os.urandom(hash_fn.block_size)
+            for repeatable_block in hash_fn.random_unique_blocks(trial_block_count):
                 if hash_fn.compress(state, repeatable_block) == state:
                     return (first_block, repeatable_block)
 
@@ -1383,12 +1381,11 @@ def challenge53():
         """Produce 2 messages with the same hash. The first will be one block long
         and the second will be block_count blocks long.
         """
-        while True:
-            filler = os.urandom(hash_fn.block_size) * (block_count - 1)
+        message_trial_count = 2**(hash_fn.digest_size * 8 // 2)
+        for filler_block in hash_fn.random_unique_blocks():
+            filler = filler_block * (block_count - 1)
             filler_state = hash_fn(filler, state, pad=False)
-            blocks = set()
-            while len(blocks) < 2**(hash_fn.digest_size * 8 // 2):
-                blocks.add(os.urandom(hash_fn.block_size))
+            blocks = set(hash_fn.random_unique_blocks(message_trial_count))
             long_message_ends = {hash_fn.compress(filler_state, b): b for b in blocks}
             for short_message in blocks:
                 block_state = hash_fn.compress(state, short_message)
@@ -1457,8 +1454,7 @@ def challenge54():
                 for j in range(2 ** (self.k - level_idx - 1)):
                     pair = [self.nodes[level_idx, 2*j], self.nodes[level_idx, 2*j + 1]]
                     block_maps = [{}, {}]
-                    while (level_idx + 1, j) not in self.nodes:
-                        block = os.urandom(self.hash_fn.block_size)
+                    for block in self.hash_fn.random_unique_blocks():
                         for i in [0, 1]:
                             state = self.hash_fn.compress(pair[i]["state"], block)
                             if state in block_maps[1 - i]:
@@ -1467,6 +1463,8 @@ def challenge54():
                                 self.nodes[level_idx + 1, j] = {"state": state}
                                 break
                             block_maps[i][state] = block
+                        if (level_idx + 1, j) in self.nodes:
+                            break
 
             self.state_dict = {node["state"]: indexes
                                for indexes, node in self.nodes.items()}
@@ -1500,8 +1498,7 @@ def challenge54():
             if len(prefix) % self.hash_fn.block_size != 0:
                 raise ValueError(
                     "length of prefix must be a multiple of hash_fn.block_size")
-            while True:
-                linking_message = os.urandom(self.hash_fn.block_size)
+            for linking_message in self.hash_fn.random_unique_blocks():
                 state = self.hash_fn(prefix + linking_message, pad=False)
                 if state in self.state_dict:
                     break
