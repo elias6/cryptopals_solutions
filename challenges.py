@@ -1391,7 +1391,8 @@ def challenge53():
                 block_state = hash_fn.compress(state, short_message)
                 if block_state in long_message_ends:
                     long_message = filler + long_message_ends[block_state]
-                    assert hash_fn(short_message, state) == hash_fn(long_message, state)
+                    assert (hash_fn(short_message, state, pad=False) ==
+                            hash_fn(long_message, state, pad=False))
                     return ((short_message, long_message), block_state)
 
     def make_expandable_message_pieces(hash_fn, k):
@@ -1425,14 +1426,14 @@ def challenge53():
     message_pieces = make_fixed_point_message_pieces(hash_fn)
     messages = [make_fixed_point_message(message_pieces, block_count)
                 for block_count in range(1, 101)]
-    hashes = set(hash_fn(m) for m in messages)
+    hashes = set(hash_fn(m, pad=False) for m in messages)
     assert len(hashes) == 1
 
     for k in range(1, 7):
         message_piece_pairs = make_expandable_message_pieces(hash_fn, k)
         messages = [make_expandable_message(message_piece_pairs, block_count)
                     for block_count in range(k, 2**k + k)]
-        hashes = set(hash_fn(m) for m in messages)
+        hashes = set(hash_fn(m, pad=False) for m in messages)
         assert len(hashes) == 1
 
 
