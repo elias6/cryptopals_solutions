@@ -1395,11 +1395,11 @@ def challenge53():
                             hash_fn(long_message, state, pad=False))
                     return ((short_message, long_message), block_state)
 
-    def make_expandable_message_pieces(hash_fn, k):
+    def make_expandable_message_pieces(hash_fn, k, state=None):
         """Make pieces that can be used to make messages containing k to
         (k + 2**k - 1) blocks, inclusive, all with the same hash.
         """
-        state = hash_fn.initial_state
+        state = state or hash_fn.initial_state
         result = []
         for i in range(k):
             collision, state = make_unequal_length_collision(2**i + 1, hash_fn, state)
@@ -1423,17 +1423,29 @@ def challenge53():
 
     hash_fn = merkle_damgard.HashFunction(digest_size=2)
 
-    message_pieces = make_fixed_point_message_pieces(hash_fn)
-    messages = [make_fixed_point_message(message_pieces, block_count)
+    fixed_point_pieces = make_fixed_point_message_pieces(hash_fn)
+    messages = [make_fixed_point_message(fixed_point_pieces, block_count)
                 for block_count in range(1, 101)]
     hashes = set(hash_fn(m, pad=False) for m in messages)
     assert len(hashes) == 1
+    fixed_point_state = list(hashes)[0]
 
     for k in range(1, 7):
         message_piece_pairs = make_expandable_message_pieces(hash_fn, k)
         messages = [make_expandable_message(message_piece_pairs, block_count)
                     for block_count in range(k, 2**k + k)]
         hashes = set(hash_fn(m, pad=False) for m in messages)
+        assert len(hashes) == 1
+
+        padded_message_piece_pairs = make_expandable_message_pieces(
+            hash_fn, k, fixed_point_state)
+        block_count = 2**k + k
+        messages = []
+        for i in range(k, block_count):
+            prefix = make_fixed_point_message(fixed_point_pieces, block_count - i)
+            suffix = make_expandable_message(padded_message_piece_pairs, i)
+            messages.append(prefix + suffix)
+        hashes = set(hash_fn(m) for m in messages)
         assert len(hashes) == 1
 
 
