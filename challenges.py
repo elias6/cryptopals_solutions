@@ -1548,7 +1548,9 @@ def get_all_challenges():
     return [challenges[num] for num in sorted(challenges)]
 
 
-if __name__ == "__main__":
+def main():
+    global ARGS
+
     parser = ArgumentParser(description="Solve the Cryptopals crypto challenges.")
     parser.add_argument(
         "challenges", nargs="*",
@@ -1588,3 +1590,7 @@ if __name__ == "__main__":
         if profile:
             print()
             profile.print_stats(sort="cumulative")
+
+
+if __name__ == "__main__":
+    main()
