@@ -795,7 +795,7 @@ def challenge34():
     alice = diffie_hellman.User()
     bob = diffie_hellman.User()
     alice.send_echo_request(bob, EXAMPLE_PLAIN_BYTES)
-    assert EXAMPLE_PLAIN_BYTES in bob._decrypted_messages[alice]
+    assert EXAMPLE_PLAIN_BYTES in bob.inbox[alice]
 
     alice = diffie_hellman.User()
     bob = diffie_hellman.User()
@@ -807,9 +807,9 @@ def challenge34():
     mallory._shared_keys[bob] = 0
     alice.send_echo_request(mallory, EXAMPLE_PLAIN_BYTES)
     # Mallory decrypts request without real key.
-    assert EXAMPLE_PLAIN_BYTES in mallory._decrypted_messages[alice]
+    assert EXAMPLE_PLAIN_BYTES in mallory.inbox[alice]
     mallory.send_echo_request(bob, EXAMPLE_PLAIN_BYTES)
-    assert EXAMPLE_PLAIN_BYTES in bob._decrypted_messages[mallory]
+    assert EXAMPLE_PLAIN_BYTES in bob.inbox[mallory]
 
 
 def challenge35():
@@ -823,9 +823,9 @@ def challenge35():
     assert bob.get_shared_key_for(mallory) == 1
     alice.send_echo_request(mallory, EXAMPLE_PLAIN_BYTES)
     # Mallory decrypts request without real key.
-    assert EXAMPLE_PLAIN_BYTES in mallory._decrypted_messages[alice]
+    assert EXAMPLE_PLAIN_BYTES in mallory.inbox[alice]
     mallory.send_echo_request(bob, EXAMPLE_PLAIN_BYTES)
-    assert EXAMPLE_PLAIN_BYTES in bob._decrypted_messages[mallory]
+    assert EXAMPLE_PLAIN_BYTES in bob.inbox[mallory]
 
     # Mallory tricks Alice and Bob into using g=IETF_PRIME
     alice = diffie_hellman.User(g=util.IETF_PRIME)
@@ -836,9 +836,9 @@ def challenge35():
     assert bob.get_shared_key_for(mallory) == 0
     alice.send_echo_request(mallory, EXAMPLE_PLAIN_BYTES)
     # Mallory decrypts request without real key.
-    assert EXAMPLE_PLAIN_BYTES in mallory._decrypted_messages[alice]
+    assert EXAMPLE_PLAIN_BYTES in mallory.inbox[alice]
     mallory.send_echo_request(bob, EXAMPLE_PLAIN_BYTES)
-    assert EXAMPLE_PLAIN_BYTES in bob._decrypted_messages[mallory]
+    assert EXAMPLE_PLAIN_BYTES in bob.inbox[mallory]
 
     # Mallory tricks Alice and Bob into using g=IETF_PRIME - 1
     alice = diffie_hellman.User(g=util.IETF_PRIME - 1)
@@ -851,9 +851,9 @@ def challenge35():
     assert bob.get_shared_key_for(mallory) == 1
     alice.send_echo_request(mallory, EXAMPLE_PLAIN_BYTES)
     # Mallory decrypts request without real key.
-    assert EXAMPLE_PLAIN_BYTES in mallory._decrypted_messages[alice]
+    assert EXAMPLE_PLAIN_BYTES in mallory.inbox[alice]
     mallory.send_echo_request(bob, EXAMPLE_PLAIN_BYTES)
-    assert EXAMPLE_PLAIN_BYTES in bob._decrypted_messages[mallory]
+    assert EXAMPLE_PLAIN_BYTES in bob.inbox[mallory]
 
 
 def challenge36():

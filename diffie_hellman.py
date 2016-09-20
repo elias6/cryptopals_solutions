@@ -15,7 +15,7 @@ class User:
             self._private_key = private_key
         self.public_key = pow(g, self._private_key, p)
         self._shared_keys = {}
-        self._decrypted_messages = defaultdict(list)
+        self.inbox = defaultdict(list)
 
     def get_shared_key_for(self, other):
         if other not in self._shared_keys:
@@ -29,7 +29,7 @@ class User:
 
     def _respond_to_echo_request(self, iv, encrypted_request, other):
         message = self._decrypt_message(iv, encrypted_request, other)
-        self._decrypted_messages[other].append(message)
+        self.inbox[other].append(message)
         return self._encrypt_message(message, other)
 
     def _generate_symmetric_key(self, other):
