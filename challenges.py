@@ -1459,50 +1459,49 @@ def challenge54():
 
             self.hash_fn = hash_fn
             self.k = k
-            self.nodes = {}
-            for i in range(2**self.k):
-                self.nodes[0, i] = {"state": os.urandom(self.hash_fn.digest_size)}
+            self.blocks = {}
+            self.states = {(0, i): os.urandom(self.hash_fn.digest_size)
+                           for i in range(2**self.k)}
 
             for level_idx in range(self.k):
                 for j in range(2 ** (self.k - level_idx - 1)):
-                    pair = [self.nodes[level_idx, 2*j], self.nodes[level_idx, 2*j + 1]]
                     block_maps = [{}, {}]
                     for block in self.hash_fn.random_unique_blocks():
                         for i in [0, 1]:
-                            state = self.hash_fn.compress(pair[i]["state"], block)
+                            state = self.hash_fn.compress(self.states[level_idx, 2*j + i],
+                                                          block)
                             if state in block_maps[1 - i]:
-                                pair[i]["block"] = block
-                                pair[1 - i]["block"] = block_maps[1 - i][state]
-                                self.nodes[level_idx + 1, j] = {"state": state}
+                                self.blocks[level_idx, 2*j + i] = block
+                                self.blocks[level_idx, 2*j + 1 - i] = block_maps[1 - i][state]
+                                self.states[level_idx + 1, j] = state
                                 break
                             block_maps[i][state] = block
-                        if (level_idx + 1, j) in self.nodes:
+                        if (level_idx + 1, j) in self.states:
                             break
 
-            self.state_dict = {node["state"]: indexes
-                               for indexes, node in self.nodes.items()}
+            self.state_dict = {state: indexes for indexes, state in self.states.items()}
 
             assert self.is_consistent()
 
         def is_consistent(self):
-            for indexes, node in self.nodes.items():
+            for indexes, state in self.states.items():
                 level_idx, node_idx = indexes
                 if level_idx < self.k:
-                    next_state = self.hash_fn.compress(node["state"], node["block"])
-                    if next_state != self.nodes[level_idx + 1, node_idx // 2]["state"]:
+                    next_state = self.hash_fn.compress(state, self.blocks[indexes])
+                    if next_state != self.states[level_idx + 1, node_idx // 2]:
                         return False
                 suffix = self.suffix_for_indexes(indexes)
-                if self.hash_fn(suffix, node["state"], pad=False) != self.final_hash:
+                if self.hash_fn(suffix, state, pad=False) != self.final_hash:
                     return False
             return True
 
         @property
         def final_hash(self):
-            return self.nodes[self.k, 0]["state"]
+            return self.states[self.k, 0]
 
         def suffix_for_indexes(self, indexes):
             level_idx, node_idx = indexes
-            return b"".join(self.nodes[i, node_idx // 2**(i - level_idx)]["block"]
+            return b"".join(self.blocks[i, node_idx // 2**(i - level_idx)]
                             for i in range(level_idx, self.k))
 
         def make_message_with_prefix(self, prefix):
@@ -1511,14 +1510,14 @@ def challenge54():
             if len(prefix) % self.hash_fn.block_size != 0:
                 raise ValueError(
                     "length of prefix must be a multiple of hash_fn.block_size")
+            prefix_state = self.hash_fn(prefix, pad=False)
             for linking_message in self.hash_fn.random_unique_blocks():
-                state = self.hash_fn(prefix + linking_message, pad=False)
+                state = self.hash_fn(linking_message, prefix_state, pad=False)
                 if state in self.state_dict:
-                    break
-            suffix = self.suffix_for_indexes(self.state_dict[state])
-            result = prefix + linking_message + suffix
-            assert self.hash_fn(result, pad=False) == self.final_hash
-            return result
+                    suffix = self.suffix_for_indexes(self.state_dict[state])
+                    result = prefix + linking_message + suffix
+                    assert self.hash_fn(result, pad=False) == self.final_hash
+                    return result
 
     hash_fn = merkle_damgard.HashFunction(digest_size=2)
     diamond = Diamond(hash_fn, k=4)
