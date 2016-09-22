@@ -1019,7 +1019,7 @@ def challenge42():
 def challenge43():
     """DSA key recovery from nonce"""
     message = EXAMPLE_PLAIN_BYTES
-    public_key, private_key = dsa.generate_key_pair()
+    public_key, private_key = dsa.KeyPair.random()
     sig = dsa.sign(message, private_key)
     assert dsa.verify(message, public_key, sig)
 
@@ -1092,7 +1092,7 @@ def challenge44():
 def challenge45():
     """DSA parameter tampering"""
     message = EXAMPLE_PLAIN_BYTES
-    public_key, private_key = dsa.generate_key_pair()
+    public_key, private_key = dsa.KeyPair.random()
 
     sig = dsa.sign(message, private_key, g=0, secure=False)
     assert dsa.verify(message, public_key, sig, g=0, secure=False)

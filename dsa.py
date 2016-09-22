@@ -15,14 +15,15 @@ g = int("5958c9d3898b224b12672c0b98e06c60df923cb8bc999d119458fef538b8fa4046c8db5
         "a097f1651fe775323556fe00b3608c887892878480e99041be601a62166ca6894bdd41a7054ec89f"
         "756ba9fc95302291", 16)
 
-KeyPair = namedtuple("KeyPair", ["public_key", "private_key"])
 Signature = namedtuple("Signature", ["r", "s"])
 
 
-def generate_key_pair():
-    private_key = random.randint(1, q - 1)    # called "x" in literature
-    public_key = pow(g, private_key, p)       # called "y" in literature
-    return KeyPair(public_key, private_key)
+class KeyPair(namedtuple("KeyPair", ["public_key", "private_key"])):
+    @classmethod
+    def random(cls):
+        private_key = random.randint(1, q - 1)    # called "x" in literature
+        public_key = pow(g, private_key, p)       # called "y" in literature
+        return cls(public_key, private_key)
 
 
 def sign(message, private_key, g=g, secure=True):
