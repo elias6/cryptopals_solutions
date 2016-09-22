@@ -913,7 +913,7 @@ def challenge39():
     """Implement RSA"""
     assert util.mod_inv(17, 3120) == 2753
 
-    public_key, private_key = rsa.generate_key_pair()
+    public_key, private_key = rsa.KeyPair.random()
 
     ciphertext = rsa.encrypt(EXAMPLE_PLAIN_BYTES, public_key)
 
@@ -928,7 +928,7 @@ def challenge40():
     ciphertext_data = []
     modulus_product = 1
     for i in range(3):
-        public_key, _ = rsa.generate_key_pair()
+        public_key, _ = rsa.KeyPair.random()
         ciphertext = rsa.encrypt(EXAMPLE_PLAIN_BYTES, public_key)
         ciphertext_data.append({
             "modulus": public_key.modulus,
@@ -956,7 +956,7 @@ def challenge40():
 def challenge41():
     """Implement unpadded message recovery oracle"""
     seen_message_hashes = set()
-    public_key, private_key = rsa.generate_key_pair()
+    public_key, private_key = rsa.KeyPair.random()
 
     class AccessDeniedError(Exception):
         pass
@@ -994,7 +994,7 @@ def challenge42():
     # https://www.ietf.org/mail-archive/web/openpgp/current/msg00999.html
     # http://www.withouthat.org/~sid/me/wp-content/uploads/2008/09/document.pdf
     modulus_length = 128
-    public_key, private_key = rsa.generate_key_pair(bit_length=modulus_length * 8)
+    public_key, private_key = rsa.KeyPair.random(bit_length=modulus_length * 8)
 
     message = b"hi mom"
 
@@ -1118,7 +1118,7 @@ def challenge45():
 
 def challenge46():
     """RSA parity oracle"""
-    public_key, private_key = rsa.generate_key_pair()
+    public_key, private_key = rsa.KeyPair.random()
 
     def plaintext_is_odd(ciphertext):
         return rsa.decrypt(ciphertext, private_key)[-1] & 1 == 1
@@ -1136,7 +1136,7 @@ def challenge46():
 
 def challenge47():
     """Bleichenbacher's PKCS 1.5 Padding Oracle (Simple Case)"""
-    public_key, private_key = rsa.generate_key_pair(bit_length=256)
+    public_key, private_key = rsa.KeyPair.random(bit_length=256)
 
     def padding_looks_ok(ciphertext):
         return rsa.decrypt(ciphertext, private_key)[:2] == b"\x00\x02"
@@ -1153,7 +1153,7 @@ def challenge47():
 
 def challenge48():
     """Bleichenbacher's PKCS 1.5 Padding Oracle (Complete Case)"""
-    public_key, private_key = rsa.generate_key_pair(bit_length=768)
+    public_key, private_key = rsa.KeyPair.random(bit_length=768)
 
     def padding_looks_ok(ciphertext):
         return rsa.decrypt(ciphertext, private_key)[:2] == b"\x00\x02"

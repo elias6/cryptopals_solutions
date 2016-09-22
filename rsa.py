@@ -11,25 +11,26 @@ from Cryptodome.Util.number import getPrime, getStrongPrime
 
 from util import mod_inv, random
 
-KeyPair = namedtuple("KeyPair", ["public_key", "private_key"])
 Key = namedtuple("Key", ["modulus", "exponent"])
 
 
-def generate_key_pair(bit_length=1024):
-    if bit_length % 2 != 0:
-        raise ValueError("bit_length must be even")
-    public_exponent = 3
-    p = generate_prime(bit_length // 2, e=public_exponent)
-    q = generate_prime(bit_length // 2, e=public_exponent)
-    modulus = p * q
-    totient = (p - 1) * (q - 1)
-    assert totient > public_exponent
-    assert gcd(public_exponent, totient) == 1
-    private_exponent = mod_inv(public_exponent, totient)
-    assert (public_exponent * private_exponent) % totient == 1
-    public_key = Key(modulus, public_exponent)
-    private_key = Key(modulus, private_exponent)
-    return KeyPair(public_key, private_key)
+class KeyPair(namedtuple("KeyPair", ["public_key", "private_key"])):
+    @classmethod
+    def random(cls, bit_length=1024):
+        if bit_length % 2 != 0:
+            raise ValueError("bit_length must be even")
+        public_exponent = 3
+        p = generate_prime(bit_length // 2, e=public_exponent)
+        q = generate_prime(bit_length // 2, e=public_exponent)
+        modulus = p * q
+        totient = (p - 1) * (q - 1)
+        assert totient > public_exponent
+        assert gcd(public_exponent, totient) == 1
+        private_exponent = mod_inv(public_exponent, totient)
+        assert (public_exponent * private_exponent) % totient == 1
+        public_key = Key(modulus, public_exponent)
+        private_key = Key(modulus, private_exponent)
+        return cls(public_key, private_key)
 
 
 def generate_prime(bit_length, e=None):
