@@ -6,3 +6,5 @@
 *.sublime-workspace
 
 reminder.txt
+
+.DS_Store
