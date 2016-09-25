@@ -6,6 +6,7 @@ import cProfile
 import functools
 import gzip
 import hashlib
+import inspect
 import itertools
 import os
 import pprint as pprint_module
@@ -703,7 +704,7 @@ def challenge30():
     assert new_hash == expected_hash
 
 
-def challenge31():
+def challenge31(dummy_server=False):
     """Implement and break HMAC-SHA1 with an artificial timing leak"""
     hmac_key = os.urandom(16)
     filename = "text_files/hamlet.txt"
@@ -711,7 +712,7 @@ def challenge31():
         hmac = util.calculate_hmac(hmac_key, f.read())
     print("looking for {}\n".format(util.pretty_hex_bytes(hmac)))
 
-    if ARGS.dummy_server:
+    if dummy_server:
         def validate_signature(sig):
             return timing_attack.insecure_compare(sig, hmac, delay=0.05)
 
@@ -741,7 +742,7 @@ def challenge31():
     assert signature == hmac
 
 
-def challenge32():
+def challenge32(dummy_server=False):
     """Break HMAC-SHA1 with a slightly less artificial timing leak"""
     hmac_key = os.urandom(16)
     filename = "text_files/hamlet.txt"
@@ -749,7 +750,7 @@ def challenge32():
         hmac = util.calculate_hmac(hmac_key, f.read())
     print("looking for {}\n".format(util.pretty_hex_bytes(hmac)))
 
-    if ARGS.dummy_server:
+    if dummy_server:
         def validate_signature(sig):
             return timing_attack.insecure_compare(sig, hmac, delay=0.025)
 
@@ -1560,8 +1561,6 @@ def get_all_challenges():
 
 
 def main():
-    global ARGS
-
     parser = ArgumentParser(description="Solve the Cryptopals crypto challenges.")
     parser.add_argument(
         "challenges", nargs="*",
@@ -1574,25 +1573,27 @@ def main():
         "-d", "--dummy-server",
         help="Use faster and more reliable dummy server for timing attacks instead of "
              "actual web server", action="store_true")
-    ARGS = parser.parse_args()
+    args = parser.parse_args()
     try:
-        challenges = get_challenges(ARGS.challenges) or get_all_challenges()
+        challenges = get_challenges(args.challenges) or get_all_challenges()
     except ChallengeNotFoundError as e:
         parser.error(e)
 
-    profile = cProfile.Profile() if ARGS.profile else None
+    profile = cProfile.Profile() if args.profile else None
     try:
         with open(os.devnull, "w") as null_stream:
-            output_stream = null_stream if ARGS.quiet else sys.stdout
+            output_stream = null_stream if args.quiet else sys.stdout
             for challenge in challenges:
                 num = re.findall(r"^challenge(.+)$", challenge.__name__)[0]
                 print("Running challenge {}: {}".format(num, challenge.__doc__))
                 try:
+                    challenge_args = {name: value for name, value in vars(args).items()
+                                      if name in inspect.signature(challenge).parameters}
                     with redirect_stdout(output_stream):
                         if profile:
-                            profile.runcall(challenge)
+                            profile.runcall(challenge, **challenge_args)
                         else:
-                            challenge()
+                            challenge(**challenge_args)
                 except Exception:
                     traceback.print_exc()
                 else:
