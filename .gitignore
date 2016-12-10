@@ -8,3 +8,7 @@
 reminder.txt
 
 .DS_Store
+
+Cryptopals_solutions.egg-info/
+
+dist/
