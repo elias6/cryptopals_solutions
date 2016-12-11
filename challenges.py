@@ -649,7 +649,7 @@ def challenge27():
     try:
         decrypt(modified_ciphertext)
     except UnicodeDecodeError as e:
-        plain_bytes = e.object
+        plain_bytes = e.args[1]
         recovered_key = util.xor_bytes(plain_bytes[0:16], plain_bytes[32:48])
         assert recovered_key == key
     else:
