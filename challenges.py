@@ -1543,22 +1543,36 @@ def challenge56():
     def oracle_fn(attacker_bytes):
         return ARC4.new(key=os.urandom(16)).encrypt(attacker_bytes + cookie)
 
-    recovered_pieces = [bytearray() for _ in range(ceil(len(cookie) / 16))]
-    for i in range(16):
-        byte_counters = [Counter() for _ in range(ceil((len(cookie) - i) / 16))]
-        for j in range(int(5e6)):
-            if j % 100000 == 0:
-                print(i, j)
-            ciphertext = oracle_fn(b"\x00" * (15 - i))
-            for k, counter in enumerate(byte_counters, start=1):
-                counter[ciphertext[16*k - 1]] += 1
-        for j, (counter, piece) in enumerate(zip(byte_counters, recovered_pieces), start=1):
-            most_common_byte, _ = counter.most_common(1)[0]
-            piece += bytes([most_common_byte ^ (256 - 16*j)])
-        recovered_so_far = b"".join(p.ljust(16, b"_") for p in recovered_pieces)[:len(cookie)]
-        print(recovered_so_far.decode(errors="replace"))
-    recovered_cookie = b"".join(recovered_pieces)
-    print(recovered_cookie)
+    def best_cookie_guess(byte_counters):
+        return bytes(max(counter, default=ord(b"_"), key=counter.get)
+                     for counter in byte_counters)
+
+    def most_likely_keystream_byte(pos):
+        if pos % 16 == 15 and 15 <= pos <= 111:
+            return 256 - (pos + 1)
+        elif 4 <= pos <= 30:
+            return pos + 1
+        elif pos == 0:
+            return 144
+        elif pos == 2:
+            return 131
+        else:
+            return 0
+
+    def show_progress(byte_counters, i):
+        if i % 5000 == 0:
+            recovered_so_far = best_cookie_guess(byte_counters)
+            print("{:10,} {}".format(i, repr(recovered_so_far.decode(errors="replace"))))
+
+    byte_counters = [Counter() for _ in range(len(cookie))]
+    for i in range(int(1e7)):
+        show_progress(byte_counters, i)
+        for j in range(16):
+            ciphertext = oracle_fn(b"\x00" * j)
+            for k in range(len(cookie)):
+                byte_counters[k][ciphertext[j + k] ^ most_likely_keystream_byte(j + k)] += 1
+    recovered_cookie = best_cookie_guess(byte_counters)
+    print(repr(recovered_cookie.decode(errors="replace")))
     assert recovered_cookie == cookie
 
 
