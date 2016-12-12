@@ -29,6 +29,7 @@ from urllib.parse import parse_qs, quote as url_quote, urlencode
 
 
 # third-party modules
+from Cryptodome.Cipher import ARC4
 from md4 import MD4
 
 
@@ -1531,6 +1532,34 @@ def challenge54():
     print(diamond.make_message_with_prefix(prefix))
 
     # TODO: make this work even if message is padded
+
+
+def challenge56():
+    """RC4 Single-Byte Biases"""
+    # Details about how this works can be found at the following URL:
+    # http://www.isg.rhul.ac.uk/tls/RC4biases.pdf
+    cookie = base64.b64decode(b"QkUgU1VSRSBUTyBEUklOSyBZT1VSIE9WQUxUSU5F")
+
+    def oracle_fn(attacker_bytes):
+        return ARC4.new(key=os.urandom(16)).encrypt(attacker_bytes + cookie)
+
+    recovered_pieces = [bytearray() for _ in range(ceil(len(cookie) / 16))]
+    for i in range(16):
+        byte_counters = [Counter() for _ in range(ceil((len(cookie) - i) / 16))]
+        for j in range(int(5e6)):
+            if j % 100000 == 0:
+                print(i, j)
+            ciphertext = oracle_fn(b"\x00" * (15 - i))
+            for k, counter in enumerate(byte_counters, start=1):
+                counter[ciphertext[16*k - 1]] += 1
+        for j, (counter, piece) in enumerate(zip(byte_counters, recovered_pieces), start=1):
+            most_common_byte, _ = counter.most_common(1)[0]
+            piece += bytes([most_common_byte ^ (256 - 16*j)])
+        recovered_so_far = b"".join(p.ljust(16, b"_") for p in recovered_pieces)[:len(cookie)]
+        print(recovered_so_far.decode(errors="replace"))
+    recovered_cookie = b"".join(recovered_pieces)
+    print(recovered_cookie)
+    assert recovered_cookie == cookie
 
 
 class ChallengeNotFoundError(ValueError):
