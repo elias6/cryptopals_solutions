@@ -1560,17 +1560,21 @@ def challenge56():
             return 0
 
     def show_progress(byte_counters, i):
-        if i % 5000 == 0:
+        if i % 10000 == 0:
             recovered_so_far = best_cookie_guess(byte_counters)
             print("{:10,} {}".format(i, repr(recovered_so_far.decode(errors="replace"))))
 
-    byte_counters = [Counter() for _ in range(len(cookie))]
+    # Speed optimization: use defaultdicts instead of Counters.
+    byte_counters = [defaultdict(lambda: 0) for _ in range(len(cookie))]
+    # Speed optimization: save keystream byte guesses in a variable instead of
+    # calling most_likely_keystream_byte in inner loop.
+    keystream_guess = [most_likely_keystream_byte(i) for i in range(256)]
     for i in range(int(1e7)):
         show_progress(byte_counters, i)
         for j in range(16):
             ciphertext = oracle_fn(b"\x00" * j)
             for k in range(len(cookie)):
-                byte_counters[k][ciphertext[j + k] ^ most_likely_keystream_byte(j + k)] += 1
+                byte_counters[k][ciphertext[j + k] ^ keystream_guess[j + k]] += 1
     recovered_cookie = best_cookie_guess(byte_counters)
     print(repr(recovered_cookie.decode(errors="replace")))
     assert recovered_cookie == cookie
