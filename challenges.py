@@ -1538,6 +1538,7 @@ def challenge56():
     """RC4 Single-Byte Biases"""
     # Details about how this works can be found at the following URL:
     # http://www.isg.rhul.ac.uk/tls/RC4biases.pdf
+    # TODO: make this faster and more accurate
     cookie = base64.b64decode(b"QkUgU1VSRSBUTyBEUklOSyBZT1VSIE9WQUxUSU5F")
 
     def oracle_fn(attacker_bytes):
