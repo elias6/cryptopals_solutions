@@ -1534,6 +1534,12 @@ def challenge54():
     # TODO: make this work even if message is padded
 
 
+def challenge55():
+    """MD4 Collisions"""
+    # TODO: figure out what I'm supposed to do here
+    raise NotImplementedError
+
+
 def challenge56():
     """RC4 Single-Byte Biases"""
     # Details about how this works can be found at the following URL:
