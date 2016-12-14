@@ -3,8 +3,6 @@ from itertools import cycle, islice
 from math import inf
 from os import urandom
 
-import struct
-
 from util import chunks
 
 class HashFunction:
@@ -25,11 +23,11 @@ class HashFunction:
         return sha512(state + block).digest()[:self.digest_size]
 
     def padding(self, message_length):
-        length_repr = struct.pack(">Q", message_length * 8)
-        padding_length = (-message_length % self.block_size) or self.block_size
-        padding = bytearray(length_repr.rjust(padding_length, b"\x00"))
-        padding[0] |= (1 << 7)
-        return bytes(padding[-self.block_size:])
+        result = bytearray((message_length * 8).to_bytes(
+            byteorder="big",
+            length=(-message_length % self.block_size) or self.block_size))
+        result[0] |= (1 << 7)
+        return result
 
     def __call__(self, message, state=None, *, pad=True):
         state = state or self.initial_state
