@@ -1544,6 +1544,7 @@ def challenge56():
     """RC4 Single-Byte Biases"""
     # Details about how this works can be found at the following URL:
     # http://www.isg.rhul.ac.uk/tls/RC4biases.pdf
+    # My solution is similar to the single-byte attack described in the paper.
     # TODO: make this faster and more accurate
     cookie = base64.b64decode(b"QkUgU1VSRSBUTyBEUklOSyBZT1VSIE9WQUxUSU5F")
 
@@ -1553,12 +1554,13 @@ def challenge56():
     def best_cookie_guess(byte_counters):
         result = bytearray()
         for r in range(len(cookie)):
-            dist = Counter()
+            plain_byte_distribution = Counter()
             for j in range(16):
                 for mu in range(256):
-                    dist[mu] += sum(byte_counters[r][j][k ^ mu] * keystream_distribution[r + j, k]
-                                    for k in range(256))
-            result.append(max(dist, key=dist.get))
+                    plain_byte_distribution[mu] += sum(
+                        byte_counters[r][j][k ^ mu] * keystream_weights[r + j, k]
+                        for k in range(256))
+            result.append(max(plain_byte_distribution, key=plain_byte_distribution.get))
         return result
 
     def show_progress(byte_counters, i):
@@ -1580,17 +1582,17 @@ def challenge56():
 
     # Distribution of RC4 keystream bytes found at the following URL:
     # http://www.isg.rhul.ac.uk/tls/RC4_keystream_dist_2_45.txt
-    keystream_distribution = {}    # called p in paper
+    keystream_weights = {}
     with open("text_files/RC4_keystream_dist_2_45.txt") as stats_file:
         for line in stats_file.readlines():
             match = re.findall(r"(\d+) (\d+) (\d+)", line)
             if match:
                 position, byte, count = [int(group) for group in match[0]]
-                keystream_distribution[position, byte] = log(count * 2**-45)
-    assert all((position, byte) in keystream_distribution
+                keystream_weights[position, byte] = log(count * 2**-45)
+    assert all((position, byte) in keystream_weights
                for position, byte in itertools.product(range(256), range(256)))
-    # keystream_distribution[p, b] == log of probability that byte in position
-    # p of keystream == b.
+    # keystream_weights[p, b] == log of probability that byte in position p of
+    # keystream is b.
 
     byte_counters = [[Counter() for j in range(16)] for r in range(len(cookie))]
     iteration_count = int(4e6)
