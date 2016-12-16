@@ -22,7 +22,7 @@ from collections import Counter, defaultdict
 from contextlib import redirect_stdout
 from hashlib import sha1, sha256
 from heapq import nlargest
-from math import ceil, gcd
+from math import ceil, gcd, log
 from threading import Thread
 from time import time
 from urllib.parse import parse_qs, quote as url_quote, urlencode
@@ -1551,37 +1551,48 @@ def challenge56():
         return ARC4.new(key=os.urandom(16)).encrypt(attacker_bytes + cookie)
 
     def best_cookie_guess(byte_counters):
-        return bytes(max(counter, default=ord(b"_"), key=counter.get)
-                     for counter in byte_counters)
-
-    def most_likely_keystream_byte(pos):
-        if pos % 16 == 15 and 15 <= pos <= 111:
-            return 256 - (pos + 1)
-        elif 4 <= pos <= 30:
-            return pos + 1
-        elif pos == 0:
-            return 144
-        elif pos == 2:
-            return 131
-        else:
-            return 0
+        result = bytearray()
+        for r in range(len(cookie)):
+            dist = Counter()
+            for j in range(16):
+                for mu in range(256):
+                    dist[mu] += sum(byte_counters[r][j][k ^ mu] * keystream_distribution[r + j, k]
+                                    for k in range(256))
+            result.append(max(dist, key=dist.get))
+        return result
 
     def show_progress(byte_counters, i):
-        if i % 10000 == 0:
-            recovered_so_far = best_cookie_guess(byte_counters)
-            print("{:10,} {}".format(i, repr(recovered_so_far.decode(errors="replace"))))
+        if i % 5e3 == 0:
+            print("{:12,} / {:12,} ciphertexts examined".format(i * 16, iteration_count * 16),
+                  end="")
+            if i % 5e5 == 0:
+                print(", calculating best cookie guess")
+                recovered_so_far = best_cookie_guess(byte_counters)
+                print("Best cookie guess: {}".format(repr(recovered_so_far.decode(errors="replace"))))
+            print()
 
-    # Speed optimization: use defaultdicts instead of Counters.
-    byte_counters = [defaultdict(lambda: 0) for _ in range(len(cookie))]
-    # Speed optimization: save keystream byte guesses in a variable instead of
-    # calling most_likely_keystream_byte in inner loop.
-    keystream_guess = [most_likely_keystream_byte(i) for i in range(256)]
-    for i in range(int(1e7)):
-        show_progress(byte_counters, i)
+    # Distribution of RC4 keystream bytes found at the following URL:
+    # http://www.isg.rhul.ac.uk/tls/RC4_keystream_dist_2_45.txt
+    keystream_distribution = {}    # called p in paper
+    with open("text_files/RC4_keystream_dist_2_45.txt") as stats_file:
+        for line in stats_file.readlines():
+            match = re.findall(r"(\d+) (\d+) (\d+)", line)
+            if match:
+                position, byte, count = [int(group) for group in match[0]]
+                keystream_distribution[position, byte] = log(count * 2**-45)
+    assert all((position, byte) in keystream_distribution
+               for position, byte in itertools.product(range(256), range(256)))
+    # keystream_distribution[p, b] == log of probability that byte in position
+    # p of keystream == b.
+
+    byte_counters = [[Counter() for j in range(16)] for r in range(len(cookie))]
+    iteration_count = int(4e6)
+    for i in range(iteration_count):
         for j in range(16):
             ciphertext = oracle_fn(b"\x00" * j)
-            for k in range(len(cookie)):
-                byte_counters[k][ciphertext[j + k] ^ keystream_guess[j + k]] += 1
+            for r, counters in enumerate(byte_counters):
+                counters[j][ciphertext[j + r]] += 1
+        show_progress(byte_counters, i)
     recovered_cookie = best_cookie_guess(byte_counters)
     print(repr(recovered_cookie.decode(errors="replace")))
     assert recovered_cookie == cookie
