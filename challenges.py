@@ -1594,9 +1594,8 @@ def challenge56():
     # keystream_weights[p][b] == log of probability that byte in position p of
     # keystream is b.
 
-    # Speed optimization: use defaultdicts instead of Counters.
-    byte_counters = [[defaultdict(lambda: 0) for j in range(16)]
-                     for r in range(len(cookie))]
+    # Speed optimization: use lists of ints instead of Counters.
+    byte_counters = [[[0] * 256 for j in range(16)] for r in range(len(cookie))]
     iteration_count = int(4e6)
     for i in range(iteration_count):
         show_progress(byte_counters, i)
