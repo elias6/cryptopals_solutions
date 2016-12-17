@@ -1555,11 +1555,11 @@ def challenge56():
         result = bytearray()
         for r in range(len(cookie)):
             plain_byte_distribution = Counter()
-            for j in range(16):
+            for j, counter in enumerate(byte_counters[r]):
                 for mu in range(256):
                     plain_byte_distribution[mu] += sum(
-                        byte_counters[r][j][k ^ mu] * keystream_weights[r + j, k]
-                        for k in range(256))
+                        [counter[k ^ mu] * weight
+                         for k, weight in keystream_weights[r + j].items()])
             result.append(max(plain_byte_distribution, key=plain_byte_distribution.get))
         return result
 
@@ -1582,26 +1582,28 @@ def challenge56():
 
     # Distribution of RC4 keystream bytes found at the following URL:
     # http://www.isg.rhul.ac.uk/tls/RC4_keystream_dist_2_45.txt
-    keystream_weights = {}
+    keystream_weights = defaultdict(dict)
     with open("text_files/RC4_keystream_dist_2_45.txt") as stats_file:
         for line in stats_file.readlines():
             match = re.findall(r"(\d+) (\d+) (\d+)", line)
             if match:
                 position, byte, count = [int(group) for group in match[0]]
-                keystream_weights[position, byte] = log(count * 2**-45)
-    assert all((position, byte) in keystream_weights
+                keystream_weights[position][byte] = log(count * 2**-45)
+    assert all(position in keystream_weights and byte in keystream_weights[position]
                for position, byte in itertools.product(range(256), range(256)))
-    # keystream_weights[p, b] == log of probability that byte in position p of
+    # keystream_weights[p][b] == log of probability that byte in position p of
     # keystream is b.
 
-    byte_counters = [[Counter() for j in range(16)] for r in range(len(cookie))]
+    # Speed optimization: use defaultdicts instead of Counters.
+    byte_counters = [[defaultdict(lambda: 0) for j in range(16)]
+                     for r in range(len(cookie))]
     iteration_count = int(4e6)
     for i in range(iteration_count):
         show_progress(byte_counters, i)
         for j in range(16):
-            ciphertext = oracle_fn(b"\x00" * j)
-            for r, counters in enumerate(byte_counters):
-                counters[j][ciphertext[j + r]] += 1
+            ciphertext = oracle_fn(b"\x00" * j)[j:]
+            for counters_for_offset, cipher_byte in zip(byte_counters, ciphertext):
+                counters_for_offset[j][cipher_byte] += 1
     print("Recovering cookie")
     recovered_cookie = best_cookie_guess(byte_counters)
     print("Recovered cookie: {}".format(cookie_str(recovered_cookie)))
