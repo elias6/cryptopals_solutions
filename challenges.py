@@ -1570,7 +1570,7 @@ def challenge56():
             print("{:12,} / {:12,} ciphertexts examined".format(examined_count,
                                                                 total_count),
                   end="")
-            if i != 0 and i % 5e5 == 0:
+            if i != 0 and i % 2.5e5 == 0:
                 print(", calculating best cookie guess")
                 recovered_so_far = best_cookie_guess(byte_counters)
                 print("Best cookie guess so far: {}".format(cookie_str(recovered_so_far)),
