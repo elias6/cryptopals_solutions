@@ -1563,23 +1563,6 @@ def challenge56():
             result.append(max(plain_byte_distribution, key=plain_byte_distribution.get))
         return result
 
-    def show_progress(byte_counters, i):
-        if i % 1e4 == 0:
-            examined_count = i * 16
-            total_count = iteration_count * 16
-            print("{:12,} / {:12,} ciphertexts examined".format(examined_count,
-                                                                total_count),
-                  end="")
-            if i != 0 and i % 2.5e5 == 0:
-                print(", calculating best cookie guess")
-                recovered_so_far = best_cookie_guess(byte_counters)
-                print("Best cookie guess so far: {}".format(cookie_str(recovered_so_far)),
-                      end="")
-            print()
-
-    def cookie_str(cookie):
-        return repr(cookie.decode(errors="replace"))
-
     # Distribution of RC4 keystream bytes found at the following URL:
     # http://www.isg.rhul.ac.uk/tls/RC4_keystream_dist_2_45.txt
     keystream_weights = defaultdict(dict)
@@ -1596,17 +1579,25 @@ def challenge56():
 
     # Speed optimization: use lists of ints instead of Counters.
     byte_counters = [[[0] * 256 for j in range(16)] for r in range(len(cookie))]
-    iteration_count = int(4e6)
-    for i in range(iteration_count):
-        show_progress(byte_counters, i)
+    for i in itertools.count(start=1):
         for j in range(16):
             ciphertext = oracle_fn(b"\x00" * j)[j:]
             for counters_for_offset, cipher_byte in zip(byte_counters, ciphertext):
                 counters_for_offset[j][cipher_byte] += 1
-    print("Recovering cookie")
-    recovered_cookie = best_cookie_guess(byte_counters)
-    print("Recovered cookie: {}".format(cookie_str(recovered_cookie)))
-    assert recovered_cookie == cookie
+        if i % 1e4 == 0:
+            examined_count = i * 16
+            print("{:,} ciphertexts examined".format(examined_count), end="")
+            if i % 2.5e5 == 0:
+                print(", calculating best cookie guess")
+                recovered_cookie = best_cookie_guess(byte_counters)
+                cookie_str = repr(cookie.decode(errors="replace"))
+                if recovered_cookie == cookie:
+                    print("Recovered cookie: {}".format(cookie_str))
+                    assert recovered_cookie == cookie
+                    break
+                else:
+                    print("Best cookie guess so far: {}".format(cookie_str), end="")
+            print()
 
 
 class ChallengeNotFoundError(ValueError):
