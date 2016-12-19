@@ -1553,13 +1553,13 @@ def challenge56():
 
     def best_cookie_guess(byte_counters):
         result = bytearray()
-        for r in range(len(cookie)):
+        for r, counters_for_position in enumerate(byte_counters):
             plain_byte_distribution = Counter()
-            for j, counter in enumerate(byte_counters[r]):
+            for j, byte_counter in enumerate(counters_for_position):
+                weights = keystream_weights[r + j]
                 for mu in range(256):
                     plain_byte_distribution[mu] += sum(
-                        [counter[k ^ mu] * weight
-                         for k, weight in keystream_weights[r + j].items()])
+                        [byte_counter[k ^ mu] * weight for k, weight in weights.items()])
             result.append(max(plain_byte_distribution, key=plain_byte_distribution.get))
         return result
 
@@ -1577,27 +1577,27 @@ def challenge56():
     # keystream_weights[p][b] == log of probability that byte in position p of
     # keystream is b.
 
+    offsets = range(16)
     # Speed optimization: use lists of ints instead of Counters.
-    byte_counters = [[[0] * 256 for j in range(16)] for r in range(len(cookie))]
-    for i in itertools.count(start=1):
-        for j in range(16):
-            ciphertext = oracle_fn(b"\x00" * j)[j:]
-            for counters_for_offset, cipher_byte in zip(byte_counters, ciphertext):
-                counters_for_offset[j][cipher_byte] += 1
-        if i % 1e4 == 0:
-            examined_count = i * 16
+    byte_counters = [[[0] * 256 for _ in offsets] for _ in cookie]
+    for examined_count in itertools.count(step=len(offsets)):
+        if examined_count % 2e5 == 0:
             print("{:,} ciphertexts examined".format(examined_count), end="")
-            if i % 2.5e5 == 0:
+            if examined_count > 0 and examined_count % 2e6 == 0:
                 print(", calculating best cookie guess")
                 recovered_cookie = best_cookie_guess(byte_counters)
-                cookie_str = repr(cookie.decode(errors="replace"))
+                cookie_str = repr(recovered_cookie.decode(errors="replace"))
                 if recovered_cookie == cookie:
                     print("Recovered cookie: {}".format(cookie_str))
                     assert recovered_cookie == cookie
                     break
                 else:
-                    print("Best cookie guess so far: {}".format(cookie_str), end="")
+                    print("Best cookie guess: {}".format(cookie_str), end="")
             print()
+        for j in offsets:
+            ciphertext = oracle_fn(b"\x00" * j)[j:]
+            for counters_for_position, cipher_byte in zip(byte_counters, ciphertext):
+                counters_for_position[j][cipher_byte] += 1
 
 
 class ChallengeNotFoundError(ValueError):
