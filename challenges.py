@@ -101,7 +101,7 @@ def challenge3():
 def challenge4():
     """Detect single-character XOR"""
     with open("text_files/4.txt") as f:
-        ciphertexts = [bytes.fromhex(line.strip()) for line in f.readlines()]
+        ciphertexts = [bytes.fromhex(line.strip()) for line in f]
     decoded_string_data = enumerate(english.best_byte_xor_score_data(c)
                                     for c in ciphertexts)
     best_decodings = nlargest(3, decoded_string_data, key=lambda d: d[1]["score"])
@@ -156,7 +156,7 @@ def challenge7():
 def challenge8():
     """Detect AES in ECB mode"""
     with open("text_files/8.txt") as f:
-        ciphertexts = [bytes.fromhex(line.strip()) for line in f.readlines()]
+        ciphertexts = [bytes.fromhex(line.strip()) for line in f]
     ecb_texts = []
     for i, ciphertext in enumerate(ciphertexts, start=1):
         if block_tools.looks_like_ecb(ciphertext):
@@ -499,7 +499,7 @@ def challenge20():
         return block_tools.aes_encrypt(plaintext, key, "CTR", nonce=b"\x00" * 8)
 
     with open("text_files/20.txt") as f:
-        plaintexts = [base64.b64decode(x) for x in f.readlines()]
+        plaintexts = [base64.b64decode(line) for line in f]
     ciphertexts = [encrypt(x) for x in plaintexts]
     recovered_key = english.crack_common_xor_key(ciphertexts)
     for c in ciphertexts:
@@ -1055,7 +1055,7 @@ def challenge44():
     messages = []
     with open("text_files/44.txt") as f:
         message_data = {}
-        for line in f.readlines():
+        for line in f:
             key, value = re.match("^(.+): (.+)$", line).groups()
             if key in message_data:
                 digest = sha1(message_data["msg"].encode()).hexdigest()
@@ -1567,7 +1567,7 @@ def challenge56():
     # http://www.isg.rhul.ac.uk/tls/RC4_keystream_dist_2_45.txt
     keystream_weights = defaultdict(dict)
     with open("text_files/RC4_keystream_dist_2_45.txt") as stats_file:
-        for line in stats_file.readlines():
+        for line in stats_file:
             match = re.findall(r"(\d+) (\d+) (\d+)", line)
             if match:
                 position, byte, count = [int(group) for group in match[0]]
