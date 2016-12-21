@@ -1551,19 +1551,19 @@ def challenge56():
     def oracle_fn(attacker_bytes):
         return ARC4.new(key=os.urandom(16)).encrypt(attacker_bytes + cookie)
 
-    def best_cookie_guess(byte_counters):
+    def best_cookie_guess(byte_counters, keystream_weights):
         result = bytearray()
         for r, counters_for_position in enumerate(byte_counters):
             plain_byte_distribution = Counter()
-            for j, byte_counter in enumerate(counters_for_position):
+            for j, counter in enumerate(counters_for_position):
                 weights = keystream_weights[r + j]
                 for mu in range(256):
                     plain_byte_distribution[mu] += sum(
-                        [byte_counter[k ^ mu] * weight for k, weight in weights.items()])
+                        [counter[k ^ mu] * weight for k, weight in weights.items()])
             result.append(max(plain_byte_distribution, key=plain_byte_distribution.get))
         return result
 
-    def crack_rc4_oracle(oracle_fn):
+    def crack_rc4_oracle(oracle_fn, keystream_weights):
         offsets = range(16)
         # Speed optimization: use lists of ints instead of Counters.
         byte_counters = [[[0] * 256 for _ in offsets] for _ in cookie]
@@ -1572,7 +1572,7 @@ def challenge56():
                 print("{:,} ciphertexts examined".format(examined_count), end="")
                 if examined_count > 0 and examined_count % 2e6 == 0:
                     print(", calculating best cookie guess")
-                    recovered_cookie = best_cookie_guess(byte_counters)
+                    recovered_cookie = best_cookie_guess(byte_counters, keystream_weights)
                     if recovered_cookie == cookie:
                         return recovered_cookie
                     else:
@@ -1598,7 +1598,7 @@ def challenge56():
     # keystream_weights[p][b] == log of probability that byte in position p of
     # keystream is b.
 
-    recovered_cookie = crack_rc4_oracle(oracle_fn)
+    recovered_cookie = crack_rc4_oracle(oracle_fn, keystream_weights)
     print("Recovered cookie: {}".format(repr(recovered_cookie.decode(errors="replace"))))
     assert recovered_cookie == cookie
 
