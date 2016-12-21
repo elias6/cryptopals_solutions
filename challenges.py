@@ -1563,6 +1563,27 @@ def challenge56():
             result.append(max(plain_byte_distribution, key=plain_byte_distribution.get))
         return result
 
+    def crack_rc4_oracle(oracle_fn):
+        offsets = range(16)
+        # Speed optimization: use lists of ints instead of Counters.
+        byte_counters = [[[0] * 256 for _ in offsets] for _ in cookie]
+        for examined_count in itertools.count(step=len(offsets)):
+            if examined_count % 2e5 == 0:
+                print("{:,} ciphertexts examined".format(examined_count), end="")
+                if examined_count > 0 and examined_count % 2e6 == 0:
+                    print(", calculating best cookie guess")
+                    recovered_cookie = best_cookie_guess(byte_counters)
+                    if recovered_cookie == cookie:
+                        return recovered_cookie
+                    else:
+                        cookie_str = repr(recovered_cookie.decode(errors="replace"))
+                        print("Best cookie guess: {}".format(cookie_str), end="")
+                print()
+            for j in offsets:
+                ciphertext = oracle_fn(b"\x00" * j)[j:]
+                for counters_for_position, cipher_byte in zip(byte_counters, ciphertext):
+                    counters_for_position[j][cipher_byte] += 1
+
     # Distribution of RC4 keystream bytes found at the following URL:
     # http://www.isg.rhul.ac.uk/tls/RC4_keystream_dist_2_45.txt
     keystream_weights = defaultdict(dict)
@@ -1577,27 +1598,9 @@ def challenge56():
     # keystream_weights[p][b] == log of probability that byte in position p of
     # keystream is b.
 
-    offsets = range(16)
-    # Speed optimization: use lists of ints instead of Counters.
-    byte_counters = [[[0] * 256 for _ in offsets] for _ in cookie]
-    for examined_count in itertools.count(step=len(offsets)):
-        if examined_count % 2e5 == 0:
-            print("{:,} ciphertexts examined".format(examined_count), end="")
-            if examined_count > 0 and examined_count % 2e6 == 0:
-                print(", calculating best cookie guess")
-                recovered_cookie = best_cookie_guess(byte_counters)
-                cookie_str = repr(recovered_cookie.decode(errors="replace"))
-                if recovered_cookie == cookie:
-                    print("Recovered cookie: {}".format(cookie_str))
-                    assert recovered_cookie == cookie
-                    break
-                else:
-                    print("Best cookie guess: {}".format(cookie_str), end="")
-            print()
-        for j in offsets:
-            ciphertext = oracle_fn(b"\x00" * j)[j:]
-            for counters_for_position, cipher_byte in zip(byte_counters, ciphertext):
-                counters_for_position[j][cipher_byte] += 1
+    recovered_cookie = crack_rc4_oracle(oracle_fn)
+    print("Recovered cookie: {}".format(repr(recovered_cookie.decode(errors="replace"))))
+    assert recovered_cookie == cookie
 
 
 class ChallengeNotFoundError(ValueError):
